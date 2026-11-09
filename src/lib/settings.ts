@@ -128,6 +128,10 @@ export function getThemeCssVariables(settings: SiteSettings): string {
     accentDark = "#000000";
   }
 
+  // Calculate contrast text color for buttons using accent
+  const accentIsLight = isLightBackground(accent);
+  const accentContrast = accentIsLight ? "#0f172a" : "#ffffff";
+
   const accentRgb = hexToRgb(accent);
   const lightRgb = hexToRgb(accentLight);
   const darkRgb = hexToRgb(accentDark);
@@ -153,6 +157,7 @@ export function getThemeCssVariables(settings: SiteSettings): string {
       --accent-light-rgb: ${lightRgb};
       --accent-dark: ${accentDark};
       --accent-dark-rgb: ${darkRgb};
+      --accent-contrast: ${accentContrast};
       color-scheme: ${isLight ? "light" : "dark"};
     }
   `.trim();

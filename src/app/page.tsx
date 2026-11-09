@@ -25,7 +25,7 @@ export default function HomePage() {
         >
           <div className="grid grid-cols-1 md:grid-cols-12 items-center">
             {allCategory?.coverPhoto && (
-              <div className="md:col-span-5 lg:col-span-4 aspect-[3/2] overflow-hidden bg-black/95">
+              <div className="md:col-span-5 lg:col-span-4 aspect-square overflow-hidden bg-surface-hover/40 dark:bg-black/80 relative flex items-center justify-center p-3 border-b md:border-b-0 md:border-r border-surface-border">
                 <img
                   src={`/api/thumbnail?src=${encodeURIComponent(
                     allCategory.coverPhoto.imageDesktop
@@ -34,7 +34,7 @@ export default function HomePage() {
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.02] shadow-sm"
                 />
               </div>
             )}
@@ -83,7 +83,7 @@ export default function HomePage() {
                 className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent/40 transition-all"
               >
                 {cat.coverPhoto && (
-                  <div className="aspect-[3/2] overflow-hidden bg-black/95 relative">
+                  <div className="aspect-square overflow-hidden bg-surface-hover/40 dark:bg-black/80 relative flex items-center justify-center p-3 border-b border-surface-border">
                     <img
                       src={`/api/thumbnail?src=${encodeURIComponent(
                         cat.coverPhoto.imageDesktop
@@ -91,10 +91,10 @@ export default function HomePage() {
                       alt={cat.coverPhoto.title || cat.name}
                       loading={idx < 4 ? "eager" : "lazy"}
                       decoding="async"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-[1.02] shadow-sm"
                     />
-                    <div className="photo-overlay absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-[11px] text-white truncate">
+                    <div className="photo-overlay absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <p className="text-[11px] text-white truncate text-center font-light">
                         {cat.coverPhoto.title}
                       </p>
                     </div>

@@ -75,20 +75,20 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-medium text-white">
+                <h3 className="text-base font-medium text-foreground">
                   Permanently Delete Photograph?
                 </h3>
                 <p className="text-xs text-muted leading-relaxed">
-                  Are you sure you want to delete <strong className="text-white">&ldquo;{title}&rdquo;</strong> (ID: <code className="text-accent font-mono">{photoID}</code>)?
+                  Are you sure you want to delete <strong className="text-foreground">&ldquo;{title}&rdquo;</strong> (ID: <code className="text-accent font-mono">{photoID}</code>)?
                 </p>
               </div>
             </div>
 
-            <div className="bg-black/60 border border-surface-border rounded p-3 text-xs text-gray-400 space-y-1">
-              <p className="text-red-300 font-medium text-[11px] uppercase tracking-wider">
+            <div className="bg-red-950/20 border border-red-900/50 rounded p-3 text-xs text-foreground space-y-1">
+              <p className="text-red-400 font-medium text-[11px] uppercase tracking-wider">
                 This action will permanently delete:
               </p>
-              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-gray-400 pl-1">
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-muted pl-1">
                 <li>Desktop web JPEG and original fullsize file from disk</li>
                 <li>Companion <code>.txt</code> metadata record</li>
                 <li>Catalog entry in <code>data/photos.json</code></li>
@@ -104,7 +104,7 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
                 type="button"
                 onClick={() => setShowConfirm(false)}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -112,7 +112,7 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{isDeleting ? "Deleting..." : "Permanently Delete"}</span>

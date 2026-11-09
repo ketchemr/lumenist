@@ -192,14 +192,14 @@ export function PhotoMap({
   return (
     <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black">
       {/* Basemap Switcher Controls */}
-      <div className="absolute top-2.5 right-2.5 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-surface-border rounded-sm overflow-hidden text-[11px] shadow-lg">
+      <div className="photo-overlay absolute top-2.5 right-2.5 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
         <button
           type="button"
           onClick={() => switchLayer("dark")}
-          className={`px-2.5 py-1 transition-colors ${
+          className={`px-2.5 py-1 transition-colors cursor-pointer ${
             activeLayer === "dark"
-              ? "bg-accent text-black font-semibold"
-              : "text-gray-300 hover:text-white"
+              ? "bg-accent text-accent-contrast font-semibold"
+              : "text-white/80 hover:text-white"
           }`}
           title="OpenStreetMap Dark Mode (No watermarks)"
         >
@@ -208,10 +208,10 @@ export function PhotoMap({
         <button
           type="button"
           onClick={() => switchLayer("topo")}
-          className={`px-2.5 py-1 border-l border-surface-border transition-colors ${
+          className={`px-2.5 py-1 border-l border-white/10 transition-colors cursor-pointer ${
             activeLayer === "topo"
-              ? "bg-accent text-black font-semibold"
-              : "text-gray-300 hover:text-white"
+              ? "bg-accent text-accent-contrast font-semibold"
+              : "text-white/80 hover:text-white"
           }`}
           title="Esri Topographic & Mountain Relief"
         >
@@ -220,10 +220,10 @@ export function PhotoMap({
         <button
           type="button"
           onClick={() => switchLayer("satellite")}
-          className={`px-2.5 py-1 border-l border-surface-border transition-colors ${
+          className={`px-2.5 py-1 border-l border-white/10 transition-colors cursor-pointer ${
             activeLayer === "satellite"
-              ? "bg-accent text-black font-semibold"
-              : "text-gray-300 hover:text-white"
+              ? "bg-accent text-accent-contrast font-semibold"
+              : "text-white/80 hover:text-white"
           }`}
           title="Esri Aerial Satellite Imagery"
         >

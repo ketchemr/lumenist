@@ -331,7 +331,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 bg-surface border border-surface-border p-3 rounded-sm">
         <div className="flex items-center space-x-2 text-xs text-muted">
           <Layers className="w-4 h-4 text-accent" />
-          <span className="font-medium text-white">Filter by Category:</span>
+          <span className="font-medium text-foreground">Filter by Category:</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto">
@@ -342,8 +342,8 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
             }}
             className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
               selectedCategory === "All"
-                ? "bg-accent text-black font-semibold"
-                : "bg-surface-hover text-gray-300 hover:text-white"
+                ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                : "bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent/40"
             }`}
           >
             All Locations ({photos.filter((p) => p.location).length})
@@ -364,8 +364,8 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                 }}
                 className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
                   selectedCategory === cat
-                    ? "bg-accent text-black font-semibold"
-                    : "bg-surface-hover text-gray-300 hover:text-white"
+                    ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                    : "bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent/40"
                 }`}
               >
                 {cat} ({count})
@@ -378,14 +378,14 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       {/* Map View */}
       <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black h-[72vh] min-h-[480px]">
         {/* Basemap Switcher Controls */}
-        <div className="absolute top-3 right-3 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-surface-border rounded-sm overflow-hidden text-[11px] shadow-lg">
+        <div className="photo-overlay absolute top-3 right-3 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
           <button
             type="button"
             onClick={() => switchLayer("dark")}
-            className={`px-3 py-1.5 transition-colors ${
+            className={`px-3 py-1.5 transition-colors cursor-pointer ${
               activeLayer === "dark"
-                ? "bg-accent text-black font-semibold"
-                : "text-gray-300 hover:text-white"
+                ? "bg-accent text-accent-contrast font-semibold"
+                : "text-white/80 hover:text-white"
             }`}
             title="OpenStreetMap Dark Mode (No watermarks)"
           >
@@ -394,10 +394,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
           <button
             type="button"
             onClick={() => switchLayer("topo")}
-            className={`px-3 py-1.5 border-l border-surface-border transition-colors ${
+            className={`px-3 py-1.5 border-l border-white/10 transition-colors cursor-pointer ${
               activeLayer === "topo"
-                ? "bg-accent text-black font-semibold"
-                : "text-gray-300 hover:text-white"
+                ? "bg-accent text-accent-contrast font-semibold"
+                : "text-white/80 hover:text-white"
             }`}
             title="Esri Topographic & Mountain Relief"
           >
@@ -406,10 +406,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
           <button
             type="button"
             onClick={() => switchLayer("satellite")}
-            className={`px-3 py-1.5 border-l border-surface-border transition-colors ${
+            className={`px-3 py-1.5 border-l border-white/10 transition-colors cursor-pointer ${
               activeLayer === "satellite"
-                ? "bg-accent text-black font-semibold"
-                : "text-gray-300 hover:text-white"
+                ? "bg-accent text-accent-contrast font-semibold"
+                : "text-white/80 hover:text-white"
             }`}
             title="Esri Aerial Satellite Imagery"
           >
@@ -421,7 +421,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
         {/* Selected Location / Multi-Photo Showcase Card */}
         {selectedCluster && (
-          <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-xl z-[1000] bg-black/95 backdrop-blur-md border border-surface-border rounded-sm p-4 shadow-2xl space-y-3">
+          <div className="photo-overlay absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-xl z-[1000] bg-black/95 backdrop-blur-md border border-white/20 rounded-sm p-4 shadow-2xl space-y-3">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
               <div className="flex items-center space-x-2 text-xs">

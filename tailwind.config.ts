@@ -15,6 +15,7 @@ const config: Config = {
           DEFAULT: "rgb(var(--accent-rgb, 245 158 11) / <alpha-value>)",
           light: "rgb(var(--accent-light-rgb, 251 191 36) / <alpha-value>)",
           dark: "rgb(var(--accent-dark-rgb, 217 119 6) / <alpha-value>)",
+          contrast: "var(--accent-contrast, #ffffff)",
         },
         surface: {
           DEFAULT: "var(--surface, #111111)",

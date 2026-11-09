@@ -806,7 +806,7 @@ export default function AdminUploadPage() {
           <div className="inline-flex p-3 rounded-full bg-surface border border-surface-border text-accent mb-2">
             <Lock className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-light text-white tracking-tight">
+          <h1 className="text-2xl font-light text-foreground tracking-tight">
             Lumenist Admin
           </h1>
           <p className="text-xs text-muted">
@@ -819,7 +819,7 @@ export default function AdminUploadPage() {
           className="bg-surface border border-surface-border rounded-sm p-6 space-y-4 shadow-xl"
         >
           <div>
-            <label className="block text-xs text-gray-300 font-medium mb-1.5">
+            <label className="block text-xs text-foreground font-medium mb-1.5">
               Admin Password
             </label>
             <input
@@ -828,7 +828,7 @@ export default function AdminUploadPage() {
               onChange={(e) => setPasswordInput(e.target.value)}
               placeholder="••••••••••••"
               required
-              className="w-full bg-black border border-surface-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+              className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
             />
           </div>
 
@@ -839,7 +839,7 @@ export default function AdminUploadPage() {
           <button
             type="submit"
             disabled={isLoggingIn}
-            className="w-full py-2.5 px-4 bg-accent text-black font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-colors disabled:opacity-50"
+            className="w-full py-2.5 px-4 bg-accent text-accent-contrast font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-colors disabled:opacity-50 cursor-pointer shadow-md"
           >
             {isLoggingIn ? "Verifying..." : "Sign In"}
           </button>
@@ -869,7 +869,7 @@ export default function AdminUploadPage() {
               },
             ]}
           />
-          <h1 className="text-2xl sm:text-3xl font-light text-white tracking-tight mt-1">
+          <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mt-1">
             {activeTab === "upload"
               ? "Publish Fine Art Photograph"
               : activeTab === "manage"
@@ -880,13 +880,13 @@ export default function AdminUploadPage() {
 
         {/* Tab Buttons & Logout */}
         <div className="flex items-center space-x-2">
-          <div className="flex items-center bg-black border border-surface-border rounded-sm p-1 text-xs">
+          <div className="flex items-center bg-surface border border-surface-border rounded-sm p-1 text-xs">
             <button
               onClick={() => setActiveTab("upload")}
               className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
                 activeTab === "upload"
-                  ? "bg-surface-hover text-white font-medium"
-                  : "text-muted hover:text-gray-200"
+                  ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               <Upload className="w-3.5 h-3.5" />
@@ -896,8 +896,8 @@ export default function AdminUploadPage() {
               onClick={() => setActiveTab("manage")}
               className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
                 activeTab === "manage"
-                  ? "bg-surface-hover text-white font-medium"
-                  : "text-muted hover:text-gray-200"
+                  ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               <ImageIcon className="w-3.5 h-3.5" />
@@ -907,8 +907,8 @@ export default function AdminUploadPage() {
               onClick={() => setActiveTab("settings")}
               className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
                 activeTab === "settings"
-                  ? "bg-surface-hover text-white font-medium"
-                  : "text-muted hover:text-gray-200"
+                  ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               <SettingsIcon className="w-3.5 h-3.5" />
@@ -919,7 +919,7 @@ export default function AdminUploadPage() {
           <button
             onClick={handleLogout}
             title="Sign Out"
-            className="p-2 border border-surface-border rounded-sm text-muted hover:text-red-400 hover:border-red-400/40 transition-colors"
+            className="p-2 bg-surface hover:bg-surface-hover border border-surface-border rounded-sm text-muted hover:text-red-400 hover:border-red-400/40 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -935,7 +935,7 @@ export default function AdminUploadPage() {
               <div className="flex items-center space-x-3 text-accent">
                 <CheckCircle2 className="w-6 h-6 flex-shrink-0" />
                 <div>
-                  <h3 className="text-base font-medium text-white">
+                  <h3 className="text-base font-medium text-foreground">
                     Photograph Published Successfully
                   </h3>
                   <p className="text-xs text-muted">
@@ -951,14 +951,14 @@ export default function AdminUploadPage() {
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
                   href={publishedResult.url}
-                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-accent text-black font-semibold text-xs rounded hover:bg-accent-light transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-accent text-accent-contrast font-semibold text-xs rounded hover:bg-accent-light transition-colors shadow-sm"
                 >
                   <span>View Published Work</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
                 <button
                   onClick={handleResetForm}
-                  className="px-4 py-2 bg-black border border-surface-border text-gray-300 font-medium text-xs rounded hover:text-white transition-colors"
+                  className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border text-foreground font-medium text-xs rounded transition-colors cursor-pointer"
                 >
                   Upload Another Photograph
                 </button>
@@ -1107,12 +1107,12 @@ export default function AdminUploadPage() {
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Mingus Mill in Autumn"
                     required
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-gray-200">
+                  <label className="block text-xs font-medium text-foreground">
                     Narrative Story / Description
                   </label>
                   <textarea
@@ -1120,7 +1120,7 @@ export default function AdminUploadPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Describe the atmosphere, historical context, geology, or optical technique..."
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-accent leading-relaxed"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent leading-relaxed"
                   />
                 </div>
 
@@ -1128,7 +1128,7 @@ export default function AdminUploadPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-medium text-gray-200 font-mono">
+                      <label className="block text-xs font-medium text-foreground font-mono">
                         Photo ID
                       </label>
                       <span className="text-[10px] text-muted">
@@ -1144,10 +1144,10 @@ export default function AdminUploadPage() {
                       }}
                       placeholder="e.g. d20261027151131 or s00000613"
                       required
-                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs font-mono text-accent focus:outline-none focus:border-accent"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-accent focus:outline-none focus:border-accent"
                     />
                     {idSourceNote && (
-                      <p className="text-[11px] text-gray-400 flex items-center space-x-1">
+                      <p className="text-[11px] text-muted flex items-center space-x-1">
                         <Sparkles className="w-3 h-3 text-accent" />
                         <span>{idSourceNote}</span>
                       </p>
@@ -1155,14 +1155,14 @@ export default function AdminUploadPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-gray-200">
+                    <label className="block text-xs font-medium text-foreground">
                       Capture Date & Time
                     </label>
                     <input
                       type="datetime-local"
                       value={captureDate}
                       onChange={(e) => setCaptureDate(e.target.value)}
-                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-accent [color-scheme:dark]"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                     />
                   </div>
                 </div>
@@ -1171,7 +1171,7 @@ export default function AdminUploadPage() {
               {/* Curated Albums (STRICTLY ALPHABETICAL) */}
               <div className="space-y-3 bg-surface border border-surface-border p-6 rounded-sm">
                 <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                  <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider">
+                  <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
                     <Folder className="w-3.5 h-3.5 text-accent" />
                     <span>Curated Albums (Alphabetical)</span>
                   </div>
@@ -1191,7 +1191,7 @@ export default function AdminUploadPage() {
                         className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                           isSelected
                             ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
-                            : "bg-black border-surface-border text-gray-400 hover:text-white hover:border-gray-500"
+                            : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground hover:border-accent/40"
                         }`}
                       >
                         {cat}
@@ -1213,12 +1213,12 @@ export default function AdminUploadPage() {
                       }
                     }}
                     placeholder="Add new album name..."
-                    className="flex-1 bg-black border border-surface-border rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-accent"
+                    className="flex-1 bg-surface border border-surface-border rounded px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-accent"
                   />
                   <button
                     type="button"
                     onClick={addCustomCategory}
-                    className="px-3 py-1.5 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white hover:border-accent transition-colors"
+                    className="px-3 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground hover:text-accent hover:border-accent transition-colors cursor-pointer"
                   >
                     + Add Album
                   </button>
@@ -1228,14 +1228,14 @@ export default function AdminUploadPage() {
               {/* Tags with Memory & Fast Popup Tray */}
               <div className="space-y-3 bg-surface border border-surface-border p-6 rounded-sm">
                 <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                  <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider">
+                  <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
                     <Tag className="w-3.5 h-3.5 text-accent" />
                     <span>Keywords & Tags</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowTagTray(!showTagTray)}
-                    className="text-xs text-accent hover:underline flex items-center space-x-1"
+                    className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
                   >
                     <span>
                       {showTagTray ? "Hide Tag Tray" : "+ Quick-Add Tags"}
@@ -1249,7 +1249,7 @@ export default function AdminUploadPage() {
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
                     placeholder="Type or paste comma-separated tags (e.g. Washington, Fall color, sunset, river, trees)..."
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                   />
                   <p className="text-[11px] text-muted">
                     Paste comma-separated tags freely, or click popular chips
@@ -1278,10 +1278,10 @@ export default function AdminUploadPage() {
                                 type="button"
                                 key={tag}
                                 onClick={() => handleTagChipClick(tag)}
-                                className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                                className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                                   isIncluded
-                                    ? "bg-accent text-black font-semibold border-accent"
-                                    : "bg-black border-surface-border text-gray-300 hover:border-accent"
+                                    ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
+                                    : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
                                 }`}
                               >
                                 {tag}
@@ -1309,10 +1309,10 @@ export default function AdminUploadPage() {
                                 type="button"
                                 key={tag}
                                 onClick={() => handleTagChipClick(tag)}
-                                className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                                className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                                   isIncluded
-                                    ? "bg-accent text-black font-semibold border-accent"
-                                    : "bg-black/60 border-surface-border text-gray-400 hover:text-white hover:border-gray-500"
+                                    ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
+                                    : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
                                 }`}
                               >
                                 {tag}
@@ -1331,7 +1331,7 @@ export default function AdminUploadPage() {
                 {/* Tripod Setup with Memory */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-medium text-gray-200">
+                    <label className="block text-xs font-medium text-foreground">
                       Tripod Setup
                     </label>
                     <span className="text-[10px] text-muted">
@@ -1344,7 +1344,7 @@ export default function AdminUploadPage() {
                     value={tripod}
                     onChange={(e) => setTripod(e.target.value)}
                     placeholder="e.g. Manfrotto Befree GT XPRO Carbon, 496 ball head, or None"
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                   />
                   <datalist id="tripod-list">
                     {metadata.commonTripods.map((t) => (
@@ -1362,10 +1362,10 @@ export default function AdminUploadPage() {
                         type="button"
                         key={opt}
                         onClick={() => setTripod(opt)}
-                        className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                        className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                           tripod === opt
-                            ? "bg-accent/20 border-accent text-accent font-medium"
-                            : "bg-black border-surface-border text-gray-400 hover:text-white"
+                            ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
+                            : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground"
                         }`}
                       >
                         {opt.includes(",") ? opt.split(",")[0] : opt}
@@ -1376,13 +1376,13 @@ export default function AdminUploadPage() {
 
                 {/* Print Availability */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-medium text-gray-200">
+                  <label className="block text-xs font-medium text-foreground">
                     Print Order Availability
                   </label>
                   <select
                     value={availability}
                     onChange={(e) => setAvailability(e.target.value)}
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent cursor-pointer"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value="Available for Order">
                       Available for Order
@@ -1400,7 +1400,7 @@ export default function AdminUploadPage() {
               {/* Interactive Geospatial Pin Picker */}
               <div className="space-y-3 bg-surface border border-surface-border p-6 rounded-sm">
                 <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                  <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider">
+                  <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
                     <MapPin className="w-3.5 h-3.5 text-accent" />
                     <span>Geographic Location & Map Pin</span>
                   </div>
@@ -1436,7 +1436,7 @@ export default function AdminUploadPage() {
                       setLatitude(null);
                       setLongitude(null);
                     }}
-                    className="text-xs text-muted hover:text-red-400 transition-colors"
+                    className="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer"
                   >
                     Clear coordinates
                   </button>
@@ -1454,7 +1454,7 @@ export default function AdminUploadPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !selectedFile}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-accent text-black font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  className="w-full sm:w-auto px-8 py-3.5 bg-accent text-accent-contrast font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer"
                 >
                   {isSubmitting
                     ? "Publishing Photograph & Writing Records..."
@@ -1504,13 +1504,13 @@ export default function AdminUploadPage() {
                 placeholder="Search catalog by title, photo ID (e.g. test, d2026...), tag, or year..."
                 value={catalogSearch}
                 onChange={(e) => setCatalogSearch(e.target.value)}
-                className="w-full pl-10 pr-9 py-2 bg-black border border-surface-border rounded-sm text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
+                className="w-full pl-10 pr-9 py-2 bg-surface border border-surface-border rounded-sm text-xs text-foreground placeholder-muted focus:outline-none focus:border-accent"
               />
               {catalogSearch && (
                 <button
                   type="button"
                   onClick={() => setCatalogSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
                   title="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -1530,7 +1530,7 @@ export default function AdminUploadPage() {
                   setCatalogAlbumFilter(e.target.value);
                   setCatalogPage(1);
                 }}
-                className="bg-black border border-surface-border text-xs rounded px-2.5 py-2 text-white focus:outline-none focus:border-accent max-w-[200px] truncate"
+                className="bg-surface border border-surface-border text-xs rounded px-2.5 py-2 text-foreground focus:outline-none focus:border-accent max-w-[200px] truncate cursor-pointer"
               >
                 <option value="all">All Albums ({catalogTotal})</option>
                 {availableAlbums.map((alb) => (
@@ -1556,7 +1556,7 @@ export default function AdminUploadPage() {
                   setCatalogPageSize(val as any);
                   setCatalogPage(1);
                 }}
-                className="bg-black border border-surface-border text-xs rounded px-2.5 py-2 text-white focus:outline-none focus:border-accent"
+                className="bg-surface border border-surface-border text-xs rounded px-2.5 py-2 text-foreground focus:outline-none focus:border-accent cursor-pointer"
               >
                 <option value={25}>25 / page</option>
                 <option value={50}>50 / page</option>
@@ -1574,7 +1574,7 @@ export default function AdminUploadPage() {
                   setCatalogAlbumFilter("all");
                   setCatalogPage(1);
                 }}
-                className="px-2.5 py-1.5 bg-black border border-surface-border rounded text-xs text-accent hover:text-white transition-colors"
+                className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-accent hover:text-accent-light transition-colors cursor-pointer"
               >
                 Reset Filters
               </button>
@@ -1588,7 +1588,7 @@ export default function AdminUploadPage() {
                 <button
                   type="button"
                   onClick={toggleSelectAllCurrentPage}
-                  className="p-1 text-white hover:text-accent transition-colors"
+                  className="p-1 text-foreground hover:text-accent transition-colors cursor-pointer"
                   title={
                     isAllCurrentPageSelected
                       ? "Deselect current page"
@@ -1601,7 +1601,7 @@ export default function AdminUploadPage() {
                     <MinusSquare className="w-4 h-4 text-accent" />
                   )}
                 </button>
-                <div className="text-xs text-white">
+                <div className="text-xs text-foreground">
                   <strong className="text-accent font-semibold">
                     {selectedPhotoIDs.length}
                   </strong>{" "}
@@ -1610,7 +1610,7 @@ export default function AdminUploadPage() {
                     <button
                       type="button"
                       onClick={selectAllMatching}
-                      className="ml-2 text-accent hover:underline font-medium"
+                      className="ml-2 text-accent hover:underline font-medium cursor-pointer"
                     >
                       Select all {catalogTotal} matching
                     </button>
@@ -1618,7 +1618,7 @@ export default function AdminUploadPage() {
                   <button
                     type="button"
                     onClick={clearSelection}
-                    className="ml-2.5 text-muted hover:text-white underline"
+                    className="ml-2.5 text-muted hover:text-foreground underline cursor-pointer"
                   >
                     Clear
                   </button>
@@ -1634,7 +1634,7 @@ export default function AdminUploadPage() {
                     setBulkCustomAlbum("");
                     setActiveBulkModal("addAlbum");
                   }}
-                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-accent rounded text-xs transition-colors flex items-center space-x-1.5"
+                  className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent rounded text-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
                   title="Add selected photos to an album"
                 >
                   <FolderPlus className="w-3.5 h-3.5 text-accent" />
@@ -1647,7 +1647,7 @@ export default function AdminUploadPage() {
                     setBulkTagsInput("");
                     setActiveBulkModal("addTags");
                   }}
-                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-accent rounded text-xs transition-colors flex items-center space-x-1.5"
+                  className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent rounded text-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
                   title="Add tag(s) to selected photos"
                 >
                   <Tag className="w-3.5 h-3.5 text-accent" />
@@ -1660,10 +1660,10 @@ export default function AdminUploadPage() {
                     setBulkAlbumChoice(availableAlbums[0] || "");
                     setActiveBulkModal("removeAlbum");
                   }}
-                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-red-400 rounded text-xs transition-colors flex items-center space-x-1.5"
+                  className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-red-400 rounded text-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
                   title="Remove selected photos from an album"
                 >
-                  <Folder className="w-3.5 h-3.5 text-gray-400" />
+                  <Folder className="w-3.5 h-3.5 text-muted" />
                   <span>Remove Album</span>
                 </button>
 
@@ -1673,17 +1673,17 @@ export default function AdminUploadPage() {
                     setBulkRemoveTagInput("");
                     setActiveBulkModal("removeTag");
                   }}
-                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-red-400 rounded text-xs transition-colors flex items-center space-x-1.5"
+                  className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-red-400 rounded text-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
                   title="Remove a tag from selected photos"
                 >
-                  <Tag className="w-3.5 h-3.5 text-gray-400" />
+                  <Tag className="w-3.5 h-3.5 text-muted" />
                   <span>Remove Tag</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveBulkModal("delete")}
-                  className="px-2.5 py-1.5 bg-red-950/30 border border-red-900/60 text-red-400 hover:bg-red-900/40 hover:border-red-500 rounded text-xs transition-colors flex items-center space-x-1.5"
+                  className="px-2.5 py-1.5 bg-red-950/20 border border-red-900/60 text-red-400 hover:bg-red-900/40 hover:border-red-500 rounded text-xs transition-colors flex items-center space-x-1.5 cursor-pointer"
                   title="Permanently delete all selected photos"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1742,7 +1742,7 @@ export default function AdminUploadPage() {
                   type="button"
                   disabled={catalogPage <= 1}
                   onClick={() => setCatalogPage(1)}
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="First Page"
                 >
                   <ChevronsLeft className="w-3.5 h-3.5" />
@@ -1751,14 +1751,14 @@ export default function AdminUploadPage() {
                   type="button"
                   disabled={catalogPage <= 1}
                   onClick={() => setCatalogPage((p) => Math.max(1, p - 1))}
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Previous Page"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
 
                 <span className="px-2 py-1 text-xs text-muted">
-                  Page <strong className="text-white">{catalogPage}</strong> of{" "}
+                  Page <strong className="text-foreground">{catalogPage}</strong> of{" "}
                   {catalogTotalPages}
                 </span>
 
@@ -1768,7 +1768,7 @@ export default function AdminUploadPage() {
                   onClick={() =>
                     setCatalogPage((p) => Math.min(catalogTotalPages, p + 1))
                   }
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Next Page"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1777,7 +1777,7 @@ export default function AdminUploadPage() {
                   type="button"
                   disabled={catalogPage >= catalogTotalPages}
                   onClick={() => setCatalogPage(catalogTotalPages)}
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Last Page"
                 >
                   <ChevronsRight className="w-3.5 h-3.5" />
@@ -1799,7 +1799,7 @@ export default function AdminUploadPage() {
                   <div
                     key={item.photoID}
                     className={`p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors ${
-                      isSelected ? "bg-accent/5" : "hover:bg-black/40"
+                      isSelected ? "bg-accent/10" : "hover:bg-surface-hover/60"
                     }`}
                   >
                     <div className="flex items-center space-x-3.5 min-w-0 flex-1">
@@ -1807,13 +1807,13 @@ export default function AdminUploadPage() {
                       <button
                         type="button"
                         onClick={() => toggleSelectPhoto(item.photoID)}
-                        className="p-1 text-muted hover:text-white transition-colors flex-shrink-0"
+                        className="p-1 text-muted hover:text-foreground transition-colors flex-shrink-0 cursor-pointer"
                         title={isSelected ? "Deselect" : "Select"}
                       >
                         {isSelected ? (
                           <CheckSquare className="w-4 h-4 text-accent" />
                         ) : (
-                          <Square className="w-4 h-4 text-gray-600" />
+                          <Square className="w-4 h-4 text-gray-500" />
                         )}
                       </button>
 
@@ -1821,7 +1821,7 @@ export default function AdminUploadPage() {
                       <Link
                         href={`/photo/${encodeURIComponent(item.photoID)}`}
                         target="_blank"
-                        className="w-16 h-12 bg-black rounded overflow-hidden flex-shrink-0 border border-surface-border hover:border-accent transition-colors block"
+                        className="w-16 h-12 bg-surface-hover rounded overflow-hidden flex-shrink-0 border border-surface-border hover:border-accent transition-colors block"
                       >
                         <img
                           src={`/api/thumbnail?src=${encodeURIComponent(
@@ -1838,7 +1838,7 @@ export default function AdminUploadPage() {
                         <Link
                           href={`/photo/${encodeURIComponent(item.photoID)}`}
                           target="_blank"
-                          className="text-sm font-medium text-white truncate block hover:text-accent transition-colors"
+                          className="text-sm font-medium text-foreground truncate block hover:text-accent transition-colors"
                         >
                           {item.title}
                         </Link>
@@ -1855,7 +1855,7 @@ export default function AdminUploadPage() {
                           {item.categories && item.categories.length > 0 && (
                             <>
                               <span>&bull;</span>
-                              <span className="truncate max-w-[240px] text-gray-400">
+                              <span className="truncate max-w-[240px] text-muted">
                                 {item.categories.join(", ")}
                               </span>
                             </>
@@ -1863,7 +1863,7 @@ export default function AdminUploadPage() {
                           {item.keywords && item.keywords.length > 0 && (
                             <>
                               <span>&bull;</span>
-                              <span className="truncate max-w-[200px] text-gray-500 text-[11px]">
+                              <span className="truncate max-w-[200px] text-muted text-[11px]">
                                 {item.keywords.slice(0, 3).join(", ")}
                                 {item.keywords.length > 3
                                   ? ` +${item.keywords.length - 3}`
@@ -1880,7 +1880,7 @@ export default function AdminUploadPage() {
                       <Link
                         href={`/photo/${encodeURIComponent(item.photoID)}`}
                         target="_blank"
-                        className="px-3 py-1.5 bg-black border border-surface-border text-gray-300 hover:text-white rounded text-xs transition-colors inline-flex items-center space-x-1"
+                        className="px-3 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent rounded text-xs transition-colors inline-flex items-center space-x-1 cursor-pointer"
                       >
                         <span>View</span>
                         <ExternalLink className="w-3 h-3 text-muted" />
@@ -1905,7 +1905,7 @@ export default function AdminUploadPage() {
             </div>
           ) : (
             <div className="text-center py-20 bg-surface border border-surface-border rounded-sm space-y-2">
-              <p className="text-gray-400 text-xs">
+              <p className="text-muted text-xs">
                 No photographs found matching your search.
               </p>
               <button
@@ -1915,7 +1915,7 @@ export default function AdminUploadPage() {
                   setCatalogAlbumFilter("all");
                   setCatalogPage(1);
                 }}
-                className="text-accent text-xs underline"
+                className="text-accent text-xs underline cursor-pointer"
               >
                 Clear search filter
               </button>
@@ -1926,15 +1926,15 @@ export default function AdminUploadPage() {
           {catalogTotalPages > 1 && catalogPageSize !== "all" && (
             <div className="flex items-center justify-between border-t border-surface-border pt-4 text-xs text-muted">
               <div>
-                Page <strong className="text-white">{catalogPage}</strong> of{" "}
-                <strong className="text-white">{catalogTotalPages}</strong>
+                Page <strong className="text-foreground">{catalogPage}</strong> of{" "}
+                <strong className="text-foreground">{catalogTotalPages}</strong>
               </div>
               <div className="flex items-center space-x-1.5">
                 <button
                   type="button"
                   disabled={catalogPage <= 1}
                   onClick={() => setCatalogPage(1)}
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="First Page"
                 >
                   <ChevronsLeft className="w-3.5 h-3.5" />
@@ -1943,7 +1943,7 @@ export default function AdminUploadPage() {
                   type="button"
                   disabled={catalogPage <= 1}
                   onClick={() => setCatalogPage((p) => Math.max(1, p - 1))}
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Previous Page"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
@@ -1955,7 +1955,7 @@ export default function AdminUploadPage() {
                   onClick={() =>
                     setCatalogPage((p) => Math.min(catalogTotalPages, p + 1))
                   }
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Next Page"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1964,7 +1964,7 @@ export default function AdminUploadPage() {
                   type="button"
                   disabled={catalogPage >= catalogTotalPages}
                   onClick={() => setCatalogPage(catalogTotalPages)}
-                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded border border-surface-border bg-surface hover:bg-surface-hover text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Last Page"
                 >
                   <ChevronsRight className="w-3.5 h-3.5" />
@@ -1982,12 +1982,12 @@ export default function AdminUploadPage() {
                     <FolderPlus className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground">
                       Add to Album
                     </h3>
                     <p className="text-xs text-muted mt-1">
                       Add{" "}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         {selectedPhotoIDs.length}
                       </strong>{" "}
                       selected photograph
@@ -1998,7 +1998,7 @@ export default function AdminUploadPage() {
 
                 <div className="space-y-4 text-xs">
                   <div>
-                    <label className="block text-gray-300 font-medium mb-1.5">
+                    <label className="block text-foreground font-medium mb-1.5">
                       Choose Existing Album
                     </label>
                     <select
@@ -2007,7 +2007,7 @@ export default function AdminUploadPage() {
                         setBulkAlbumChoice(e.target.value);
                         setBulkCustomAlbum("");
                       }}
-                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent cursor-pointer"
                     >
                       {availableAlbums.map((alb) => (
                         <option key={alb} value={alb}>
@@ -2018,7 +2018,7 @@ export default function AdminUploadPage() {
                   </div>
 
                   <div>
-                    <label className="block text-gray-300 font-medium mb-1.5">
+                    <label className="block text-foreground font-medium mb-1.5">
                       Or Create New Album Name
                     </label>
                     <input
@@ -2026,7 +2026,7 @@ export default function AdminUploadPage() {
                       placeholder="e.g. Blue Ridge Parkway"
                       value={bulkCustomAlbum}
                       onChange={(e) => setBulkCustomAlbum(e.target.value)}
-                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent"
                     />
                   </div>
                 </div>
@@ -2036,7 +2036,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={() => setActiveBulkModal(null)}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2044,7 +2044,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={handleExecuteBulkAction}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-accent text-black font-semibold rounded text-xs hover:bg-accent-light transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                    className="px-4 py-2 bg-accent text-accent-contrast font-semibold rounded text-xs hover:bg-accent-light transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
                   >
                     <FolderPlus className="w-3.5 h-3.5" />
                     <span>
@@ -2065,12 +2065,12 @@ export default function AdminUploadPage() {
                     <Folder className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground">
                       Remove from Album
                     </h3>
                     <p className="text-xs text-muted mt-1">
                       Remove an album from{" "}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         {selectedPhotoIDs.length}
                       </strong>{" "}
                       selected photograph
@@ -2080,13 +2080,13 @@ export default function AdminUploadPage() {
                 </div>
 
                 <div className="text-xs space-y-2">
-                  <label className="block text-gray-300 font-medium">
+                  <label className="block text-foreground font-medium">
                     Select Album to Remove
                   </label>
                   <select
                     value={bulkAlbumChoice}
                     onChange={(e) => setBulkAlbumChoice(e.target.value)}
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent cursor-pointer"
                   >
                     {availableAlbums.map((alb) => (
                       <option key={alb} value={alb}>
@@ -2101,7 +2101,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={() => setActiveBulkModal(null)}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2109,7 +2109,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={handleExecuteBulkAction}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
                   >
                     <span>
                       {isExecutingBulk ? "Removing..." : "Remove Album"}
@@ -2129,12 +2129,12 @@ export default function AdminUploadPage() {
                     <Tag className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground">
                       Add Tags
                     </h3>
                     <p className="text-xs text-muted mt-1">
                       Add tags to{" "}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         {selectedPhotoIDs.length}
                       </strong>{" "}
                       selected photograph
@@ -2145,7 +2145,7 @@ export default function AdminUploadPage() {
 
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-gray-300 font-medium mb-1.5">
+                    <label className="block text-foreground font-medium mb-1.5">
                       Tags (comma-separated)
                     </label>
                     <input
@@ -2153,7 +2153,7 @@ export default function AdminUploadPage() {
                       placeholder="e.g. sunrise, ocean, landscape"
                       value={bulkTagsInput}
                       onChange={(e) => setBulkTagsInput(e.target.value)}
-                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent"
                     />
                   </div>
 
@@ -2180,7 +2180,7 @@ export default function AdminUploadPage() {
                                 setBulkTagsInput([...parts, tag].join(", "));
                               }
                             }}
-                            className="px-2 py-0.5 bg-black border border-surface-border rounded text-[11px] text-gray-300 hover:text-accent hover:border-accent transition-colors"
+                            className="px-2 py-0.5 bg-surface hover:bg-surface-hover border border-surface-border rounded text-[11px] text-foreground hover:text-accent hover:border-accent transition-colors cursor-pointer"
                           >
                             +{tag}
                           </button>
@@ -2195,7 +2195,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={() => setActiveBulkModal(null)}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2203,7 +2203,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={handleExecuteBulkAction}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-accent text-black font-semibold rounded text-xs hover:bg-accent-light transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                    className="px-4 py-2 bg-accent text-accent-contrast font-semibold rounded text-xs hover:bg-accent-light transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
                   >
                     <Tag className="w-3.5 h-3.5" />
                     <span>{isExecutingBulk ? "Adding..." : "Add Tags"}</span>
@@ -2222,12 +2222,12 @@ export default function AdminUploadPage() {
                     <Tag className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground">
                       Remove Tag
                     </h3>
                     <p className="text-xs text-muted mt-1">
                       Remove a tag from{" "}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         {selectedPhotoIDs.length}
                       </strong>{" "}
                       selected photograph
@@ -2237,7 +2237,7 @@ export default function AdminUploadPage() {
                 </div>
 
                 <div className="text-xs space-y-2">
-                  <label className="block text-gray-300 font-medium">
+                  <label className="block text-foreground font-medium">
                     Tag Name to Remove
                   </label>
                   <input
@@ -2245,7 +2245,7 @@ export default function AdminUploadPage() {
                     placeholder="e.g. mist"
                     value={bulkRemoveTagInput}
                     onChange={(e) => setBulkRemoveTagInput(e.target.value)}
-                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent"
                   />
                 </div>
 
@@ -2254,7 +2254,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={() => setActiveBulkModal(null)}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2262,7 +2262,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={handleExecuteBulkAction}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
                   >
                     <span>
                       {isExecutingBulk ? "Removing..." : "Remove Tag"}
@@ -2282,12 +2282,12 @@ export default function AdminUploadPage() {
                     <AlertTriangle className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground">
                       Permanently Delete {selectedPhotoIDs.length} Photographs?
                     </h3>
                     <p className="text-xs text-muted mt-1 leading-relaxed">
                       You are about to permanently delete{" "}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         {selectedPhotoIDs.length}
                       </strong>{" "}
                       photographs from your library and storage.
@@ -2295,11 +2295,11 @@ export default function AdminUploadPage() {
                   </div>
                 </div>
 
-                <div className="bg-black/60 border border-red-900/50 rounded p-3 text-xs text-gray-300 space-y-2">
-                  <p className="text-red-300 font-medium text-[11px] uppercase tracking-wider">
+                <div className="bg-red-950/20 border border-red-900/50 rounded p-3 text-xs text-foreground space-y-2">
+                  <p className="text-red-400 font-medium text-[11px] uppercase tracking-wider">
                     Permanent File Deletion:
                   </p>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-gray-400 pl-1">
+                  <ul className="list-disc list-inside space-y-1 text-[11px] text-muted pl-1">
                     <li>
                       All companion <code>_desktop.jpg</code> web images and
                       original fullsize JPEG files will be unlinked from disk.
@@ -2319,7 +2319,7 @@ export default function AdminUploadPage() {
                   <span className="text-[11px] text-muted">
                     Selected Photographs ({selectedPhotoIDs.length}):
                   </span>
-                  <div className="bg-black border border-surface-border rounded p-2.5 max-h-36 overflow-y-auto space-y-1 text-xs font-mono text-gray-400">
+                  <div className="bg-surface-hover/50 border border-surface-border rounded p-2.5 max-h-36 overflow-y-auto space-y-1 text-xs font-mono text-muted">
                     {selectedPhotoIDs.slice(0, 50).map((id) => {
                       const p = catalogPhotos.find((x) => x.photoID === id);
                       return (
@@ -2328,7 +2328,7 @@ export default function AdminUploadPage() {
                           className="flex items-center justify-between text-[11px]"
                         >
                           <span className="text-accent">{id}</span>
-                          <span className="text-gray-300 truncate max-w-[240px]">
+                          <span className="text-foreground truncate max-w-[240px]">
                             {p ? p.title : ""}
                           </span>
                         </div>
@@ -2347,7 +2347,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={() => setActiveBulkModal(null)}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2355,7 +2355,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={handleExecuteBulkAction}
                     disabled={isExecutingBulk}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>
@@ -2378,12 +2378,12 @@ export default function AdminUploadPage() {
                     <AlertTriangle className="w-5 h-5" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-base font-medium text-white">
+                    <h3 className="text-base font-medium text-foreground">
                       Permanently Delete Photograph?
                     </h3>
                     <p className="text-xs text-muted leading-relaxed">
                       Are you sure you want to delete{" "}
-                      <strong className="text-white">
+                      <strong className="text-foreground">
                         &ldquo;{confirmDelete.title}&rdquo;
                       </strong>{" "}
                       (ID:{" "}
@@ -2395,11 +2395,11 @@ export default function AdminUploadPage() {
                   </div>
                 </div>
 
-                <div className="bg-black/60 border border-surface-border rounded p-3 text-xs text-gray-400 space-y-1">
-                  <p className="text-red-300 font-medium text-[11px] uppercase tracking-wider">
+                <div className="bg-red-950/20 border border-red-900/50 rounded p-3 text-xs text-foreground space-y-1">
+                  <p className="text-red-400 font-medium text-[11px] uppercase tracking-wider">
                     This action will permanently delete:
                   </p>
-                  <ul className="list-disc list-inside space-y-0.5 text-[11px] text-gray-400 pl-1">
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px] text-muted pl-1">
                     <li>Desktop web JPEG and original fullsize file from disk</li>
                     <li>
                       Companion <code>.txt</code> metadata record
@@ -2415,7 +2415,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={() => setConfirmDelete(null)}
                     disabled={isDeletingPhoto}
-                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                    className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2423,7 +2423,7 @@ export default function AdminUploadPage() {
                     type="button"
                     onClick={handleDeletePhoto}
                     disabled={isDeletingPhoto}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>
@@ -2444,17 +2444,17 @@ export default function AdminUploadPage() {
           {/* Theme Palette & Accent Colors */}
           <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
             <div className="flex items-center justify-between border-b border-surface-border pb-3">
-              <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider">
+              <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
                 <Palette className="w-3.5 h-3.5 text-accent" />
                 <span>Theme Accent Color</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-muted">Active:</span>
                 <span
-                  className="w-4 h-4 rounded-full border border-white/20 inline-block shadow-sm"
+                  className="w-4 h-4 rounded-full border border-surface-border inline-block shadow-sm"
                   style={{ backgroundColor: settings.themeAccent }}
                 />
-                <code className="text-xs font-mono text-white">
+                <code className="text-xs font-mono text-foreground">
                   {settings.themeAccent}
                 </code>
               </div>
@@ -2482,18 +2482,18 @@ export default function AdminUploadPage() {
                         themeAccentDark: preset.dark,
                       }));
                     }}
-                    className={`flex items-center space-x-3 p-3 rounded border text-left transition-all ${
+                    className={`flex items-center space-x-3 p-3 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/10 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-black hover:border-gray-600"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
                     }`}
                   >
                     <span
-                      className="w-5 h-5 rounded-full flex-shrink-0 border border-white/20 shadow-sm"
+                      className="w-5 h-5 rounded-full flex-shrink-0 border border-surface-border shadow-sm"
                       style={{ backgroundColor: preset.accent }}
                     />
                     <div className="truncate">
-                      <span className="block text-xs font-medium text-white truncate">
+                      <span className="block text-xs font-medium text-foreground truncate">
                         {preset.name}
                       </span>
                       <span className="block text-[10px] font-mono text-muted">
@@ -2520,7 +2520,7 @@ export default function AdminUploadPage() {
                     themeAccentDark: hex,
                   }));
                 }}
-                className="w-8 h-8 rounded border border-surface-border bg-black cursor-pointer p-0"
+                className="w-8 h-8 rounded border border-surface-border bg-surface cursor-pointer p-0"
               />
               <input
                 type="text"
@@ -2535,7 +2535,7 @@ export default function AdminUploadPage() {
                   }));
                 }}
                 placeholder="#f59e0b"
-                className="w-28 bg-black border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-accent"
+                className="w-28 bg-surface border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent"
               />
             </div>
           </div>
@@ -2543,17 +2543,17 @@ export default function AdminUploadPage() {
           {/* Theme Background & Gallery Atmosphere */}
           <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
             <div className="flex items-center justify-between border-b border-surface-border pb-3">
-              <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider">
+              <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
                 <Sliders className="w-3.5 h-3.5 text-accent" />
                 <span>Gallery Background & Atmosphere</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-muted">Active:</span>
                 <span
-                  className="w-4 h-4 rounded-full border border-white/20 inline-block shadow-sm"
+                  className="w-4 h-4 rounded-full border border-surface-border inline-block shadow-sm"
                   style={{ backgroundColor: settings.themeBackground || "#000000" }}
                 />
-                <code className="text-xs font-mono text-white">
+                <code className="text-xs font-mono text-foreground">
                   {settings.themeBackground || "#000000"}
                 </code>
               </div>
@@ -2580,24 +2580,24 @@ export default function AdminUploadPage() {
                         themeBorder: preset.border,
                       }));
                     }}
-                    className={`flex items-center space-x-3 p-3 rounded border text-left transition-all ${
+                    className={`flex items-center space-x-3 p-3 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/10 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-black hover:border-gray-600"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
                     }`}
                   >
                     <div className="flex items-center -space-x-1 flex-shrink-0">
                       <span
-                        className="w-5 h-5 rounded-full border border-white/30 shadow-sm"
+                        className="w-5 h-5 rounded-full border border-surface-border shadow-sm"
                         style={{ backgroundColor: preset.background }}
                       />
                       <span
-                        className="w-4 h-4 rounded-full border border-white/20 shadow-sm"
+                        className="w-4 h-4 rounded-full border border-surface-border shadow-sm"
                         style={{ backgroundColor: preset.surface }}
                       />
                     </div>
                     <div className="truncate">
-                      <span className="block text-xs font-medium text-white truncate">
+                      <span className="block text-xs font-medium text-foreground truncate">
                         {preset.name}
                       </span>
                       <span className="block text-[10px] font-mono text-muted">
@@ -2636,7 +2636,7 @@ export default function AdminUploadPage() {
                     };
                   });
                 }}
-                className="w-8 h-8 rounded border border-surface-border bg-black cursor-pointer p-0"
+                className="w-8 h-8 rounded border border-surface-border bg-surface cursor-pointer p-0"
               />
               <input
                 type="text"
@@ -2663,13 +2663,13 @@ export default function AdminUploadPage() {
                   });
                 }}
                 placeholder="#000000"
-                className="w-28 bg-black border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-accent"
+                className="w-28 bg-surface border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent"
               />
             </div>
 
             {/* Text Contrast & Dynamic Mode */}
             <div className="pt-4 border-t border-surface-border space-y-3">
-              <label className="block text-xs font-medium text-gray-200 uppercase tracking-wider">
+              <label className="block text-xs font-medium text-foreground uppercase tracking-wider">
                 Text Contrast & Typography Tone
               </label>
               <p className="text-xs text-muted">
@@ -2704,13 +2704,13 @@ export default function AdminUploadPage() {
                           themeTextMode: mode.id as any,
                         }))
                       }
-                      className={`p-3 rounded border text-left transition-all ${
+                      className={`p-3 rounded border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? "border-accent bg-accent/10 shadow-md ring-1 ring-accent"
-                          : "border-surface-border bg-black hover:border-gray-600"
+                          ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
+                          : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
                       }`}
                     >
-                      <span className="block text-xs font-medium text-white">
+                      <span className="block text-xs font-medium text-foreground">
                         {mode.label}
                       </span>
                       <span className="block text-[10px] text-muted">
@@ -2725,7 +2725,7 @@ export default function AdminUploadPage() {
 
           {/* Catalog Sort Order */}
           <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
-            <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider border-b border-surface-border pb-3">
+            <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider border-b border-surface-border pb-3">
               <ArrowUpDown className="w-3.5 h-3.5 text-accent" />
               <span>Default Catalog & Gallery Sort Order</span>
             </div>
@@ -2769,13 +2769,13 @@ export default function AdminUploadPage() {
                         defaultSortOrder: opt.id as any,
                       }))
                     }
-                    className={`p-4 rounded border text-left transition-all ${
+                    className={`p-4 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/10 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-black hover:border-gray-600"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
                     }`}
                   >
-                    <span className="block text-xs font-medium text-white">
+                    <span className="block text-xs font-medium text-foreground">
                       {opt.label}
                     </span>
                     <span className="block text-[11px] text-muted pt-1">
@@ -2789,14 +2789,14 @@ export default function AdminUploadPage() {
 
           {/* Slideshow & Studio Identity */}
           <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
-            <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider border-b border-surface-border pb-3">
+            <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider border-b border-surface-border pb-3">
               <Clock className="w-3.5 h-3.5 text-accent" />
               <span>Slideshow & Studio Identity</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-gray-200">
+                <label className="block text-xs font-medium text-foreground">
                   Slideshow Interval (seconds)
                 </label>
                 <div className="flex items-center space-x-3">
@@ -2821,7 +2821,7 @@ export default function AdminUploadPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-gray-200">
+                <label className="block text-xs font-medium text-foreground">
                   Artist Name
                 </label>
                 <input
@@ -2833,12 +2833,12 @@ export default function AdminUploadPage() {
                       artistName: e.target.value,
                     }))
                   }
-                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-200">
+                <label className="block text-xs font-medium text-foreground">
                   Site Title
                 </label>
                 <input
@@ -2850,12 +2850,12 @@ export default function AdminUploadPage() {
                       siteTitle: e.target.value,
                     }))
                   }
-                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-200">
+                <label className="block text-xs font-medium text-foreground">
                   Site Tagline / Description
                 </label>
                 <input
@@ -2867,7 +2867,7 @@ export default function AdminUploadPage() {
                       siteTagline: e.target.value,
                     }))
                   }
-                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
@@ -2875,7 +2875,7 @@ export default function AdminUploadPage() {
 
           {/* Success Banner */}
           {settingsSuccess && (
-            <div className="p-3 bg-emerald-950/40 border border-emerald-700 rounded text-emerald-300 text-xs flex items-center space-x-2">
+            <div className="p-3 bg-emerald-950/20 border border-emerald-700/50 rounded text-emerald-400 text-xs flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>
                 Settings successfully saved! Theme and sort order applied.
@@ -2888,7 +2888,7 @@ export default function AdminUploadPage() {
             <button
               type="submit"
               disabled={isSavingSettings}
-              className="px-8 py-3.5 bg-accent text-black font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all shadow-lg flex items-center space-x-2 cursor-pointer"
+              className="px-8 py-3.5 bg-accent text-accent-contrast font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all shadow-lg flex items-center space-x-2 cursor-pointer disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               <span>
@@ -2900,7 +2900,7 @@ export default function AdminUploadPage() {
 
         {/* Security & Admin Passphrase Form */}
         <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm mt-8">
-          <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider border-b border-surface-border pb-3">
+          <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider border-b border-surface-border pb-3">
             <Lock className="w-3.5 h-3.5 text-accent" />
             <span>Security & Admin Passphrase</span>
           </div>
@@ -2912,7 +2912,7 @@ export default function AdminUploadPage() {
           <form onSubmit={handleChangePassword} className="space-y-4 pt-1">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-gray-300">
+                <label className="block text-xs font-medium text-foreground">
                   Current Password
                 </label>
                 <input
@@ -2921,12 +2921,12 @@ export default function AdminUploadPage() {
                   value={currentPasswordChange}
                   onChange={(e) => setCurrentPasswordChange(e.target.value)}
                   required
-                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-gray-300">
+                <label className="block text-xs font-medium text-foreground">
                   New Password (min 6 chars)
                 </label>
                 <input
@@ -2936,12 +2936,12 @@ export default function AdminUploadPage() {
                   onChange={(e) => setNewPasswordChange(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-gray-300">
+                <label className="block text-xs font-medium text-foreground">
                   Confirm New Password
                 </label>
                 <input
@@ -2951,7 +2951,7 @@ export default function AdminUploadPage() {
                   onChange={(e) => setConfirmPasswordChange(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
@@ -2961,7 +2961,7 @@ export default function AdminUploadPage() {
             )}
 
             {passwordChangeSuccess && (
-              <div className="p-3 bg-emerald-950/40 border border-emerald-700 rounded text-emerald-300 text-xs flex items-center space-x-2">
+              <div className="p-3 bg-emerald-950/20 border border-emerald-700/50 rounded text-emerald-400 text-xs flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                 <span>{passwordChangeSuccess}</span>
               </div>
@@ -2971,7 +2971,7 @@ export default function AdminUploadPage() {
               <button
                 type="submit"
                 disabled={isUpdatingPassword}
-                className="px-6 py-2.5 bg-black border border-surface-border hover:border-accent text-white font-medium text-xs uppercase tracking-wider rounded transition-colors flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent text-foreground font-medium text-xs uppercase tracking-wider rounded transition-colors flex items-center space-x-2 disabled:opacity-50 cursor-pointer shadow-sm"
               >
                 <Lock className="w-3.5 h-3.5 text-accent" />
                 <span>

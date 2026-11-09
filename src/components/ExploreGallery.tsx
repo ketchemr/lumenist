@@ -164,10 +164,10 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
             {/* Tag Cloud Toggle */}
             <button
               onClick={() => setShowTagCloud(!showTagCloud)}
-              className={`px-3 py-2 rounded-sm border text-xs flex items-center space-x-1.5 transition-colors ${
+              className={`px-3 py-2 rounded-sm border text-xs flex items-center space-x-1.5 transition-colors cursor-pointer ${
                 showTagCloud || selectedTag
-                  ? "bg-accent/15 border-accent text-accent font-medium"
-                  : "bg-black border-surface-border text-gray-300 hover:text-white"
+                  ? "bg-accent/15 border-accent text-accent font-medium shadow-sm"
+                  : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent/40"
               }`}
             >
               <Tag className="w-3.5 h-3.5" />
@@ -178,36 +178,36 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
             </button>
 
             {/* Film / Digital toggle */}
-            <div className="flex items-center space-x-1 border border-surface-border rounded-sm p-1 bg-black text-xs">
+            <div className="flex items-center space-x-1 border border-surface-border rounded-sm p-1 bg-surface text-xs">
               <button
                 onClick={() => handleFilmChange("All")}
-                className={`px-3 py-1.5 rounded-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-sm transition-colors cursor-pointer ${
                   filmFilter === "All"
-                    ? "bg-surface-hover text-white font-medium"
-                    : "text-muted hover:text-gray-200"
+                    ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 All
               </button>
               <button
                 onClick={() => handleFilmChange("Digital")}
-                className={`px-3 py-1.5 rounded-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-sm transition-colors cursor-pointer ${
                   filmFilter === "Digital"
-                    ? "bg-surface-hover text-white font-medium"
-                    : "text-muted hover:text-gray-200"
+                    ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 Digital
               </button>
               <button
                 onClick={() => handleFilmChange("Film")}
-                className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1 ${
+                className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1 cursor-pointer ${
                   filmFilter === "Film"
-                    ? "bg-surface-hover text-amber-300 font-medium"
-                    : "text-muted hover:text-gray-200"
+                    ? "bg-surface-hover text-accent font-medium shadow-sm"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
-                <Film className="w-3 h-3 text-amber-300" />
+                <Film className="w-3 h-3 text-accent" />
                 <span>Film</span>
               </button>
             </div>
@@ -218,10 +218,10 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
           <button
             onClick={() => handleCategoryChange("All")}
-            className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors ${
+            className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors cursor-pointer ${
               selectedCategory === "All"
-                ? "bg-accent/20 border-accent text-accent font-medium"
-                : "bg-black border-surface-border text-gray-400 hover:text-white"
+                ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
+                : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground hover:border-accent/40"
             }`}
           >
             All Categories ({initialPhotos.length})
@@ -233,10 +233,10 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               <button
                 key={cat.name}
                 onClick={() => handleCategoryChange(cat.name)}
-                className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors ${
+                className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors cursor-pointer ${
                   selectedCategory === cat.name
-                    ? "bg-accent/20 border-accent text-accent font-medium"
-                    : "bg-black border-surface-border text-gray-400 hover:text-white"
+                    ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
+                    : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground hover:border-accent/40"
                 }`}
               >
                 {cat.name} ({cat.count})
@@ -250,19 +250,19 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2 text-xs text-muted">
                 <Tag className="w-3.5 h-3.5 text-accent" />
-                <span className="uppercase tracking-wider font-semibold text-gray-300">
+                <span className="uppercase tracking-wider font-semibold text-foreground">
                   Tag Cloud ({popularTags.length} keywords)
                 </span>
                 {selectedTag && (
                   <span className="text-accent">
-                    &bull; Filtered by <strong className="text-white">&ldquo;{selectedTag}&rdquo;</strong>
+                    &bull; Filtered by <strong className="text-foreground">&ldquo;{selectedTag}&rdquo;</strong>
                   </span>
                 )}
               </div>
               {selectedTag && (
                 <button
                   onClick={() => setSelectedTag(null)}
-                  className="text-xs text-accent hover:underline flex items-center space-x-1"
+                  className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
                 >
                   <X className="w-3 h-3" />
                   <span>Clear Tag</span>
@@ -278,16 +278,16 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
                   <button
                     key={tag}
                     onClick={() => handleTagToggle(tag)}
-                    className={`text-xs px-2.5 py-1 rounded border transition-all ${
+                    className={`text-xs px-2.5 py-1 rounded border transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-accent text-black font-semibold border-accent shadow-sm scale-105"
-                        : "bg-black/60 border-surface-border text-gray-300 hover:border-accent hover:text-white"
+                        ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm scale-105"
+                        : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
                     }`}
                   >
                     <span>{tag}</span>
                     <span
                       className={`ml-1.5 text-[10px] ${
-                        isSelected ? "text-neutral-900" : "text-muted"
+                        isSelected ? "text-accent-contrast/80" : "text-muted"
                       }`}
                     >
                       {count}
@@ -301,7 +301,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               <div className="text-right">
                 <button
                   onClick={() => setShowAllTags(!showAllTags)}
-                  className="text-[11px] text-muted hover:text-accent inline-flex items-center space-x-1"
+                  className="text-[11px] text-muted hover:text-accent inline-flex items-center space-x-1 cursor-pointer"
                 >
                   <span>{showAllTags ? "Show fewer tags" : `Show more tags (${popularTags.length} total)`}</span>
                   {showAllTags ? (
@@ -320,7 +320,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <div className="flex items-center space-x-2">
           <span>
-            Showing <strong className="text-white font-medium">{filteredPhotos.length}</strong> photographs
+            Showing <strong className="text-foreground font-medium">{filteredPhotos.length}</strong> photographs
           </span>
           {selectedTag && (
             <span className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]">
@@ -362,12 +362,12 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         </div>
       ) : (
         <div className="text-center py-20 bg-surface border border-surface-border rounded-sm space-y-3">
-          <p className="text-gray-400 text-sm">
+          <p className="text-muted text-sm">
             No photographs found matching your criteria.
           </p>
           <button
             onClick={clearAllFilters}
-            className="text-accent text-xs underline"
+            className="text-accent text-xs underline cursor-pointer"
           >
             Reset all filters
           </button>

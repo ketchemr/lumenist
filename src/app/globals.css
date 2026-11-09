@@ -17,6 +17,7 @@
   --accent-light-rgb: 251 191 36;
   --accent-dark: #d97706;
   --accent-dark-rgb: 217 119 6;
+  --accent-contrast: #000000;
 }
 
 body {
@@ -105,6 +106,50 @@ html.light [data-theater] *,
 html.light .keep-white,
 html.light .keep-white * {
   color: #ffffff !important;
+}
+
+/* Accent contrast utility */
+.text-accent-contrast,
+[class*="text-accent-contrast"] {
+  color: var(--accent-contrast, #ffffff) !important;
+}
+
+/* Light mode button contrast guarantees */
+html.light button.bg-accent,
+html.light button[class*="bg-accent"],
+html.light a.bg-accent,
+html.light a[class*="bg-accent"],
+html.light .btn-primary {
+  color: var(--accent-contrast, #ffffff) !important;
+}
+html.light button.bg-accent *,
+html.light button[class*="bg-accent"] *,
+html.light a.bg-accent *,
+html.light a[class*="bg-accent"] *,
+html.light .btn-primary * {
+  color: var(--accent-contrast, #ffffff) !important;
+}
+
+/* Danger / red buttons always retain white text */
+button[class*="bg-red-"],
+button[class*="bg-red-"] *,
+a[class*="bg-red-"],
+a[class*="bg-red-"] * {
+  color: #ffffff !important;
+}
+
+/* Light-mode fail-safe for any lingering hardcoded dark buttons */
+html.light button.bg-black,
+html.light button[class~="bg-black"],
+html.light a[class~="bg-black"] {
+  background-color: var(--surface, #ffffff);
+  border-color: var(--surface-border, #e2e8f0);
+  color: var(--foreground, #0f172a);
+}
+html.light button.bg-black *,
+html.light button[class~="bg-black"] *,
+html.light a[class~="bg-black"] * {
+  color: var(--foreground, #0f172a);
 }
 
 /* Custom subtle scrollbar */
