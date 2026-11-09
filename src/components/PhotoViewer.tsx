@@ -199,42 +199,14 @@ export function PhotoViewer({
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
-      <div
-        className="group relative flex justify-center items-center bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none"
-        onMouseMove={handleMouseMove}
-      >
+      <div className="flex justify-center items-center bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none">
         <img
           src={photo.imageDesktop}
           alt={photo.title}
           onClick={openWindowFullscreen}
           className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame cursor-zoom-in"
-          title="Click to view full screen within browser"
+          title="Click to view full screen (Shortcut: W, Monitor: F)"
         />
-
-        {/* Normal Mode Floating Action Bar (Top Right) */}
-        <div className="absolute top-4 right-4 flex items-center space-x-2 bg-black/75 backdrop-blur-md border border-surface-border/80 rounded-sm p-1 shadow-lg opacity-90 group-hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            onClick={openWindowFullscreen}
-            className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-surface-hover rounded-sm transition-colors"
-            title="Full screen within browser window (Shortcut: W)"
-          >
-            <Maximize2 className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline">Fit Window</span>
-          </button>
-
-          <span className="text-surface-border">|</span>
-
-          <button
-            type="button"
-            onClick={toggleMonitorFullscreen}
-            className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-surface-hover rounded-sm transition-colors"
-            title="Extend to full monitor screen (Shortcut: F)"
-          >
-            <Expand className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline">Extend to Monitor</span>
-          </button>
-        </div>
       </div>
 
       {/* 2. Fullscreen Theater / Monitor Presentation Overlay */}

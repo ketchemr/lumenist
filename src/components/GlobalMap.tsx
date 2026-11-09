@@ -3,12 +3,26 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import "leaflet/dist/leaflet.css";
 import { Photo } from "@/types/photo";
-import { Layers, ExternalLink } from "lucide-react";
+import {
+  Layers,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  MapPin,
+} from "lucide-react";
 import Link from "next/link";
 
 interface GlobalMapProps {
   photos: Photo[];
   categories: string[];
+}
+
+interface LocationCluster {
+  key: string;
+  latitude: number;
+  longitude: number;
+  photos: Photo[];
 }
 
 type LayerMode = "dark" | "topo" | "satellite";
@@ -56,7 +70,8 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
   const [activeLayer, setActiveLayer] = useState<LayerMode>("dark");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedCluster, setSelectedCluster] = useState<LocationCluster | null>(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0);
 
   // Filter photos with valid coordinates and matching category
   const geotaggedPhotos = useMemo(() => {
@@ -68,6 +83,27 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       );
     });
   }, [photos, selectedCategory]);
+
+  // Group photos into location clusters (~11m precision or exact)
+  const clusters = useMemo(() => {
+    const map = new Map<string, LocationCluster>();
+    for (const photo of geotaggedPhotos) {
+      if (!photo.location?.latitude || !photo.location?.longitude) continue;
+      const key = `${photo.location.latitude.toFixed(4)},${photo.location.longitude.toFixed(4)}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.photos.push(photo);
+      } else {
+        map.set(key, {
+          key,
+          latitude: photo.location.latitude,
+          longitude: photo.location.longitude,
+          photos: [photo],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [geotaggedPhotos]);
 
   // Initialize Map dynamically on client
   useEffect(() => {
@@ -99,7 +135,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       const layerGroup = L.layerGroup().addTo(map);
       markersLayerRef.current = layerGroup;
 
-      renderMarkers(L, map, layerGroup, geotaggedPhotos);
+      renderClusterMarkers(L, map, layerGroup, clusters);
 
       setTimeout(() => {
         if (isMounted && mapInstanceRef.current) {
@@ -137,65 +173,138 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
     tileLayerRef.current = newLayer;
   };
 
-  const renderMarkers = (L: any, map: any, layerGroup: any, photoList: Photo[]) => {
+  const renderClusterMarkers = (
+    L: any,
+    map: any,
+    layerGroup: any,
+    clusterList: LocationCluster[]
+  ) => {
     layerGroup.clearLayers();
-    if (photoList.length === 0) return;
+    if (clusterList.length === 0) return;
 
     const bounds = L.latLngBounds([]);
 
-    const createIcon = () =>
-      L.divIcon({
-        className: "custom-map-pin",
+    // Icon generator: Single Pin vs Multi-Photo Badge
+    const createMarkerIcon = (count: number) => {
+      if (count === 1) {
+        return L.divIcon({
+          className: "custom-map-pin",
+          html: `
+            <div style="
+              width: 22px;
+              height: 22px;
+              background-color: #f59e0b;
+              border: 2px solid #000;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+              cursor: pointer;
+            "></div>
+          `,
+          iconSize: [22, 22],
+          iconAnchor: [11, 22],
+          popupAnchor: [0, -22],
+        });
+      }
+
+      // Multi-photo cluster badge pin
+      return L.divIcon({
+        className: "custom-cluster-badge",
         html: `
           <div style="
-            width: 22px;
-            height: 22px;
+            min-width: 26px;
+            height: 26px;
+            padding: 0 6px;
             background-color: #f59e0b;
+            color: #000;
+            font-weight: 700;
+            font-size: 11px;
             border: 2px solid #000;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            border-radius: 13px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
             cursor: pointer;
-          "></div>
+          ">
+            ${count}
+          </div>
         `,
-        iconSize: [22, 22],
-        iconAnchor: [11, 22],
-        popupAnchor: [0, -22],
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        popupAnchor: [0, -15],
+      });
+    };
+
+    clusterList.forEach((cluster) => {
+      bounds.extend([cluster.latitude, cluster.longitude]);
+
+      const marker = L.marker([cluster.latitude, cluster.longitude], {
+        icon: createMarkerIcon(cluster.photos.length),
       });
 
-    photoList.forEach((photo) => {
-      const lat = photo.location!.latitude;
-      const lon = photo.location!.longitude;
-      bounds.extend([lat, lon]);
-
-      const marker = L.marker([lat, lon], { icon: createIcon() });
-
-      const popupHtml = `
-        <div style="color: #fff; background: #111; padding: 2px; font-family: inherit; width: 200px;">
-          <a href="/photo/${photo.photoID}" style="display: block; text-decoration: none; color: inherit;">
-            <div style="width: 100%; height: 110px; overflow: hidden; border-radius: 2px; margin-bottom: 6px; background: #000;">
-              <img src="/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=400" style="width: 100%; height: 100%; object-fit: cover;" />
+      // Build popup content
+      let popupHtml = "";
+      if (cluster.photos.length === 1) {
+        const photo = cluster.photos[0];
+        popupHtml = `
+          <div style="color: #fff; background: #111; padding: 2px; font-family: inherit; width: 200px;">
+            <a href="/photo/${photo.photoID}" style="display: block; text-decoration: none; color: inherit;">
+              <div style="width: 100%; height: 110px; overflow: hidden; border-radius: 2px; margin-bottom: 6px; background: #000;">
+                <img src="/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=400" style="width: 100%; height: 100%; object-fit: cover;" />
+              </div>
+              <div style="font-weight: 600; font-size: 13px; line-height: 1.2; margin-bottom: 4px; color: #fff;">
+                ${photo.title}
+              </div>
+              <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">
+                ${photo.dateTaken.year}-${String(photo.dateTaken.month).padStart(2, "0")}-${String(photo.dateTaken.day).padStart(2, "0")}
+              </div>
+              <div style="color: #9999ff; font-size: 11px; font-weight: 500;">
+                View Photograph →
+              </div>
+            </a>
+          </div>
+        `;
+      } else {
+        popupHtml = `
+          <div style="color: #fff; background: #111; padding: 4px; font-family: inherit; width: 230px;">
+            <div style="font-weight: 600; font-size: 12px; color: #f59e0b; margin-bottom: 6px;">
+              📍 ${cluster.photos.length} Photographs at this site
             </div>
-            <div style="font-weight: 600; font-size: 13px; line-height: 1.2; margin-bottom: 4px; color: #fff;">
-              ${photo.title}
+            <div style="display: grid; grid-template-columns: repeat(${Math.min(cluster.photos.length, 3)}, 1fr); gap: 4px; margin-bottom: 6px;">
+              ${cluster.photos
+                .slice(0, 3)
+                .map(
+                  (p) => `
+                <a href="/photo/${p.photoID}" style="display: block; height: 52px; border-radius: 2px; overflow: hidden; background: #000; border: 1px solid #333;">
+                  <img src="/api/thumbnail?src=${encodeURIComponent(p.imageDesktop)}&w=150" style="width: 100%; height: 100%; object-fit: cover;" title="${p.title}" />
+                </a>
+              `
+                )
+                .join("")}
             </div>
-            <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">
-              ${photo.dateTaken.year}-${String(photo.dateTaken.month).padStart(2, "0")}-${String(photo.dateTaken.day).padStart(2, "0")}
+            <div style="font-size: 12px; color: #fff; font-weight: 500; truncate;">
+              ${cluster.photos[0].title}
             </div>
-            <div style="color: #9999ff; font-size: 11px; font-weight: 500;">
-              View Photograph →
+            <div style="font-size: 11px; color: #9ca3af;">
+              and ${cluster.photos.length - 1} more in this location
             </div>
-          </a>
-        </div>
-      `;
+            <div style="font-size: 11px; color: #9999ff; margin-top: 6px; font-weight: 500;">
+              Click pin to browse collection below ↓
+            </div>
+          </div>
+        `;
+      }
 
       marker.bindPopup(popupHtml, {
         className: "dark-map-popup",
-        maxWidth: 220,
+        maxWidth: 250,
       });
 
       marker.on("click", () => {
-        setSelectedPhoto(photo);
+        setSelectedCluster(cluster);
+        setActivePhotoIndex(0);
       });
 
       layerGroup.addLayer(marker);
@@ -206,15 +315,15 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
     }
   };
 
-  // Re-render markers when filter changes
+  // Re-render markers when filtered clusters change
   useEffect(() => {
     const L = leafletLibRef.current;
     const map = mapInstanceRef.current;
     const layerGroup = markersLayerRef.current;
     if (L && map && layerGroup) {
-      renderMarkers(L, map, layerGroup, geotaggedPhotos);
+      renderClusterMarkers(L, map, layerGroup, clusters);
     }
-  }, [geotaggedPhotos]);
+  }, [clusters]);
 
   return (
     <div className="space-y-4">
@@ -227,7 +336,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
         <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto">
           <button
-            onClick={() => setSelectedCategory("All")}
+            onClick={() => {
+              setSelectedCategory("All");
+              setSelectedCluster(null);
+            }}
             className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
               selectedCategory === "All"
                 ? "bg-accent text-black font-semibold"
@@ -246,7 +358,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
             return (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setSelectedCluster(null);
+                }}
                 className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
                   selectedCategory === cat
                     ? "bg-accent text-black font-semibold"
@@ -304,37 +419,147 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
         <div ref={mapContainerRef} className="w-full h-full" />
 
-        {/* Selected Photo Floating Card */}
-        {selectedPhoto && (
-          <div className="absolute bottom-4 left-4 z-[1000] bg-black/90 backdrop-blur border border-surface-border rounded-sm p-3 max-w-sm flex items-center space-x-3 shadow-2xl">
-            <img
-              src={`/api/thumbnail?src=${encodeURIComponent(selectedPhoto.imageDesktop)}&w=200`}
-              alt={selectedPhoto.title}
-              className="w-16 h-16 object-cover rounded-sm border border-surface-border flex-shrink-0"
-            />
-            <div className="min-w-0 space-y-1">
-              <h4 className="text-sm font-medium text-white truncate">
-                {selectedPhoto.title}
-              </h4>
-              <p className="text-xs text-muted">
-                {selectedPhoto.dateTaken.year}-{String(selectedPhoto.dateTaken.month).padStart(2, "0")}-{String(selectedPhoto.dateTaken.day).padStart(2, "0")} · {selectedPhoto.camera}
-              </p>
-              <div className="flex items-center space-x-3 pt-0.5 text-xs">
-                <Link
-                  href={`/photo/${selectedPhoto.photoID}`}
-                  className="text-accent hover:underline flex items-center space-x-1"
-                >
-                  <span>Exhibition View</span>
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
+        {/* Selected Location / Multi-Photo Showcase Card */}
+        {selectedCluster && (
+          <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-xl z-[1000] bg-black/95 backdrop-blur-md border border-surface-border rounded-sm p-4 shadow-2xl space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
+              <div className="flex items-center space-x-2 text-xs">
+                <MapPin className="w-3.5 h-3.5 text-accent" />
+                <span className="font-semibold text-white">
+                  {selectedCluster.photos.length === 1
+                    ? "Site Photograph"
+                    : `Site Collection (${selectedCluster.photos.length} Photographs)`}
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-3 text-xs">
+                {selectedCluster.photos.length > 1 && (
+                  <div className="flex items-center space-x-1.5 text-gray-400 font-mono text-[11px]">
+                    <span>
+                      {activePhotoIndex + 1} of {selectedCluster.photos.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActivePhotoIndex(
+                          (prev) =>
+                            (prev - 1 + selectedCluster.photos.length) %
+                            selectedCluster.photos.length
+                        )
+                      }
+                      className="p-1 hover:bg-surface rounded text-white transition-colors cursor-pointer"
+                      title="Previous photo at this site"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActivePhotoIndex(
+                          (prev) => (prev + 1) % selectedCluster.photos.length
+                        )
+                      }
+                      className="p-1 hover:bg-surface rounded text-white transition-colors cursor-pointer"
+                      title="Next photo at this site"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 <button
-                  onClick={() => setSelectedPhoto(null)}
-                  className="text-muted hover:text-gray-200"
+                  onClick={() => setSelectedCluster(null)}
+                  className="text-muted hover:text-gray-200 p-0.5 cursor-pointer"
+                  title="Close panel"
                 >
-                  Close
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
+            {/* Currently Active Photo at This Site */}
+            {(() => {
+              const currentPhoto =
+                selectedCluster.photos[activePhotoIndex] ||
+                selectedCluster.photos[0];
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3.5">
+                    <Link
+                      href={`/photo/${currentPhoto.photoID}`}
+                      className="group block flex-shrink-0 relative overflow-hidden rounded-sm border border-surface-border hover:border-accent transition-colors"
+                    >
+                      <img
+                        src={`/api/thumbnail?src=${encodeURIComponent(
+                          currentPhoto.imageDesktop
+                        )}&w=300`}
+                        alt={currentPhoto.title}
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </Link>
+
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h4 className="text-sm font-medium text-white truncate">
+                        {currentPhoto.title}
+                      </h4>
+                      <p className="text-xs text-muted font-mono">
+                        {currentPhoto.dateTaken.year}-
+                        {String(currentPhoto.dateTaken.month).padStart(2, "0")}-
+                        {String(currentPhoto.dateTaken.day).padStart(2, "0")} ·{" "}
+                        {currentPhoto.camera}
+                      </p>
+                      {currentPhoto.description && (
+                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                          {currentPhoto.description}
+                        </p>
+                      )}
+                      <div className="pt-1">
+                        <Link
+                          href={`/photo/${currentPhoto.photoID}`}
+                          className="inline-flex items-center space-x-1.5 text-xs text-accent hover:underline font-medium"
+                        >
+                          <span>Exhibition View</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Thumbnail ribbon for multi-photo sites */}
+                  {selectedCluster.photos.length > 1 && (
+                    <div className="pt-2 border-t border-surface-border/40">
+                      <div className="text-[11px] text-gray-400 mb-1.5 font-medium">
+                        All photos at this location ({selectedCluster.photos.length}):
+                      </div>
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+                        {selectedCluster.photos.map((p, idx) => (
+                          <button
+                            key={p.photoID}
+                            type="button"
+                            onClick={() => setActivePhotoIndex(idx)}
+                            className={`relative flex-shrink-0 w-12 h-12 rounded-sm overflow-hidden border transition-all cursor-pointer ${
+                              idx === activePhotoIndex
+                                ? "border-accent ring-2 ring-accent/60 scale-105"
+                                : "border-surface-border opacity-70 hover:opacity-100"
+                            }`}
+                            title={p.title}
+                          >
+                            <img
+                              src={`/api/thumbnail?src=${encodeURIComponent(
+                                p.imageDesktop
+                              )}&w=150`}
+                              alt={p.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
