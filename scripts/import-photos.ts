@@ -64,17 +64,26 @@ async function main() {
     console.log(`  📁 ${sub}: imported ${countInFolder} photos`);
   }
 
-  // Sort photos newest first by year/month/day
+  // Sort photos down to the second (YYYYMMDDHHMMSS) newest first, tie-breaking by photoID
   photos.sort((a, b) => {
     const timeA =
-      (a.dateTaken.year || 0) * 10000 +
-      (a.dateTaken.month || 0) * 100 +
-      (a.dateTaken.day || 0);
+      String(a.dateTaken.year || 0).padStart(4, "0") +
+      String(a.dateTaken.month || 0).padStart(2, "0") +
+      String(a.dateTaken.day || 0).padStart(2, "0") +
+      String(a.dateTaken.hour || 0).padStart(2, "0") +
+      String(a.dateTaken.minute || 0).padStart(2, "0") +
+      String(a.dateTaken.second || 0).padStart(2, "0");
+
     const timeB =
-      (b.dateTaken.year || 0) * 10000 +
-      (b.dateTaken.month || 0) * 100 +
-      (b.dateTaken.day || 0);
-    return timeB - timeA;
+      String(b.dateTaken.year || 0).padStart(4, "0") +
+      String(b.dateTaken.month || 0).padStart(2, "0") +
+      String(b.dateTaken.day || 0).padStart(2, "0") +
+      String(b.dateTaken.hour || 0).padStart(2, "0") +
+      String(b.dateTaken.minute || 0).padStart(2, "0") +
+      String(b.dateTaken.second || 0).padStart(2, "0");
+
+    if (timeA !== timeB) return timeB.localeCompare(timeA);
+    return b.photoID.localeCompare(a.photoID);
   });
 
   // Ensure output directory exists
