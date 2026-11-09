@@ -25,6 +25,10 @@ import {
   Plus,
   X,
   History,
+  Trash2,
+  Search,
+  Image as ImageIcon,
+  AlertTriangle,
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -46,7 +50,20 @@ export default function AdminUploadPage() {
   const router = useRouter();
 
   // Navigation tab
-  const [activeTab, setActiveTab] = useState<"upload" | "settings">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "manage" | "settings">(
+    "upload"
+  );
+
+  // Manage / Delete Photos state
+  const [catalogPhotos, setCatalogPhotos] = useState<any[]>([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState("");
 
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -140,6 +157,61 @@ export default function AdminUploadPage() {
       }
     } catch {}
   }, []);
+
+  const loadCatalog = async (q = "") => {
+    setIsLoadingCatalog(true);
+    try {
+      const res = await fetch(
+        `/api/admin/photos?q=${encodeURIComponent(q)}&limit=100`
+      );
+      const data = await res.json();
+      if (data.photos) {
+        setCatalogPhotos(data.photos);
+      }
+    } catch {
+      console.warn("Failed to load catalog");
+    } finally {
+      setIsLoadingCatalog(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "manage" && isAuthenticated) {
+      loadCatalog(catalogSearch);
+    }
+  }, [activeTab, isAuthenticated]);
+
+  const handleDeletePhoto = async () => {
+    if (!confirmDelete) return;
+    setIsDeletingPhoto(true);
+
+    try {
+      const res = await fetch(
+        `/api/admin/photo/${encodeURIComponent(confirmDelete.id)}`,
+        {
+          method: "DELETE",
+        }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to delete photograph");
+      }
+
+      setCatalogPhotos((prev) =>
+        prev.filter((p) => p.photoID !== confirmDelete.id)
+      );
+      setDeleteSuccessMsg(
+        `Deleted "${confirmDelete.title}" (${confirmDelete.id}) and all associated files.`
+      );
+      setTimeout(() => setDeleteSuccessMsg(""), 4500);
+      setConfirmDelete(null);
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete photo");
+    } finally {
+      setIsDeletingPhoto(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -538,13 +610,19 @@ export default function AdminUploadPage() {
               { label: "Admin", href: "/admin/upload" },
               {
                 label:
-                  activeTab === "upload" ? "Upload Photo" : "Site Settings",
+                  activeTab === "upload"
+                    ? "Upload Photo"
+                    : activeTab === "manage"
+                    ? "Manage Catalog"
+                    : "Site Settings",
               },
             ]}
           />
           <h1 className="text-2xl sm:text-3xl font-light text-white tracking-tight mt-1">
             {activeTab === "upload"
               ? "Publish Fine Art Photograph"
+              : activeTab === "manage"
+              ? "Manage & Delete Photographs"
               : "Studio & Site Settings"}
           </h1>
         </div>
@@ -562,6 +640,17 @@ export default function AdminUploadPage() {
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Upload</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("manage")}
+              className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
+                activeTab === "manage"
+                  ? "bg-surface-hover text-white font-medium"
+                  : "text-muted hover:text-gray-200"
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Manage ({catalogPhotos.length > 0 ? catalogPhotos.length : "Catalog"})</span>
             </button>
             <button
               onClick={() => setActiveTab("settings")}
@@ -1126,7 +1215,175 @@ export default function AdminUploadPage() {
         </>
       )}
 
-      {/* TAB 2: SITE & THEME SETTINGS */}
+      {/* TAB 2: MANAGE & DELETE CATALOG */}
+      {activeTab === "manage" && (
+        <div className="space-y-6">
+          {/* Notification banner */}
+          {deleteSuccessMsg && (
+            <div className="p-4 bg-emerald-950/40 border border-emerald-700 rounded text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <span>{deleteSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* Search bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-surface border border-surface-border p-4 rounded-sm">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search catalog by title, photo ID (e.g. test, d2026...), or year..."
+                value={catalogSearch}
+                onChange={(e) => {
+                  setCatalogSearch(e.target.value);
+                  loadCatalog(e.target.value);
+                }}
+                className="w-full pl-10 pr-4 py-2 bg-black border border-surface-border rounded-sm text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div className="text-xs text-muted">
+              Showing <strong className="text-white font-medium">{catalogPhotos.length}</strong> photographs
+            </div>
+          </div>
+
+          {/* Loading indicator */}
+          {isLoadingCatalog ? (
+            <div className="py-16 text-center text-xs text-muted font-mono">
+              Loading photograph catalog...
+            </div>
+          ) : catalogPhotos.length > 0 ? (
+            <div className="bg-surface border border-surface-border rounded-sm overflow-hidden divide-y divide-surface-border">
+              {catalogPhotos.map((item) => (
+                <div
+                  key={item.photoID}
+                  className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-black/40 transition-colors"
+                >
+                  <div className="flex items-center space-x-4 min-w-0">
+                    <div className="w-16 h-12 bg-black rounded overflow-hidden flex-shrink-0 border border-surface-border">
+                      <img
+                        src={`/api/thumbnail?src=${encodeURIComponent(item.imageDesktop)}&w=120`}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      <h4 className="text-sm font-medium text-white truncate">
+                        {item.title}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                        <code className="text-accent font-mono text-[11px]">
+                          {item.photoID}
+                        </code>
+                        <span>&bull;</span>
+                        <span>
+                          {item.dateTaken?.year}-{String(item.dateTaken?.month || 1).padStart(2, "0")}-{String(item.dateTaken?.day || 1).padStart(2, "0")}
+                        </span>
+                        {item.categories && item.categories.length > 0 && (
+                          <>
+                            <span>&bull;</span>
+                            <span className="truncate max-w-[200px] text-gray-400">
+                              {item.categories.join(", ")}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 self-end sm:self-center flex-shrink-0">
+                    <Link
+                      href={`/photo/${encodeURIComponent(item.photoID)}`}
+                      target="_blank"
+                      className="px-3 py-1.5 bg-black border border-surface-border text-gray-300 hover:text-white rounded text-xs transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>View</span>
+                      <ExternalLink className="w-3 h-3 text-muted" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirmDelete({ id: item.photoID, title: item.title })
+                      }
+                      className="px-3 py-1.5 bg-red-950/20 border border-red-900/40 text-red-400 hover:bg-red-900/30 hover:border-red-600 rounded text-xs transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-surface border border-surface-border rounded-sm space-y-2">
+              <p className="text-gray-400 text-xs">No photographs found matching your search.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setCatalogSearch("");
+                  loadCatalog("");
+                }}
+                className="text-accent text-xs underline"
+              >
+                Clear search filter
+              </button>
+            </div>
+          )}
+
+          {/* Confirmation Modal */}
+          {confirmDelete && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface border border-surface-border rounded-sm max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 rounded-full bg-red-950/40 border border-red-800 text-red-400 flex-shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-medium text-white">
+                      Permanently Delete Photograph?
+                    </h3>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Are you sure you want to delete <strong className="text-white">&ldquo;{confirmDelete.title}&rdquo;</strong> (ID: <code className="text-accent font-mono">{confirmDelete.id}</code>)?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-black/60 border border-surface-border rounded p-3 text-xs text-gray-400 space-y-1">
+                  <p className="text-red-300 font-medium text-[11px] uppercase tracking-wider">
+                    This action will permanently delete:
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px] text-gray-400 pl-1">
+                    <li>Desktop web JPEG and original fullsize file from disk</li>
+                    <li>Companion <code>.txt</code> metadata record</li>
+                    <li>Catalog entry in <code>data/photos.json</code></li>
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(null)}
+                    disabled={isDeletingPhoto}
+                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeletePhoto}
+                    disabled={isDeletingPhoto}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isDeletingPhoto ? "Deleting..." : "Permanently Delete"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: SITE & THEME SETTINGS */}
       {activeTab === "settings" && (
         <form onSubmit={handleSaveSettings} className="space-y-8">
           {/* Theme Palette & Accent Colors */}

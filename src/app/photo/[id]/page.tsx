@@ -5,6 +5,7 @@ import { TechnicalDetails } from "@/components/TechnicalDetails";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BackButton } from "@/components/BackButton";
 import { PhotoViewer } from "@/components/PhotoViewer";
+import { AdminPhotoControls } from "@/components/AdminPhotoControls";
 import { ChevronLeft, ChevronRight, Tag, Folder } from "lucide-react";
 
 interface PhotoPageProps {
@@ -82,6 +83,8 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
               <ChevronRight className="w-4 h-4" />
             </span>
           )}
+
+          <AdminPhotoControls photoID={photo.photoID} title={photo.title} />
         </div>
       </div>
 
