@@ -12,7 +12,7 @@
     "import:test": "tsx scripts/test-parser.ts",
     "import:all": "tsx scripts/import-photos.ts",
     "thumbnails:precache": "node scripts/precache-thumbnails.js",
-    "sync:oci": "rsync -avz --progress --exclude '.DS_Store' \"/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com/photos/\" personal-web:/var/www/rrkphoto.com/photos/"
+    "sync:remote": "rsync -avz --progress --exclude '.DS_Store' \"${LOCAL_PHOTO_DIR:-public/photos/}\" \"${REMOTE_PHOTO_TARGET:-server:/var/www/photos/}\""
   },
   "dependencies": {
     "@types/leaflet": "^1.9.22",

@@ -5,7 +5,9 @@ import { Photo } from "../src/types/photo";
 import exifr from "exifr";
 
 const DEFAULT_SOURCE_DIR =
-  "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com/photos";
+  process.env.PHOTOS_SOURCE_DIR ||
+  process.env.LOCAL_PHOTO_DIR ||
+  path.join(process.cwd(), "public", "photos");
 
 function cleanCameraName(make?: string, model?: string): string {
   if (!model && !make) return "Unknown Camera";

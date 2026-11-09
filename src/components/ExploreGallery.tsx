@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { Pagination } from "@/components/Pagination";
@@ -12,14 +13,50 @@ interface ExploreGalleryProps {
 }
 
 export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const urlTag = searchParams.get("tag") || null;
+  const urlQuery = searchParams.get("q") || "";
+  const urlCategory = searchParams.get("category") || "All";
+
+  const [searchQuery, setSearchQuery] = useState(urlQuery);
+  const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory);
+  const [selectedTag, setSelectedTag] = useState<string | null>(urlTag);
   const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">("All");
-  const [showTagCloud, setShowTagCloud] = useState(false);
+  const [showTagCloud, setShowTagCloud] = useState(Boolean(urlTag));
   const [showAllTags, setShowAllTags] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 48;
+
+  // Sync state when URL params change (e.g. from clicking photo tags or browser back/forward)
+  useEffect(() => {
+    const currentTag = searchParams.get("tag") || null;
+    const currentQ = searchParams.get("q") || "";
+    const currentCat = searchParams.get("category") || "All";
+
+    setSelectedTag(currentTag);
+    if (currentTag) {
+      setShowTagCloud(true);
+    }
+    setSearchQuery(currentQ);
+    setSelectedCategory(currentCat);
+    setCurrentPage(1);
+  }, [searchParams]);
+
+  const updateUrlParams = useCallback(
+    (tag: string | null, q: string, cat: string) => {
+      const params = new URLSearchParams();
+      if (tag) params.set("tag", tag);
+      if (q.trim()) params.set("q", q.trim());
+      if (cat && cat !== "All") params.set("category", cat);
+
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router]
+  );
 
   // Compute tag frequencies across all photos, focusing on meaningful keywords
   const popularTags = useMemo(() => {
@@ -107,20 +144,27 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setCurrentPage(1);
+    updateUrlParams(selectedTag, val, selectedCategory);
   };
 
   const handleCategoryChange = (val: string) => {
     setSelectedCategory(val);
     setCurrentPage(1);
+    updateUrlParams(selectedTag, searchQuery, val);
   };
 
   const handleTagToggle = (tag: string) => {
-    if (selectedTag?.toLowerCase() === tag.toLowerCase()) {
-      setSelectedTag(null);
-    } else {
-      setSelectedTag(tag);
-    }
+    const nextTag =
+      selectedTag?.toLowerCase() === tag.toLowerCase() ? null : tag;
+    setSelectedTag(nextTag);
     setCurrentPage(1);
+    updateUrlParams(nextTag, searchQuery, selectedCategory);
+  };
+
+  const handleClearTag = () => {
+    setSelectedTag(null);
+    setCurrentPage(1);
+    updateUrlParams(null, searchQuery, selectedCategory);
   };
 
   const handleFilmChange = (val: "All" | "Film" | "Digital") => {
@@ -134,6 +178,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
     setSelectedTag(null);
     setFilmFilter("All");
     setCurrentPage(1);
+    router.replace(pathname, { scroll: false });
   };
 
   const hasActiveFilters =
@@ -261,7 +306,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               </div>
               {selectedTag && (
                 <button
-                  onClick={() => setSelectedTag(null)}
+                  onClick={handleClearTag}
                   className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
                 >
                   <X className="w-3 h-3" />
@@ -327,8 +372,9 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               <Tag className="w-3 h-3" />
               <span>{selectedTag}</span>
               <button
-                onClick={() => setSelectedTag(null)}
-                className="hover:text-white"
+                onClick={handleClearTag}
+                className="hover:text-white cursor-pointer"
+                title="Remove tag filter"
               >
                 <X className="w-3 h-3" />
               </button>

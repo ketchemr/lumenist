@@ -29,6 +29,7 @@ data/
 .thumbnails/
 public/thumbnails/
 public/uploads/
+public/photos
 storage/
 
 # Logs

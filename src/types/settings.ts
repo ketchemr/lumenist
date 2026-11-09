@@ -11,6 +11,15 @@ export interface SiteSettings {
   siteTitle: string;
   siteTagline: string;
   artistName: string;
+  aboutTitle?: string;
+  aboutSubheading?: string;
+  artistBio?: string;
+  contactEmail?: string;
+  instagramHandle?: string;
+  instagramUrl?: string;
+  gearList?: string[];
+  supportGearList?: string[];
+  copyrightText?: string;
 }
 
 export const THEME_PRESETS = [
@@ -146,9 +155,18 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   themeTextMode: "auto",
   defaultSortOrder: "date-desc",
   slideshowInterval: 10,
-  siteTitle: "Randal R. Ketchem Photography",
-  siteTagline: "Fine Art Landscape, Nature, and Pacific Northwest Photography",
-  artistName: "Randal R. Ketchem",
+  siteTitle: "Fine Art Photography",
+  siteTagline: "Landscape, Nature, and Fine Art Photography",
+  artistName: "Photographer",
+  aboutTitle: "About the Artist",
+  aboutSubheading: "Landscape and Nature Photography",
+  artistBio: "Welcome to my photography portfolio. This exhibition showcases fine art photography exploring the quiet grandeur, intricate details, and atmospheric light of the natural world.\n\nThank you for visiting. Please explore the galleries, and check back regularly as new photographic work and collections are added.",
+  contactEmail: "",
+  instagramHandle: "",
+  instagramUrl: "",
+  gearList: [],
+  supportGearList: [],
+  copyrightText: "",
 };
 
 export function isLightBackground(hex?: string): boolean {

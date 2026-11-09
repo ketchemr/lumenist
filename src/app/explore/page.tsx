@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getAllPhotos, getAllCategories } from "@/lib/photos";
 import { ExploreGallery } from "@/components/ExploreGallery";
 
@@ -16,7 +17,15 @@ export default function ExplorePage() {
         </p>
       </div>
 
-      <ExploreGallery initialPhotos={photos} categories={categories} />
+      <Suspense
+        fallback={
+          <div className="py-12 text-center text-sm text-muted">
+            Loading archive...
+          </div>
+        }
+      >
+        <ExploreGallery initialPhotos={photos} categories={categories} />
+      </Suspense>
     </div>
   );
 }

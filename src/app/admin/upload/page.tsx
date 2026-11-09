@@ -145,6 +145,8 @@ export default function AdminUploadPage() {
 
   // Settings states
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [gearText, setGearText] = useState("");
+  const [supportGearText, setSupportGearText] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
@@ -182,6 +184,8 @@ export default function AdminUploadPage() {
       .then((res) => res.json())
       .then((data: SiteSettings) => {
         setSettings(data);
+        setGearText((data.gearList || []).join("\n"));
+        setSupportGearText((data.supportGearList || []).join("\n"));
       })
       .catch(() => {});
 
@@ -686,10 +690,15 @@ export default function AdminUploadPage() {
     setSettingsSuccess(false);
 
     try {
+      const payload: SiteSettings = {
+        ...settings,
+        gearList: gearText.split("\n").map((s) => s.trim()).filter(Boolean),
+        supportGearList: supportGearText.split("\n").map((s) => s.trim()).filter(Boolean),
+      };
       const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -2869,6 +2878,167 @@ export default function AdminUploadPage() {
                   }
                   className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  About Page Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. About the Artist or About Me"
+                  value={settings.aboutTitle || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      aboutTitle: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  About Subheading / Specialty
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Landscape and Nature Photography"
+                  value={settings.aboutSubheading || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      aboutSubheading: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  Contact / Inquiry Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g. contact@example.com"
+                  value={settings.contactEmail || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      contactEmail: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  Instagram Handle
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. @artistphoto"
+                  value={settings.instagramHandle || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      instagramHandle: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-xs font-medium text-foreground">
+                  Instagram URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="e.g. https://www.instagram.com/artistphoto/"
+                  value={settings.instagramUrl || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      instagramUrl: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-xs font-medium text-foreground">
+                  Custom Copyright Notice
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. © 2003–{year} Artist Name. All rights reserved."
+                  value={settings.copyrightText || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      copyrightText: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+                <p className="text-[11px] text-muted">
+                  Supports the <code className="text-accent">&#123;year&#125;</code> placeholder for current dynamic year.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-xs font-medium text-foreground">
+                  Artist Biography / Narrative
+                </label>
+                <textarea
+                  rows={6}
+                  placeholder="Enter your artist story and background. Blank lines separate paragraphs."
+                  value={settings.artistBio || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      artistBio: e.target.value,
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  Camera Bodies & Lenses
+                </label>
+                <textarea
+                  rows={5}
+                  placeholder="One equipment item per line..."
+                  value={gearText}
+                  onChange={(e) => setGearText(e.target.value)}
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent font-mono text-[11px]"
+                />
+                <p className="text-[11px] text-muted">
+                  One body, lens, or optic per line.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  Tripods & Support Gear
+                </label>
+                <textarea
+                  rows={5}
+                  placeholder="One support equipment item per line..."
+                  value={supportGearText}
+                  onChange={(e) => setSupportGearText(e.target.value)}
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent font-mono text-[11px]"
+                />
+                <p className="text-[11px] text-muted">
+                  One tripod, head, or support accessory per line.
+                </p>
               </div>
             </div>
           </div>

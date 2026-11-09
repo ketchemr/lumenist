@@ -24,9 +24,11 @@ function resolvePhotoPath(src) {
   let fullPath = path.join(ROOT_DIR, "public", cleanSrc);
 
   if (!fs.existsSync(fullPath)) {
-    const gdriveDir =
-      "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com";
-    fullPath = path.join(gdriveDir, cleanSrc);
+    const externalDir =
+      process.env.LOCAL_PHOTO_DIR || process.env.PHOTOS_SOURCE_DIR;
+    if (externalDir) {
+      fullPath = path.join(externalDir, cleanSrc);
+    }
   }
 
   if (fs.existsSync(fullPath)) {

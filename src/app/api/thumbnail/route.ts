@@ -23,11 +23,13 @@ export async function GET(request: NextRequest) {
   let cleanSrc = decodeURIComponent(src).replace(/^\/+/, "");
   let fullPath = path.join(process.cwd(), "public", cleanSrc);
 
-  // If symlink or path doesn't exist in public, check Google Drive source dir directly
+  // If symlink or path doesn't exist in public, check configured external photo dir directly
   if (!fs.existsSync(fullPath)) {
-    const gdriveDir =
-      "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com";
-    fullPath = path.join(gdriveDir, cleanSrc);
+    const externalDir =
+      process.env.LOCAL_PHOTO_DIR || process.env.PHOTOS_SOURCE_DIR;
+    if (externalDir) {
+      fullPath = path.join(externalDir, cleanSrc);
+    }
   }
 
   if (!fs.existsSync(fullPath)) {

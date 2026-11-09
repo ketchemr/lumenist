@@ -121,13 +121,15 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
           ))}
 
           {photo.keywords.map((kw) => (
-            <span
+            <Link
               key={kw}
-              className="inline-flex items-center space-x-1 text-xs text-gray-400 bg-surface/50 border border-surface-border/50 px-2 py-0.5 rounded"
+              href={`/explore?tag=${encodeURIComponent(kw)}`}
+              className="inline-flex items-center space-x-1 text-xs text-gray-400 hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
+              title={`Explore other photographs tagged "${kw}"`}
             >
-              <Tag className="w-2.5 h-2.5 text-gray-500" />
+              <Tag className="w-2.5 h-2.5 text-gray-500 group-hover:text-accent transition-colors" />
               <span>{kw}</span>
-            </span>
+            </Link>
           ))}
         </div>
       </div>

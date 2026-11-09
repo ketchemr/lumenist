@@ -9,13 +9,14 @@ interface FooterProps {
 export function Footer({ settings }: FooterProps) {
   const currentYear = new Date().getFullYear();
   const artistName = settings?.artistName || siteConfig.artistName;
+  const copyrightText = settings?.copyrightText
+    ? settings.copyrightText.replace(/{year}/g, String(currentYear))
+    : `© ${currentYear} ${artistName}. All rights reserved.`;
 
   return (
     <footer className="border-t border-surface-border bg-background mt-20 py-12 text-center text-xs text-muted">
       <div className="max-w-7xl mx-auto px-4 space-y-3">
-        <p className="tracking-wide">
-          &copy; 2003–{currentYear} {artistName}. All rights reserved.
-        </p>
+        <p className="tracking-wide">{copyrightText}</p>
         <p className="text-[11px] text-gray-500">
           All photographs on this site are protected by United States and international copyright laws.
           Unauthorized use or reproduction without express written consent is prohibited.
