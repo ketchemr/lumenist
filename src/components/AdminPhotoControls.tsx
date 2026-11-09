@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, AlertTriangle, X, CheckCircle2 } from "lucide-react";
+import { Trash2, AlertTriangle, X, CheckCircle2, Sliders } from "lucide-react";
+import { EditPhotoModal } from "@/components/EditPhotoModal";
 
 interface AdminPhotoControlsProps {
   photoID: string;
@@ -12,6 +13,7 @@ interface AdminPhotoControlsProps {
 export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -57,6 +59,17 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
     <>
       <div className="flex items-center space-x-2">
         <button
+          type="button"
+          onClick={() => setShowEditModal(true)}
+          className="inline-flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-medium text-accent bg-accent/10 border border-accent/40 hover:bg-accent/20 hover:border-accent transition-colors cursor-pointer"
+          title="Edit photograph details, coordinates, or replace image file"
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Edit Photo</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setShowConfirm(true)}
           className="inline-flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-medium text-red-400 bg-red-950/20 border border-red-900/40 hover:bg-red-900/30 hover:border-red-600 transition-colors cursor-pointer"
           title="Delete photograph from catalog and disk"
@@ -65,6 +78,16 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
           <span>Delete Photo</span>
         </button>
       </div>
+
+      {/* Edit Photo Modal */}
+      <EditPhotoModal
+        photoID={photoID}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSaved={() => {
+          router.refresh();
+        }}
+      />
 
       {/* Confirmation Modal */}
       {showConfirm && (
@@ -104,7 +127,7 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
                 type="button"
                 onClick={() => setShowConfirm(false)}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground transition-colors cursor-pointer"
+                className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground text-xs rounded transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -112,7 +135,7 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow-md transition-colors flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{isDeleting ? "Deleting..." : "Permanently Delete"}</span>

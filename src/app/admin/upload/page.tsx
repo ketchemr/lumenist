@@ -40,6 +40,7 @@ import {
   Compass,
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
+import { EditPhotoModal } from "@/components/EditPhotoModal";
 import {
   parseCoordinates,
   isValidLatitude,
@@ -106,6 +107,7 @@ export default function AdminUploadPage() {
   } | null>(null);
   const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState("");
+  const [editingPhotoID, setEditingPhotoID] = useState<string | null>(null);
 
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -2179,6 +2181,15 @@ export default function AdminUploadPage() {
                       </Link>
                       <button
                         type="button"
+                        onClick={() => setEditingPhotoID(item.photoID)}
+                        className="px-3 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-accent hover:border-accent rounded text-xs transition-colors inline-flex items-center space-x-1 cursor-pointer"
+                        title="Edit photograph details, coordinates, or replace image"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() =>
                           setConfirmDelete({
                             id: item.photoID,
@@ -2725,6 +2736,18 @@ export default function AdminUploadPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* EDIT PHOTO MODAL */}
+          {editingPhotoID && (
+            <EditPhotoModal
+              photoID={editingPhotoID}
+              isOpen={!!editingPhotoID}
+              onClose={() => setEditingPhotoID(null)}
+              onSaved={() => {
+                loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
+              }}
+            />
           )}
         </div>
       )}
