@@ -109,18 +109,37 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Location coordinates (form overrides EXIF)
+    // Location coordinates (form input overrides EXIF, explicit empty/false disables location)
     let latitude: number | null = null;
     let longitude: number | null = null;
-    const formLat = parseFloat(formData.get("latitude") as string);
-    const formLon = parseFloat(formData.get("longitude") as string);
+    const hasLocation = formData.get("hasLocation");
+    const rawLat = formData.get("latitude") as string | null;
+    const rawLon = formData.get("longitude") as string | null;
 
-    if (!isNaN(formLat) && !isNaN(formLon)) {
-      latitude = formLat;
-      longitude = formLon;
-    } else if (exifData.latitude !== undefined && exifData.longitude !== undefined) {
-      latitude = exifData.latitude;
-      longitude = exifData.longitude;
+    if (hasLocation === "false" || rawLat === "") {
+      latitude = null;
+      longitude = null;
+    } else {
+      const formLat = rawLat ? parseFloat(rawLat) : NaN;
+      const formLon = rawLon ? parseFloat(rawLon) : NaN;
+
+      if (
+        !isNaN(formLat) &&
+        !isNaN(formLon) &&
+        formLat >= -90 &&
+        formLat <= 90 &&
+        formLon >= -180 &&
+        formLon <= 180
+      ) {
+        latitude = parseFloat(formLat.toFixed(6));
+        longitude = parseFloat(formLon.toFixed(6));
+      } else if (
+        exifData.latitude !== undefined &&
+        exifData.longitude !== undefined
+      ) {
+        latitude = parseFloat(exifData.latitude.toFixed(6));
+        longitude = parseFloat(exifData.longitude.toFixed(6));
+      }
     }
 
     // Categories and Tags

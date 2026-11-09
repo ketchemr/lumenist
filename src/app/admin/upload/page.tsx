@@ -37,8 +37,15 @@ import {
   MinusSquare,
   FolderPlus,
   Filter,
+  Compass,
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
+import {
+  parseCoordinates,
+  isValidLatitude,
+  isValidLongitude,
+  formatDMS,
+} from "@/lib/coordinates";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
   THEME_PRESETS,
@@ -129,6 +136,11 @@ export default function AdminUploadPage() {
   const [captureDate, setCaptureDate] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [latInput, setLatInput] = useState<string>("");
+  const [lonInput, setLonInput] = useState<string>("");
+  const [quickCoordInput, setQuickCoordInput] = useState<string>("");
+  const [coordError, setCoordError] = useState<string>("");
+  const [coordFeedback, setCoordFeedback] = useState<string>("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [newCategoryInput, setNewCategoryInput] = useState("");
   const [tagsInput, setTagsInput] = useState("");
@@ -495,8 +507,15 @@ export default function AdminUploadPage() {
 
         // Coordinates
         if (exif.latitude !== undefined && exif.longitude !== undefined) {
-          setLatitude(parseFloat(exif.latitude.toFixed(6)));
-          setLongitude(parseFloat(exif.longitude.toFixed(6)));
+          const lat = parseFloat(exif.latitude.toFixed(6));
+          const lon = parseFloat(exif.longitude.toFixed(6));
+          setLatitude(lat);
+          setLongitude(lon);
+          setLatInput(String(lat));
+          setLonInput(String(lon));
+          setQuickCoordInput(`${lat}, ${lon}`);
+          setCoordFeedback("Detected from EXIF metadata");
+          setCoordError("");
         }
 
         // Camera Details
@@ -623,6 +642,11 @@ export default function AdminUploadPage() {
     if (latitude !== null && longitude !== null) {
       formData.append("latitude", String(latitude));
       formData.append("longitude", String(longitude));
+      formData.append("hasLocation", "true");
+    } else {
+      formData.append("latitude", "");
+      formData.append("longitude", "");
+      formData.append("hasLocation", "false");
     }
 
     try {
@@ -668,6 +692,147 @@ export default function AdminUploadPage() {
     }
   };
 
+  const handleMapCoordinatesChange = (lat: number, lon: number) => {
+    setLatitude(lat);
+    setLongitude(lon);
+    setLatInput(String(lat));
+    setLonInput(String(lon));
+    setQuickCoordInput(`${lat}, ${lon}`);
+    setCoordError("");
+    setCoordFeedback("Pin position selected from interactive map");
+  };
+
+  const handleApplyQuickCoordinates = () => {
+    if (!quickCoordInput.trim()) {
+      setCoordError("Please enter or paste coordinates first.");
+      return;
+    }
+    const parsed = parseCoordinates(quickCoordInput);
+    if (parsed) {
+      setLatitude(parsed.latitude);
+      setLongitude(parsed.longitude);
+      setLatInput(String(parsed.latitude));
+      setLonInput(String(parsed.longitude));
+      setQuickCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
+      setCoordError("");
+      setCoordFeedback(`Coordinates applied: ${parsed.latitude}, ${parsed.longitude}`);
+    } else {
+      setCoordError("Unrecognized format. Enter as 'lat, lon' (e.g. 35.799292, -82.954774), DMS, or map URL.");
+    }
+  };
+
+  const handleLatInputChange = (val: string) => {
+    // If user pasted a combined string into Latitude input, parse both
+    const parsed = parseCoordinates(val);
+    if (parsed) {
+      setLatitude(parsed.latitude);
+      setLongitude(parsed.longitude);
+      setLatInput(String(parsed.latitude));
+      setLonInput(String(parsed.longitude));
+      setQuickCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
+      setCoordError("");
+      setCoordFeedback(`Coordinates parsed: ${parsed.latitude}, ${parsed.longitude}`);
+      return;
+    }
+
+    setLatInput(val);
+    const trimmed = val.trim();
+    if (!trimmed) {
+      if (!lonInput.trim()) {
+        setLatitude(null);
+        setLongitude(null);
+        setQuickCoordInput("");
+      } else {
+        setLatitude(null);
+      }
+      setCoordError("");
+      setCoordFeedback("");
+      return;
+    }
+
+    const latNum = parseFloat(trimmed);
+    if (isNaN(latNum)) {
+      setCoordError("Latitude must be a valid number.");
+      return;
+    }
+    if (!isValidLatitude(latNum)) {
+      setCoordError("Latitude must be between -90 and 90 degrees.");
+      return;
+    }
+
+    setCoordError("");
+    const lonNum = parseFloat(lonInput.trim());
+    if (!isNaN(lonNum) && isValidLongitude(lonNum)) {
+      setLatitude(parseFloat(latNum.toFixed(6)));
+      setLongitude(parseFloat(lonNum.toFixed(6)));
+      setQuickCoordInput(`${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
+      setCoordFeedback(`Coordinates updated: ${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
+    } else {
+      setLatitude(parseFloat(latNum.toFixed(6)));
+    }
+  };
+
+  const handleLonInputChange = (val: string) => {
+    // If user pasted a combined string into Longitude input, parse both
+    const parsed = parseCoordinates(val);
+    if (parsed) {
+      setLatitude(parsed.latitude);
+      setLongitude(parsed.longitude);
+      setLatInput(String(parsed.latitude));
+      setLonInput(String(parsed.longitude));
+      setQuickCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
+      setCoordError("");
+      setCoordFeedback(`Coordinates parsed: ${parsed.latitude}, ${parsed.longitude}`);
+      return;
+    }
+
+    setLonInput(val);
+    const trimmed = val.trim();
+    if (!trimmed) {
+      if (!latInput.trim()) {
+        setLatitude(null);
+        setLongitude(null);
+        setQuickCoordInput("");
+      } else {
+        setLongitude(null);
+      }
+      setCoordError("");
+      setCoordFeedback("");
+      return;
+    }
+
+    const lonNum = parseFloat(trimmed);
+    if (isNaN(lonNum)) {
+      setCoordError("Longitude must be a valid number.");
+      return;
+    }
+    if (!isValidLongitude(lonNum)) {
+      setCoordError("Longitude must be between -180 and 180 degrees.");
+      return;
+    }
+
+    setCoordError("");
+    const latNum = parseFloat(latInput.trim());
+    if (!isNaN(latNum) && isValidLatitude(latNum)) {
+      setLatitude(parseFloat(latNum.toFixed(6)));
+      setLongitude(parseFloat(lonNum.toFixed(6)));
+      setQuickCoordInput(`${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
+      setCoordFeedback(`Coordinates updated: ${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
+    } else {
+      setLongitude(parseFloat(lonNum.toFixed(6)));
+    }
+  };
+
+  const handleClearCoordinates = () => {
+    setLatitude(null);
+    setLongitude(null);
+    setLatInput("");
+    setLonInput("");
+    setQuickCoordInput("");
+    setCoordError("");
+    setCoordFeedback("");
+  };
+
   const handleResetForm = () => {
     setSelectedFile(null);
     setImagePreviewUrl(null);
@@ -677,6 +842,11 @@ export default function AdminUploadPage() {
     setDescription("");
     setLatitude(null);
     setLongitude(null);
+    setLatInput("");
+    setLonInput("");
+    setQuickCoordInput("");
+    setCoordError("");
+    setCoordFeedback("");
     setSelectedCategories([]);
     setTagsInput("");
     setDetectedCamera(null);
@@ -1406,50 +1576,163 @@ export default function AdminUploadPage() {
                 </div>
               </div>
 
-              {/* Interactive Geospatial Pin Picker */}
-              <div className="space-y-3 bg-surface border border-surface-border p-6 rounded-sm">
-                <div className="flex items-center justify-between border-b border-surface-border pb-2">
+              {/* Geographic Location & Coordinates */}
+              <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
+                <div className="flex items-center justify-between border-b border-surface-border pb-2.5">
                   <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
                     <MapPin className="w-3.5 h-3.5 text-accent" />
-                    <span>Geographic Location & Map Pin</span>
+                    <span>Geographic Location & Coordinates</span>
                   </div>
                   {latitude !== null && longitude !== null ? (
-                    <span className="text-xs font-mono text-accent">
-                      {latitude.toFixed(5)}, {longitude.toFixed(5)}
+                    <span className="text-xs font-mono text-accent font-medium">
+                      {latitude.toFixed(6)}, {longitude.toFixed(6)}
                     </span>
                   ) : (
                     <span className="text-xs text-muted">
-                      No coordinates chosen
+                      No coordinates set
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs text-muted">
-                  Click anywhere on the dark map or drag the amber pin to place
-                  or refine the capture coordinates.
+                <p className="text-xs text-muted leading-relaxed">
+                  Enter coordinates manually, paste from Google Maps or GPS, or click anywhere on the dark map to position or refine the pin.
                 </p>
 
+                {/* Quick Paste / Combined Coordinates Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
+                    Paste Coordinates (e.g. 35.799292, -82.954774 or 35°47&apos;57&quot;N 82°57&apos;17&quot;W)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Compass className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={quickCoordInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setQuickCoordInput(val);
+                          // Auto-detect when a valid coordinate string is pasted or typed
+                          const parsed = parseCoordinates(val);
+                          if (parsed) {
+                            setLatitude(parsed.latitude);
+                            setLongitude(parsed.longitude);
+                            setLatInput(String(parsed.latitude));
+                            setLonInput(String(parsed.longitude));
+                            setCoordError("");
+                            setCoordFeedback(
+                              `Coordinates applied: ${parsed.latitude}, ${parsed.longitude}`
+                            );
+                          } else if (!val.trim()) {
+                            setCoordError("");
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleApplyQuickCoordinates();
+                          }
+                        }}
+                        placeholder="Paste coordinates (lat, lon, DMS, or Google Maps URL)..."
+                        className="w-full pl-9 pr-3 py-2 bg-surface border border-surface-border rounded text-xs text-foreground placeholder-muted focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyQuickCoordinates}
+                      className="px-3.5 py-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent text-foreground text-xs rounded font-medium transition-colors flex-shrink-0 cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+
+                {/* Individual Latitude and Longitude Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
+                      Latitude (-90° to 90°)
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={latInput}
+                      onChange={(e) => handleLatInputChange(e.target.value)}
+                      placeholder="e.g. 35.799292"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-foreground placeholder-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
+                      Longitude (-180° to 180°)
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={lonInput}
+                      onChange={(e) => handleLonInputChange(e.target.value)}
+                      placeholder="e.g. -82.954774"
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-foreground placeholder-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </div>
+
+                {/* Validation and feedback messages */}
+                {coordError && (
+                  <p className="text-xs text-red-400 font-medium">
+                    {coordError}
+                  </p>
+                )}
+
+                {coordFeedback && !coordError && (
+                  <p className="text-xs text-accent flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{coordFeedback}</span>
+                  </p>
+                )}
+
+                {/* Interactive Map Picker */}
                 <AdminMapPicker
                   latitude={latitude}
                   longitude={longitude}
-                  onChange={(lat, lon) => {
-                    setLatitude(lat);
-                    setLongitude(lon);
-                  }}
+                  onChange={handleMapCoordinatesChange}
                 />
 
-                {latitude !== null && longitude !== null && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLatitude(null);
-                      setLongitude(null);
-                    }}
-                    className="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer"
-                  >
-                    Clear coordinates
-                  </button>
-                )}
+                {/* Actions row: Clear, External Google Maps Link, DMS display */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  {latitude !== null && longitude !== null ? (
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={handleClearCoordinates}
+                        className="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer"
+                      >
+                        Clear coordinates
+                      </button>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 text-xs text-accent hover:underline"
+                        title="Verify location on Google Maps satellite / terrain"
+                      >
+                        <span>Open in Google Maps</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted italic">
+                      Tip: Paste from Google Maps (lat, lon) or right-click map pin
+                    </span>
+                  )}
+
+                  {latitude !== null && longitude !== null && (
+                    <span className="text-[11px] font-mono text-muted">
+                      {formatDMS(latitude, longitude)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {submitError && (
