@@ -142,9 +142,9 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         )}
       </div>
 
-      {/* Grid */}
+      {/* Full Thumbnail Flex Gallery */}
       {filteredPhotos.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center justify-start">
           {filteredPhotos.map((photo) => (
             <PhotoCard key={photo.photoID} photo={photo} />
           ))}

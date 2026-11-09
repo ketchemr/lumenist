@@ -13,8 +13,8 @@ interface PaginatedGalleryProps {
 
 export function PaginatedGallery({
   photos,
-  initialCount = 36,
-  pageSize = 36,
+  initialCount = 48,
+  pageSize = 48,
 }: PaginatedGalleryProps) {
   const [visibleCount, setVisibleCount] = useState(initialCount);
 
@@ -24,14 +24,15 @@ export function PaginatedGallery({
 
   return (
     <div className="space-y-10">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {/* Full-thumbnail flex row gallery matching rrkphoto.com */}
+      <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center justify-start">
         {displayedPhotos.map((photo) => (
           <PhotoCard key={photo.photoID} photo={photo} />
         ))}
       </div>
 
       {hasMore && (
-        <div className="text-center pt-6 pb-12 space-y-3">
+        <div className="text-center pt-8 pb-12 space-y-3">
           <p className="text-xs text-muted">
             Showing {visibleCount} of {photos.length} photographs
           </p>
