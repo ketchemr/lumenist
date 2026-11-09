@@ -11,7 +11,6 @@ import {
   Pause,
   Play,
   Camera,
-  Film,
 } from "lucide-react";
 
 interface RandomHeroSlideshowProps {
@@ -98,7 +97,6 @@ export function RandomHeroSlideshow({
   if (!photos || photos.length === 0) return null;
 
   const current = photos[currentIndex] || photos[0];
-  const isAnalogFilm = current.film && current.film.toLowerCase() !== "digital";
 
   return (
     <section
@@ -122,14 +120,6 @@ export function RandomHeroSlideshow({
               }`}
             />
           </Link>
-
-          {/* Film badge */}
-          {isAnalogFilm && (
-            <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-sm border border-white/10 px-2.5 py-1 rounded text-xs text-amber-200 flex items-center space-x-1.5">
-              <Film className="w-3.5 h-3.5 text-amber-300" />
-              <span>{current.film}</span>
-            </div>
-          )}
 
           {/* Navigation Controls Overlay */}
           <div className="absolute inset-y-0 left-0 flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
