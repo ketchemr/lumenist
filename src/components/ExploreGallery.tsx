@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
-import { Search, SlidersHorizontal, Film } from "lucide-react";
+import { Pagination } from "@/components/Pagination";
+import { Search, Film } from "lucide-react";
 
 interface ExploreGalleryProps {
   initialPhotos: Photo[];
@@ -14,6 +15,8 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 48;
 
   const filteredPhotos = useMemo(() => {
     return initialPhotos.filter((p) => {
@@ -49,6 +52,27 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
     });
   }, [initialPhotos, searchQuery, selectedCategory, filmFilter]);
 
+  const totalPages = Math.ceil(filteredPhotos.length / pageSize);
+  const paginatedPhotos = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredPhotos.slice(start, start + pageSize);
+  }, [filteredPhotos, currentPage, pageSize]);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (val: string) => {
+    setSelectedCategory(val);
+    setCurrentPage(1);
+  };
+
+  const handleFilmChange = (val: "All" | "Film" | "Digital") => {
+    setFilmFilter(val);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="space-y-8">
       {/* Controls Bar */}
@@ -60,7 +84,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               type="text"
               placeholder="Search by subject, location, camera, or keyword..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-black border border-surface-border rounded-sm text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent"
             />
           </div>
@@ -68,7 +92,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
           {/* Film / Digital toggle */}
           <div className="flex items-center space-x-1 border border-surface-border rounded-sm p-1 bg-black text-xs">
             <button
-              onClick={() => setFilmFilter("All")}
+              onClick={() => handleFilmChange("All")}
               className={`px-3 py-1.5 rounded-sm transition-colors ${
                 filmFilter === "All" ? "bg-surface-hover text-white font-medium" : "text-muted hover:text-gray-200"
               }`}
@@ -76,7 +100,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               All Formats
             </button>
             <button
-              onClick={() => setFilmFilter("Digital")}
+              onClick={() => handleFilmChange("Digital")}
               className={`px-3 py-1.5 rounded-sm transition-colors ${
                 filmFilter === "Digital" ? "bg-surface-hover text-white font-medium" : "text-muted hover:text-gray-200"
               }`}
@@ -84,7 +108,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               Digital
             </button>
             <button
-              onClick={() => setFilmFilter("Film")}
+              onClick={() => handleFilmChange("Film")}
               className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1 ${
                 filmFilter === "Film" ? "bg-surface-hover text-amber-300 font-medium" : "text-muted hover:text-gray-200"
               }`}
@@ -98,7 +122,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         {/* Category Pills */}
         <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
           <button
-            onClick={() => setSelectedCategory("All")}
+            onClick={() => handleCategoryChange("All")}
             className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors ${
               selectedCategory === "All"
                 ? "bg-accent/20 border-accent text-accent font-medium"
@@ -110,7 +134,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
           {categories.slice(0, 12).map((cat) => (
             <button
               key={cat.name}
-              onClick={() => setSelectedCategory(cat.name)}
+              onClick={() => handleCategoryChange(cat.name)}
               className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors ${
                 selectedCategory === cat.name
                   ? "bg-accent/20 border-accent text-accent font-medium"
@@ -134,6 +158,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               setSearchQuery("");
               setSelectedCategory("All");
               setFilmFilter("All");
+              setCurrentPage(1);
             }}
             className="text-accent hover:underline"
           >
@@ -143,8 +168,18 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
       </div>
 
       {/* Justified Flush Gallery */}
-      {filteredPhotos.length > 0 ? (
-        <JustifiedGallery photos={filteredPhotos} targetRowHeight={210} gap={8} />
+      {paginatedPhotos.length > 0 ? (
+        <div className="space-y-6">
+          <JustifiedGallery photos={paginatedPhotos} targetRowHeight={210} gap={8} />
+          
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredPhotos.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       ) : (
         <div className="text-center py-20 bg-surface border border-surface-border rounded-sm space-y-3">
           <p className="text-gray-400 text-sm">No photographs found matching your criteria.</p>
@@ -153,6 +188,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               setSearchQuery("");
               setSelectedCategory("All");
               setFilmFilter("All");
+              setCurrentPage(1);
             }}
             className="text-accent text-xs underline"
           >

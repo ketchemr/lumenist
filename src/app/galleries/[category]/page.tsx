@@ -8,15 +8,23 @@ interface CategoryPageProps {
   params: Promise<{
     category: string;
   }>;
+  searchParams: Promise<{
+    page?: string;
+  }>;
 }
 
-export default async function CategoryPage({ params }: CategoryPageProps) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: CategoryPageProps) {
   const { category } = await params;
+  const { page } = await searchParams;
+
   const decodedCategory = decodeURIComponent(category);
   const isAll = decodedCategory.toLowerCase() === "all";
-  const photos = getPhotosByCategory(decodedCategory);
+  const allCategoryPhotos = getPhotosByCategory(decodedCategory);
 
-  if (photos.length === 0) {
+  if (allCategoryPhotos.length === 0) {
     notFound();
   }
 
@@ -24,6 +32,17 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const description = isAll
     ? "Complete fine-art photography archive across all years and subjects."
     : `Photographs curated in the ${decodedCategory} collection.`;
+
+  // Pagination calculations (48 photos per page)
+  const pageSize = 48;
+  const totalPages = Math.ceil(allCategoryPhotos.length / pageSize);
+  const currentPage = Math.min(
+    Math.max(1, parseInt(page || "1", 10) || 1),
+    Math.max(1, totalPages)
+  );
+
+  const startIdx = (currentPage - 1) * pageSize;
+  const pagePhotos = allCategoryPhotos.slice(startIdx, startIdx + pageSize);
 
   return (
     <div className="space-y-8">
@@ -48,12 +67,20 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             <p className="text-xs text-muted pt-1">{description}</p>
           </div>
           <span className="text-xs text-muted font-mono self-start sm:self-auto">
-            {photos.length} {photos.length === 1 ? "work" : "works"}
+            {allCategoryPhotos.length}{" "}
+            {allCategoryPhotos.length === 1 ? "work" : "works"}
           </span>
         </div>
       </div>
 
-      <PaginatedGallery photos={photos} initialCount={36} pageSize={36} />
+      <PaginatedGallery
+        photos={pagePhotos}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={allCategoryPhotos.length}
+        pageSize={pageSize}
+        baseUrl={`/galleries/${encodeURIComponent(category)}`}
+      />
     </div>
   );
 }

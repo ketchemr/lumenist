@@ -1,46 +1,39 @@
 "use client";
 
-import { useState } from "react";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
-import { ChevronDown } from "lucide-react";
+import { Pagination } from "@/components/Pagination";
 
 interface PaginatedGalleryProps {
   photos: Photo[];
-  initialCount?: number;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
   pageSize?: number;
+  baseUrl: string;
 }
 
 export function PaginatedGallery({
   photos,
-  initialCount = 48,
+  currentPage,
+  totalPages,
+  totalItems,
   pageSize = 48,
+  baseUrl,
 }: PaginatedGalleryProps) {
-  const [visibleCount, setVisibleCount] = useState(initialCount);
-
-  const displayedPhotos = photos.slice(0, visibleCount);
-  const hasMore = visibleCount < photos.length;
-  const remaining = photos.length - visibleCount;
-
   return (
-    <div className="space-y-10">
-      {/* Justified gallery with flush aligned edges and full uncropped thumbnails */}
-      <JustifiedGallery photos={displayedPhotos} targetRowHeight={210} gap={8} />
+    <div className="space-y-6">
+      {/* Justified gallery with flush aligned edges and zero cropping */}
+      <JustifiedGallery photos={photos} targetRowHeight={210} gap={8} />
 
-      {hasMore && (
-        <div className="text-center pt-8 pb-12 space-y-3">
-          <p className="text-xs text-muted">
-            Showing {visibleCount} of {photos.length} photographs
-          </p>
-          <button
-            onClick={() => setVisibleCount((prev) => prev + pageSize)}
-            className="inline-flex items-center space-x-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 text-gray-200 hover:text-accent px-6 py-2.5 rounded-sm text-sm font-medium transition-all group"
-          >
-            <span>Load Next {Math.min(remaining, pageSize)} Works</span>
-            <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
-          </button>
-        </div>
-      )}
+      {/* Piwigo-style numbered pagination bar */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        baseUrl={baseUrl}
+      />
     </div>
   );
 }
