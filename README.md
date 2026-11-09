@@ -290,49 +290,73 @@ lumenist/
 
 ## Photo Metadata Specification
 
-Every photograph in Lumenist adheres to a strict, typed schema:
+Every photograph in Lumenist adheres to a strict, typed schema. Lumenist automatically parses **EXIF, XMP, GPS, and image headers** during ingestion and web upload, merging technical camera data with your curated narratives.
 
 ```typescript
 export interface Photo {
-  photoID: string;              // e.g. "d20261027151131"
-  title: string;                // e.g. "Mingus Mill in Autumn"
-  description: string;          // Rich narrative and history
-  availability: string;         // "Available for Order", "Private Collection", etc.
+  // Identity & Story (Curated / Companion Metadata)
+  photoID: string;              // e.g. "d20261027151131" (or auto-generated from EXIF timestamp)
+  title: string;                // e.g. "Mingus Mill in Autumn" (Curated)
+  description: string;          // Rich narrative and history (Curated)
+  availability: string;         // e.g. "Available for Order", "Private Collection" (Curated)
   
+  // Organization (Curated)
   categories: string[];         // ["Fall Color", "Historic Structures", "Water"]
   tags: string[];               // ["Mingus Mill", "Great Smoky Mountains", "Pioneer"]
   
-  dateTaken: string;            // ISO formatted timestamp
+  // Chronology (Derived from EXIF DateTimeOriginal / CreateDate)
+  dateTaken: string;            // ISO formatted timestamp (e.g. "2026-10-27T15:11:31")
   year: number;                 // e.g. 2026
   
-  // Optical & Gear Details
-  film: string;                 // "Digital" or film stock ("Fuji Velvia 50", "Kodak Tri-X")
-  camera: string;               // e.g. "Sony ILCE-7RM4"
-  lens: string;                 // e.g. "Sony FE 24-105mm F4 G OSS"
-  focalLength: string;          // e.g. "24 mm"
-  shutterspeed: string;         // e.g. "1/15 s"
-  aperture: string;             // e.g. "f/14"
-  iso: string;                  // e.g. "100"
-  exposureCompensation: string; // e.g. "0 EV"
-  whiteBalance: string;         // e.g. "5200K +4" (Kelvin + Tint)
-  toneCompensation: string;     // e.g. "Auto"
-  tripod: string;               // e.g. "Manfrotto 055 Carbon Fiber, Arca-Swiss Monoball"
+  // Camera & Optics (Derived from EXIF / XMP)
+  camera: string;               // e.g. "Sony ILCE-7RM4" (EXIF Make + Model)
+  lens: string;                 // e.g. "Sony FE 24-105mm F4 G OSS" (EXIF LensModel / Lens)
+  focalLength: string;          // e.g. "24 mm" (EXIF FocalLength)
+  shutterspeed: string;         // e.g. "1/15 s" or "2.5 s" (EXIF ExposureTime)
+  aperture: string;             // e.g. "f/14" (EXIF FNumber)
+  iso: string;                  // e.g. "100" (EXIF ISO / PhotographicSensitivity)
+  exposureCompensation: string; // e.g. "0 EV", "+0.7 EV" (EXIF ExposureCompensation)
+  whiteBalance: string;         // e.g. "5200K +4" or "Auto" (XMP Temperature + Tint / WhiteBalance)
+  toneCompensation: string;     // e.g. "Auto" (EXIF / XMP tone curve)
 
-  // Geospatial Coordinates
-  latitude: number | null;      // e.g. 35.5312
-  longitude: number | null;     // e.g. -83.3094
+  // Physical Craft & Support (Curated / Companion Metadata)
+  film: string;                 // "Digital" (auto-detected from EXIF) or film stock ("Fuji Velvia 50", "Kodak Tri-X")
+  tripod: string;               // e.g. "Manfrotto 055 Carbon Fiber, Arca-Swiss Monoball" (Not recorded in EXIF)
 
-  // Dimensions & Aspect Ratio (Zero-CLS)
-  width: number;                // e.g. 1920
-  height: number;               // e.g. 1080
+  // Geospatial Coordinates (Derived from EXIF GPS or picked via Admin Map)
+  latitude: number | null;      // Decimal latitude (e.g. 35.5312)
+  longitude: number | null;     // Decimal longitude (e.g. -83.3094)
+
+  // Dimensions & Aspect Ratio (Derived from Image File Headers for Zero-CLS Layout)
+  width: number;                // Pixel width (e.g. 1920)
+  height: number;               // Pixel height (e.g. 1080)
   aspectRatio: number;          // e.g. 1.777
   orientation: "horizontal" | "vertical" | "square";
 
-  // File Paths
-  imageDesktop: string;         // Path to display image (/photos/...)
-  imageThumb: string;           // Path or thumbnail route
+  // File Paths (System Managed)
+  imageDesktop: string;         // Relative URL to master display image (/photos/...)
+  imageThumb: string;           // On-demand thumbnail endpoint (/api/thumbnail?src=...)
 }
 ```
+
+### EXIF-Derived vs. Curated Breakdown
+
+| Field | Source | Details |
+| :--- | :--- | :--- |
+| **Camera** | **EXIF** | Read from `Make` and `Model` tags, normalized (e.g., removing redundant vendor prefixes). |
+| **Lens** | **EXIF** | Read from `LensModel` or `Lens` EXIF/XMP tags. |
+| **Focal Length** | **EXIF** | Read from `FocalLength` tag in millimeters. |
+| **Shutter Speed** | **EXIF** | Read from `ExposureTime`, formatted as fractional seconds (e.g. `1/125 s`) or whole seconds (e.g. `2.5 s`). |
+| **Aperture** | **EXIF** | Read from `FNumber` tag (e.g. `f/8`, `f/11`). |
+| **ISO** | **EXIF** | Read from `ISO` or `PhotographicSensitivity`. |
+| **Exposure Bias** | **EXIF** | Read from `ExposureCompensation` (e.g. `0 EV`, `+0.7 EV`, `-1.0 EV`). |
+| **White Balance** | **EXIF / XMP** | Kelvin color temperature and tint (e.g. `5200K +4`) when present in camera maker-notes/XMP, falling back to standard EXIF white balance setting (`Auto` / `Daylight`). |
+| **Date & Time** | **EXIF** | Extracted from `DateTimeOriginal` or `CreateDate`. Also used to automatically generate the photo ID (`dYYYYMMDDHHMMSS`) if no manual ID is specified. |
+| **GPS Coordinates**| **EXIF / Map** | Read from GPS IFD tags (`GPSLatitude`, `GPSLongitude`). Can also be assigned or refined using the visual map pin picker in `/admin`. |
+| **Geometry** | **Image Headers** | Exact pixel width, height, aspect ratio, and orientation calculated directly from the image file to reserve layout space and prevent Cumulative Layout Shift (CLS). |
+| **Capture Medium** | **EXIF / Curated** | Defaulted to `"Digital"` when digital camera EXIF is detected. For analog film scans, can be set to the specific film emulsion (e.g. `Fuji Velvia 50`, `Kodak Tri-X 400`, `Provia 100F`). |
+| **Tripod & Support**| **Curated** | Camera EXIF does not record support gear. Configured via `.txt` companion files or selected from the quick-pick gear dropdown in `/admin`. |
+| **Narrative & Title**| **Curated** | Title, multi-paragraph story, gallery categories, keywords/tags, and order availability are managed via companion `.txt` metadata files or the `/admin` editor. |
 
 ---
 
