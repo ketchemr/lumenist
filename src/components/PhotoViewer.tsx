@@ -199,14 +199,37 @@ export function PhotoViewer({
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
-      <div className="flex justify-center items-center bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none">
-        <img
-          src={photo.imageDesktop}
-          alt={photo.title}
-          onClick={openWindowFullscreen}
-          className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame cursor-zoom-in"
-          title="Click to view full screen (Shortcut: W, Monitor: F)"
-        />
+      <div className="relative bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none">
+        <div className="flex justify-center items-center">
+          <img
+            src={photo.imageDesktop}
+            alt={photo.title}
+            onClick={openWindowFullscreen}
+            className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame cursor-pointer"
+            title="Click to view full screen (Shortcut: W, Monitor: F)"
+          />
+        </div>
+
+        {/* Fit / Extend text in the lower right corner of the margin outside of the image */}
+        <div className="flex justify-end items-center space-x-2 pt-2.5 pr-1 text-xs text-muted font-mono">
+          <button
+            type="button"
+            onClick={openWindowFullscreen}
+            className="hover:text-accent transition-colors cursor-pointer"
+            title="Full screen within browser window (Shortcut: W)"
+          >
+            Fit Window
+          </button>
+          <span className="text-gray-700">/</span>
+          <button
+            type="button"
+            onClick={toggleMonitorFullscreen}
+            className="hover:text-accent transition-colors cursor-pointer"
+            title="Extend to full monitor screen (Shortcut: F)"
+          >
+            Extend to Monitor
+          </button>
+        </div>
       </div>
 
       {/* 2. Fullscreen Theater / Monitor Presentation Overlay */}
