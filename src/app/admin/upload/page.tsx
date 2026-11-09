@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import exifr from "exifr";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   Camera,
@@ -37,6 +38,8 @@ interface MetadataResponse {
 }
 
 export default function AdminUploadPage() {
+  const router = useRouter();
+
   // Navigation tab
   const [activeTab, setActiveTab] = useState<"upload" | "settings">("upload");
 
@@ -436,6 +439,7 @@ export default function AdminUploadPage() {
           "--accent-dark",
           settings.themeAccentDark
         );
+        router.refresh();
         setTimeout(() => setSettingsSuccess(false), 3500);
       }
     } catch {

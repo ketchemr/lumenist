@@ -1,16 +1,24 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import { SiteSettings } from "@/types/settings";
 
-export function Header() {
+interface HeaderProps {
+  settings?: SiteSettings;
+}
+
+export function Header({ settings }: HeaderProps) {
+  const title = settings?.siteTitle || siteConfig.siteTitle;
+  const tagline = settings?.siteTagline || siteConfig.tagline;
+
   return (
     <header className="border-b border-surface-border bg-black/80 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href="/" className="group">
           <h1 className="text-lg sm:text-xl font-medium tracking-tight text-white group-hover:text-accent transition-colors">
-            {siteConfig.siteTitle}
+            {title}
           </h1>
           <p className="text-xs text-muted hidden sm:block tracking-wide">
-            {siteConfig.tagline}
+            {tagline}
           </p>
         </Link>
 
