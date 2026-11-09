@@ -33,11 +33,7 @@ export function RandomHeroSlideshow({
   });
 
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-
-  // Overall effective paused state
-  const isPaused = isManuallyPaused || isHovered;
+  const [isPaused, setIsPaused] = useState(false);
 
   const descScrollRef = useRef<HTMLDivElement>(null);
   const remainingTimeRef = useRef<number>(intervalSeconds * 1000);
@@ -188,11 +184,7 @@ export function RandomHeroSlideshow({
   const canGoPrev = state.index > 0;
 
   return (
-    <section
-      className="relative rounded-sm overflow-hidden border border-surface-border bg-black group w-full"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <section className="relative rounded-sm overflow-hidden border border-surface-border bg-black group w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
         {/* Photo Display: Constant Width & Constant Height Frame */}
         <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black relative flex items-center justify-center">
@@ -270,11 +262,11 @@ export function RandomHeroSlideshow({
               </h2>
 
               <button
-                onClick={() => setIsManuallyPaused((p) => !p)}
-                className="text-xs text-muted hover:text-white flex-shrink-0 flex items-center space-x-1 bg-black border border-surface-border px-2 py-1 rounded transition-colors mt-1 cursor-pointer"
-                title={isManuallyPaused ? "Resume rotation" : "Pause rotation"}
+                onClick={() => setIsPaused((p) => !p)}
+                className="text-xs text-muted hover:text-white flex-shrink-0 flex items-center space-x-1 bg-black border border-surface-border px-2.5 py-1 rounded transition-colors mt-1 cursor-pointer"
+                title={isPaused ? "Resume rotation" : "Pause rotation"}
               >
-                {isManuallyPaused ? (
+                {isPaused ? (
                   <>
                     <Play className="w-3 h-3 text-accent" />
                     <span className="hidden sm:inline">Resume</span>
