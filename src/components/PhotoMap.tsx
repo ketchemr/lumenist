@@ -79,6 +79,7 @@ export function PhotoMap({
         zoom,
         zoomControl: true,
         scrollWheelZoom: false,
+        attributionControl: false,
       });
 
       mapInstanceRef.current = map;
@@ -231,6 +232,9 @@ export function PhotoMap({
       </div>
 
       <div ref={mapContainerRef} style={{ height, width: "100%" }} />
+      <div className="bg-black/90 px-2 py-1 text-[10px] text-gray-500 text-right border-t border-surface-border/40 font-mono">
+        Map data &copy; OpenStreetMap &copy; Esri
+      </div>
     </div>
   );
 }

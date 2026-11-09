@@ -4,6 +4,7 @@ import { getPhotoById, getAdjacentPhotos } from "@/lib/photos";
 import { TechnicalDetails } from "@/components/TechnicalDetails";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BackButton } from "@/components/BackButton";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import { ChevronLeft, ChevronRight, Tag, Folder } from "lucide-react";
 
 interface PhotoPageProps {
@@ -84,14 +85,12 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
         </div>
       </div>
 
-      {/* Main Photographic Presentation */}
-      <div className="flex justify-center items-center bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border">
-        <img
-          src={photo.imageDesktop}
-          alt={photo.title}
-          className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame"
-        />
-      </div>
+      {/* Main Photographic Presentation with Fullscreen Controls */}
+      <PhotoViewer
+        photo={photo}
+        prevPhoto={prev}
+        nextPhoto={next}
+      />
 
       {/* Story & Narrative */}
       <div className="space-y-4 max-w-3xl mx-auto text-center sm:text-left">

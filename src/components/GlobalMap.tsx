@@ -86,6 +86,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
         zoomControl: true,
         maxZoom: 18,
         minZoom: 2,
+        attributionControl: false,
       });
 
       mapInstanceRef.current = map;
@@ -336,6 +337,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="text-[10px] text-gray-500 text-right font-mono pr-1">
+        Map data &copy; OpenStreetMap &copy; Esri
       </div>
     </div>
   );
