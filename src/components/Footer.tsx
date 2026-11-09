@@ -26,7 +26,7 @@ export function Footer({ settings }: FooterProps) {
           </span>
           <span>·</span>
           <Link href="/admin/upload" className="hover:text-gray-400 transition-colors">
-            Admin Uploader
+            Admin
           </Link>
         </p>
       </div>
