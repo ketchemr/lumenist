@@ -3,21 +3,25 @@ import path from "path";
 import { Photo } from "@/types/photo";
 
 let cachedPhotos: Photo[] | null = null;
+let lastMtime = 0;
 
 export function getAllPhotos(): Photo[] {
-  if (cachedPhotos) return cachedPhotos;
-
   const filePath = path.join(process.cwd(), "data", "photos.json");
   if (!fs.existsSync(filePath)) {
     return [];
   }
 
-  const raw = fs.readFileSync(filePath, "utf-8");
   try {
+    const stats = fs.statSync(filePath);
+    if (cachedPhotos && stats.mtimeMs === lastMtime) {
+      return cachedPhotos;
+    }
+    const raw = fs.readFileSync(filePath, "utf-8");
     cachedPhotos = JSON.parse(raw);
+    lastMtime = stats.mtimeMs;
     return cachedPhotos || [];
   } catch {
-    return [];
+    return cachedPhotos || [];
   }
 }
 
