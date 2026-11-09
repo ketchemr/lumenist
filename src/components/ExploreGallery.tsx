@@ -25,8 +25,10 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory);
   const [selectedTag, setSelectedTag] = useState<string | null>(urlTag);
   const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">("All");
+  const [tagSort, setTagSort] = useState<"alpha" | "count">("alpha");
+  const [tagSearch, setTagSearch] = useState("");
   const [showTagCloud, setShowTagCloud] = useState(Boolean(urlTag));
-  const [showAllTags, setShowAllTags] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 48;
 
@@ -59,7 +61,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   );
 
   // Compute tag frequencies across all photos, focusing on meaningful keywords
-  const popularTags = useMemo(() => {
+  const allKeywords = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const p of initialPhotos) {
       for (const k of p.keywords || []) {
@@ -76,10 +78,30 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         }
       }
     }
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([tag, count]) => ({ tag, count }));
+    return Object.entries(counts).map(([tag, count]) => ({ tag, count }));
   }, [initialPhotos]);
+
+  const displayedTags = useMemo(() => {
+    let list = [...allKeywords];
+
+    if (tagSearch.trim()) {
+      const q = tagSearch.toLowerCase();
+      list = list.filter((item) => item.tag.toLowerCase().includes(q));
+    }
+
+    if (tagSort === "alpha") {
+      list.sort((a, b) =>
+        a.tag.localeCompare(b.tag, undefined, { sensitivity: "base" })
+      );
+    } else {
+      list.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+    }
+
+    if (!showAllTags && !tagSearch.trim()) {
+      return list.slice(0, 48);
+    }
+    return list;
+  }, [allKeywords, tagSearch, tagSort, showAllTags]);
 
   const filteredPhotos = useMemo(() => {
     return initialPhotos.filter((p) => {
@@ -187,7 +209,6 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
     selectedTag !== null ||
     filmFilter !== "All";
 
-  const displayedTags = showAllTags ? popularTags.slice(0, 100) : popularTags.slice(0, 36);
 
   return (
     <div className="space-y-8">
@@ -292,11 +313,11 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         {/* Tag Cloud Section */}
         {showTagCloud && (
           <div className="border-t border-surface-border pt-4 mt-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs text-muted">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                 <Tag className="w-3.5 h-3.5 text-accent" />
                 <span className="uppercase tracking-wider font-semibold text-foreground">
-                  Tag Cloud ({popularTags.length} keywords)
+                  Tag Cloud ({allKeywords.length} keywords)
                 </span>
                 {selectedTag && (
                   <span className="text-accent">
@@ -304,18 +325,78 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
                   </span>
                 )}
               </div>
-              {selectedTag && (
-                <button
-                  onClick={handleClearTag}
-                  className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Clear Tag</span>
-                </button>
-              )}
+
+              {/* Tag Controls: Filter, Sort & Range */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Quick filter input within keywords */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Filter keywords..."
+                    value={tagSearch}
+                    onChange={(e) => setTagSearch(e.target.value)}
+                    className="pl-2.5 pr-6 py-1 bg-surface border border-surface-border rounded text-xs text-foreground placeholder-muted focus:outline-none focus:border-accent w-36 sm:w-44"
+                  />
+                  {tagSearch && (
+                    <button
+                      onClick={() => setTagSearch("")}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Sort Toggle: A-Z vs Count */}
+                <div className="flex items-center space-x-1 border border-surface-border rounded p-0.5 bg-surface text-xs">
+                  <button
+                    onClick={() => setTagSort("alpha")}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                      tagSort === "alpha"
+                        ? "bg-surface-hover text-accent font-medium shadow-sm"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                    title="Sort alphabetically A to Z"
+                  >
+                    A–Z
+                  </button>
+                  <button
+                    onClick={() => setTagSort("count")}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                      tagSort === "count"
+                        ? "bg-surface-hover text-accent font-medium shadow-sm"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                    title="Sort by number of photos"
+                  >
+                    Count
+                  </button>
+                </div>
+
+                {/* Show All vs Top 48 Toggle */}
+                {!tagSearch && allKeywords.length > 48 && (
+                  <button
+                    onClick={() => setShowAllTags(!showAllTags)}
+                    className="text-xs px-2.5 py-1 bg-surface hover:bg-surface-hover border border-surface-border rounded text-muted hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {showAllTags ? "Show Top 48" : `Show All (${allKeywords.length})`}
+                  </button>
+                )}
+
+                {selectedTag && (
+                  <button
+                    onClick={handleClearTag}
+                    className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer pl-1"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Clear Tag</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto pr-1">
+            {/* Scrollable Tag Cloud Container */}
+            <div className="flex flex-wrap gap-1.5 max-h-80 overflow-y-auto pr-1">
               {displayedTags.map(({ tag, count }) => {
                 const isSelected =
                   selectedTag?.toLowerCase() === tag.toLowerCase();
@@ -340,23 +421,12 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
                   </button>
                 );
               })}
+              {displayedTags.length === 0 && (
+                <div className="text-xs text-muted py-6 w-full text-center">
+                  No keywords matching &ldquo;{tagSearch}&rdquo;
+                </div>
+              )}
             </div>
-
-            {popularTags.length > 36 && (
-              <div className="text-right">
-                <button
-                  onClick={() => setShowAllTags(!showAllTags)}
-                  className="text-[11px] text-muted hover:text-accent inline-flex items-center space-x-1 cursor-pointer"
-                >
-                  <span>{showAllTags ? "Show fewer tags" : `Show more tags (${popularTags.length} total)`}</span>
-                  {showAllTags ? (
-                    <ChevronUp className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
