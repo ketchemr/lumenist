@@ -29,6 +29,14 @@ export function RandomHeroSlideshow({
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const descScrollRef = useRef<HTMLDivElement>(null);
+
+  // Reset description scroll position when slide changes
+  useEffect(() => {
+    if (descScrollRef.current) {
+      descScrollRef.current.scrollTop = 0;
+    }
+  }, [currentIndex]);
 
   // Pick a random photo different from current
   const advanceToRandom = useCallback(() => {
@@ -185,11 +193,16 @@ export function RandomHeroSlideshow({
               </button>
             </div>
 
-            {/* Description */}
-            <p className="text-sm text-gray-300 leading-relaxed font-normal">
-              {current.description ||
-                "A fine art landscape photograph exploring natural light and form."}
-            </p>
+            {/* Description (Scrollable container for long stories) */}
+            <div
+              ref={descScrollRef}
+              className="max-h-[160px] sm:max-h-[190px] overflow-y-auto pr-2 space-y-2 select-text"
+            >
+              <p className="text-sm text-gray-300 leading-relaxed font-normal">
+                {current.description ||
+                  "A fine art landscape photograph exploring natural light and form."}
+              </p>
+            </div>
 
             {/* Categories */}
             <div className="flex flex-wrap gap-1.5 pt-1">
