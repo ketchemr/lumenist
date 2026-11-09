@@ -107,30 +107,38 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
           </p>
         )}
 
-        {/* Categories & Keywords */}
+        {/* Categories & Keywords (Alphabetically Sorted) */}
         <div className="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-          {photo.categories.map((cat) => (
-            <Link
-              key={cat}
-              href={`/galleries/${encodeURIComponent(cat)}`}
-              className="inline-flex items-center space-x-1 text-xs bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded text-accent transition-colors"
-            >
-              <Folder className="w-3 h-3" />
-              <span>{cat}</span>
-            </Link>
-          ))}
+          {[...photo.categories]
+            .sort((a, b) =>
+              a.localeCompare(b, undefined, { sensitivity: "base" })
+            )
+            .map((cat) => (
+              <Link
+                key={cat}
+                href={`/galleries/${encodeURIComponent(cat)}`}
+                className="inline-flex items-center space-x-1 text-xs bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded text-accent transition-colors"
+              >
+                <Folder className="w-3 h-3" />
+                <span>{cat}</span>
+              </Link>
+            ))}
 
-          {photo.keywords.map((kw) => (
-            <Link
-              key={kw}
-              href={`/explore?tag=${encodeURIComponent(kw)}`}
-              className="inline-flex items-center space-x-1 text-xs text-gray-400 hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
-              title={`Explore other photographs tagged "${kw}"`}
-            >
-              <Tag className="w-2.5 h-2.5 text-gray-500 group-hover:text-accent transition-colors" />
-              <span>{kw}</span>
-            </Link>
-          ))}
+          {[...photo.keywords]
+            .sort((a, b) =>
+              a.localeCompare(b, undefined, { sensitivity: "base" })
+            )
+            .map((kw) => (
+              <Link
+                key={kw}
+                href={`/explore?tag=${encodeURIComponent(kw)}`}
+                className="inline-flex items-center space-x-1 text-xs text-gray-400 hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
+                title={`Explore other photographs tagged "${kw}"`}
+              >
+                <Tag className="w-2.5 h-2.5 text-gray-500 group-hover:text-accent transition-colors" />
+                <span>{kw}</span>
+              </Link>
+            ))}
         </div>
       </div>
 

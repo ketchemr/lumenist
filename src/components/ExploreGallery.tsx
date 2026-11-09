@@ -12,34 +12,54 @@ interface ExploreGalleryProps {
   categories: { name: string; count: number }[];
 }
 
+function parseTagsFromParams(params: URLSearchParams): string[] {
+  const raw = params.getAll("tag");
+  const tags: string[] = [];
+  for (const item of raw) {
+    for (const piece of item.split(",")) {
+      const trimmed = piece.trim();
+      if (
+        trimmed &&
+        !tags.some((t) => t.toLowerCase() === trimmed.toLowerCase())
+      ) {
+        tags.push(trimmed);
+      }
+    }
+  }
+  return tags;
+}
+
 export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const urlTag = searchParams.get("tag") || null;
   const urlQuery = searchParams.get("q") || "";
   const urlCategory = searchParams.get("category") || "All";
 
+  const [selectedTags, setSelectedTags] = useState<string[]>(() =>
+    parseTagsFromParams(searchParams)
+  );
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory);
-  const [selectedTag, setSelectedTag] = useState<string | null>(urlTag);
   const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">("All");
   const [tagSort, setTagSort] = useState<"alpha" | "count">("alpha");
   const [tagSearch, setTagSearch] = useState("");
-  const [showTagCloud, setShowTagCloud] = useState(Boolean(urlTag));
+  const [showTagCloud, setShowTagCloud] = useState(() =>
+    parseTagsFromParams(searchParams).length > 0
+  );
   const [showAllTags, setShowAllTags] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 48;
 
   // Sync state when URL params change (e.g. from clicking photo tags or browser back/forward)
   useEffect(() => {
-    const currentTag = searchParams.get("tag") || null;
+    const tags = parseTagsFromParams(searchParams);
     const currentQ = searchParams.get("q") || "";
     const currentCat = searchParams.get("category") || "All";
 
-    setSelectedTag(currentTag);
-    if (currentTag) {
+    setSelectedTags(tags);
+    if (tags.length > 0) {
       setShowTagCloud(true);
     }
     setSearchQuery(currentQ);
@@ -48,9 +68,11 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   }, [searchParams]);
 
   const updateUrlParams = useCallback(
-    (tag: string | null, q: string, cat: string) => {
+    (tags: string[], q: string, cat: string) => {
       const params = new URLSearchParams();
-      if (tag) params.set("tag", tag);
+      if (tags.length > 0) {
+        params.set("tag", tags.join(","));
+      }
       if (q.trim()) params.set("q", q.trim());
       if (cat && cat !== "All") params.set("category", cat);
 
@@ -136,12 +158,15 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         }
       }
 
-      // Tag filter match
-      if (selectedTag) {
-        const hasTag = p.keywords.some(
-          (k) => k.toLowerCase() === selectedTag.toLowerCase()
+      // Multi-tag filter match (all selected tags must match)
+      if (selectedTags.length > 0) {
+        const photoKeywordsLower = (p.keywords || []).map((k) =>
+          k.toLowerCase()
         );
-        if (!hasTag) {
+        const matchesAll = selectedTags.every((st) =>
+          photoKeywordsLower.includes(st.toLowerCase())
+        );
+        if (!matchesAll) {
           return false;
         }
       }
@@ -155,7 +180,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
 
       return true;
     });
-  }, [initialPhotos, searchQuery, selectedCategory, selectedTag, filmFilter]);
+  }, [initialPhotos, searchQuery, selectedCategory, selectedTags, filmFilter]);
 
   const totalPages = Math.ceil(filteredPhotos.length / pageSize);
   const paginatedPhotos = useMemo(() => {
@@ -166,27 +191,41 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setCurrentPage(1);
-    updateUrlParams(selectedTag, val, selectedCategory);
+    updateUrlParams(selectedTags, val, selectedCategory);
   };
 
   const handleCategoryChange = (val: string) => {
     setSelectedCategory(val);
     setCurrentPage(1);
-    updateUrlParams(selectedTag, searchQuery, val);
+    updateUrlParams(selectedTags, searchQuery, val);
   };
 
   const handleTagToggle = (tag: string) => {
-    const nextTag =
-      selectedTag?.toLowerCase() === tag.toLowerCase() ? null : tag;
-    setSelectedTag(nextTag);
+    const exists = selectedTags.some(
+      (t) => t.toLowerCase() === tag.toLowerCase()
+    );
+    const nextTags = exists
+      ? selectedTags.filter((t) => t.toLowerCase() !== tag.toLowerCase())
+      : [...selectedTags, tag];
+
+    setSelectedTags(nextTags);
     setCurrentPage(1);
-    updateUrlParams(nextTag, searchQuery, selectedCategory);
+    updateUrlParams(nextTags, searchQuery, selectedCategory);
   };
 
-  const handleClearTag = () => {
-    setSelectedTag(null);
+  const handleRemoveTag = (tag: string) => {
+    const nextTags = selectedTags.filter(
+      (t) => t.toLowerCase() !== tag.toLowerCase()
+    );
+    setSelectedTags(nextTags);
     setCurrentPage(1);
-    updateUrlParams(null, searchQuery, selectedCategory);
+    updateUrlParams(nextTags, searchQuery, selectedCategory);
+  };
+
+  const handleClearAllTags = () => {
+    setSelectedTags([]);
+    setCurrentPage(1);
+    updateUrlParams([], searchQuery, selectedCategory);
   };
 
   const handleFilmChange = (val: "All" | "Film" | "Digital") => {
@@ -197,7 +236,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   const clearAllFilters = () => {
     setSearchQuery("");
     setSelectedCategory("All");
-    setSelectedTag(null);
+    setSelectedTags([]);
     setFilmFilter("All");
     setCurrentPage(1);
     router.replace(pathname, { scroll: false });
@@ -206,7 +245,7 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   const hasActiveFilters =
     searchQuery ||
     selectedCategory !== "All" ||
-    selectedTag !== null ||
+    selectedTags.length > 0 ||
     filmFilter !== "All";
 
 
@@ -231,15 +270,17 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
             <button
               onClick={() => setShowTagCloud(!showTagCloud)}
               className={`px-3 py-2 rounded-sm border text-xs flex items-center space-x-1.5 transition-colors cursor-pointer ${
-                showTagCloud || selectedTag
+                showTagCloud || selectedTags.length > 0
                   ? "bg-accent/15 border-accent text-accent font-medium shadow-sm"
                   : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent/40"
               }`}
             >
               <Tag className="w-3.5 h-3.5" />
               <span>Tag Cloud</span>
-              {selectedTag && (
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              {selectedTags.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-accent text-accent-contrast rounded-full text-[10px] font-bold">
+                  {selectedTags.length}
+                </span>
               )}
             </button>
 
@@ -319,9 +360,15 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
                 <span className="uppercase tracking-wider font-semibold text-foreground">
                   Tag Cloud ({allKeywords.length} keywords)
                 </span>
-                {selectedTag && (
-                  <span className="text-accent">
-                    &bull; Filtered by <strong className="text-foreground">&ldquo;{selectedTag}&rdquo;</strong>
+                {selectedTags.length > 0 && (
+                  <span className="text-accent flex items-center gap-1.5">
+                    &bull; {selectedTags.length} active
+                    <button
+                      onClick={handleClearAllTags}
+                      className="text-xs text-accent hover:underline cursor-pointer ml-1"
+                    >
+                      Clear tags
+                    </button>
                   </span>
                 )}
               </div>
@@ -383,13 +430,13 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
                   </button>
                 )}
 
-                {selectedTag && (
+                {selectedTags.length > 0 && (
                   <button
-                    onClick={handleClearTag}
+                    onClick={handleClearAllTags}
                     className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer pl-1"
                   >
                     <X className="w-3 h-3" />
-                    <span>Clear Tag</span>
+                    <span>Clear Tags</span>
                   </button>
                 )}
               </div>
@@ -398,8 +445,9 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
             {/* Scrollable Tag Cloud Container */}
             <div className="flex flex-wrap gap-1.5 max-h-80 overflow-y-auto pr-1">
               {displayedTags.map(({ tag, count }) => {
-                const isSelected =
-                  selectedTag?.toLowerCase() === tag.toLowerCase();
+                const isSelected = selectedTags.some(
+                  (t) => t.toLowerCase() === tag.toLowerCase()
+                );
                 return (
                   <button
                     key={tag}
@@ -433,23 +481,26 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
 
       {/* Results Header with Active Filters */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span>
             Showing <strong className="text-foreground font-medium">{filteredPhotos.length}</strong> photographs
           </span>
-          {selectedTag && (
-            <span className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]">
+          {selectedTags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]"
+            >
               <Tag className="w-3 h-3" />
-              <span>{selectedTag}</span>
+              <span>{tag}</span>
               <button
-                onClick={handleClearTag}
-                className="hover:text-white cursor-pointer"
-                title="Remove tag filter"
+                onClick={() => handleRemoveTag(tag)}
+                className="hover:text-white cursor-pointer ml-0.5"
+                title={`Remove ${tag} filter`}
               >
                 <X className="w-3 h-3" />
               </button>
             </span>
-          )}
+          ))}
         </div>
 
         {hasActiveFilters && (
