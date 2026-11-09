@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Photo } from "@/types/photo";
 import {
-  Sparkles,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
@@ -106,7 +105,7 @@ export function RandomHeroSlideshow({
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
         {/* Photo Display: Constant Width & Constant Height Frame */}
-        <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-neutral-950 relative flex items-center justify-center">
+        <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black relative flex items-center justify-center">
           <Link
             href={`/photo/${current.photoID}`}
             className="w-full h-full flex items-center justify-center p-2"
@@ -129,7 +128,7 @@ export function RandomHeroSlideshow({
                 advanceToPrev();
               }}
               aria-label="Previous random photo"
-              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all"
+              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -142,61 +141,63 @@ export function RandomHeroSlideshow({
                 advanceToNext();
               }}
               aria-label="Next random photo"
-              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all"
+              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Narrative & Details Column: Stable height */}
-        <div className="lg:col-span-4 h-full flex flex-col justify-between py-1 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center space-x-1.5 text-xs text-accent font-medium tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Random Exhibition ({intervalSeconds}s)</span>
-            </div>
-
-            {/* Play/Pause Button */}
-            <button
-              onClick={() => setIsPaused((p) => !p)}
-              className="text-xs text-muted hover:text-white flex items-center space-x-1 bg-surface border border-surface-border px-2 py-0.5 rounded transition-colors"
-              title={isPaused ? "Resume rotation" : "Pause rotation"}
-            >
-              {isPaused ? (
-                <>
-                  <Play className="w-3 h-3 text-accent" />
-                  <span>Resume</span>
-                </>
-              ) : (
-                <>
-                  <Pause className="w-3 h-3 text-gray-400" />
-                  <span>Pause</span>
-                </>
-              )}
-            </button>
-          </div>
-
+        {/* Narrative & Details Column: Top Justified */}
+        <div className="lg:col-span-4 h-full flex flex-col justify-start py-2 space-y-4">
           <div
-            className={`transition-opacity duration-300 ${
+            className={`space-y-4 transition-opacity duration-300 ${
               isTransitioning ? "opacity-0" : "opacity-100"
             }`}
           >
-            <h2 className="text-2xl sm:text-3xl font-light text-white tracking-tight">
-              {current.title}
-            </h2>
+            {/* Title with discreet Pause/Play toggle */}
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-2xl sm:text-3xl font-light text-white tracking-tight">
+                <Link
+                  href={`/photo/${current.photoID}`}
+                  className="hover:text-accent transition-colors"
+                >
+                  {current.title}
+                </Link>
+              </h2>
 
-            <p className="text-sm text-gray-400 line-clamp-4 leading-relaxed pt-2">
+              <button
+                onClick={() => setIsPaused((p) => !p)}
+                className="text-xs text-muted hover:text-white flex-shrink-0 flex items-center space-x-1 bg-black border border-surface-border px-2 py-1 rounded transition-colors mt-1 cursor-pointer"
+                title={isPaused ? "Resume rotation" : "Pause rotation"}
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-3 h-3 text-accent" />
+                    <span className="hidden sm:inline">Resume</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-3 h-3 text-gray-400" />
+                    <span className="hidden sm:inline">Pause</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-gray-300 leading-relaxed font-normal">
               {current.description ||
                 "A fine art landscape photograph exploring natural light and form."}
             </p>
 
-            <div className="pt-3 flex flex-wrap gap-1.5">
+            {/* Categories */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {current.categories.map((c) => (
                 <Link
                   key={c}
                   href={`/galleries/${encodeURIComponent(c)}`}
-                  className="text-xs bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded text-gray-300 transition-colors"
+                  className="text-xs bg-black hover:bg-surface-hover border border-surface-border hover:border-accent px-2.5 py-1 rounded text-gray-300 hover:text-white transition-colors"
                 >
                   {c}
                 </Link>
@@ -204,7 +205,7 @@ export function RandomHeroSlideshow({
             </div>
 
             {/* Camera & Year Metadata */}
-            <div className="pt-4 flex items-center space-x-3 text-xs text-muted">
+            <div className="flex items-center space-x-3 text-xs text-muted font-mono pt-1">
               {current.camera && (
                 <span className="flex items-center space-x-1">
                   <Camera className="w-3.5 h-3.5 text-gray-400" />
@@ -216,7 +217,8 @@ export function RandomHeroSlideshow({
               )}
             </div>
 
-            <div className="pt-5">
+            {/* Exhibition Link */}
+            <div className="pt-2">
               <Link
                 href={`/photo/${current.photoID}`}
                 className="inline-flex items-center space-x-2 text-sm text-accent hover:text-accent-light transition-colors font-medium group/link"
