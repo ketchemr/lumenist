@@ -17,41 +17,68 @@ interface RandomHeroSlideshowProps {
   intervalSeconds?: number;
 }
 
+interface SlideshowState {
+  list: number[];
+  index: number;
+}
+
 export function RandomHeroSlideshow({
   photos,
   intervalSeconds = 10,
 }: RandomHeroSlideshowProps) {
-  // Slideshow History Stack: allows backward/forward navigation of random photos
-  const [historyState, setHistoryState] = useState<{
-    history: number[];
-    index: number;
-  }>({
-    history: [],
-    index: -1,
+  // Slideshow History: stores the exact chronological order of random slides shown
+  const [state, setState] = useState<SlideshowState>({
+    list: [],
+    index: 0,
   });
 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [progress, setProgress] = useState(0);
 
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const descScrollRef = useRef<HTMLDivElement>(null);
 
-  // Initialize with initial random photo on client mount
+  // Initialize from sessionStorage or pick initial random photo on mount
   useEffect(() => {
-    if (photos.length > 0 && historyState.history.length === 0) {
-      const initial = Math.floor(Math.random() * photos.length);
-      setHistoryState({
-        history: [initial],
-        index: 0,
-      });
+    if (photos.length === 0) return;
+
+    try {
+      const saved = sessionStorage.getItem("lumenist_slideshow_state");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (
+          Array.isArray(parsed.list) &&
+          parsed.list.length > 0 &&
+          typeof parsed.index === "number" &&
+          parsed.list.every((i: number) => i >= 0 && i < photos.length)
+        ) {
+          setState(parsed);
+          return;
+        }
+      }
+    } catch {}
+
+    const initial = Math.floor(Math.random() * photos.length);
+    setState({
+      list: [initial],
+      index: 0,
+    });
+  }, [photos.length]);
+
+  // Persist history state to sessionStorage so it survives back-navigation
+  useEffect(() => {
+    if (state.list.length > 0) {
+      try {
+        sessionStorage.setItem(
+          "lumenist_slideshow_state",
+          JSON.stringify(state)
+        );
+      } catch {}
     }
-  }, [photos.length, historyState.history.length]);
+  }, [state]);
 
   const currentIndex =
-    historyState.index >= 0 &&
-    historyState.history[historyState.index] !== undefined
-      ? historyState.history[historyState.index]
+    state.list.length > 0 && state.list[state.index] !== undefined
+      ? state.list[state.index]
       : 0;
 
   // Reset description scroll position when slide changes
@@ -61,92 +88,80 @@ export function RandomHeroSlideshow({
     }
   }, [currentIndex]);
 
-  // Next: moves forward in visited history, or generates a new random photo if at the tip
+  // Advance to Next:
+  // If we navigated back in history, move forward to the next already-visited slide.
+  // If we are at the latest slide, pick a new random slide and append to history.
   const advanceToNext = useCallback(() => {
     if (photos.length <= 1) return;
     setIsTransitioning(true);
 
     setTimeout(() => {
-      setHistoryState((prev) => {
-        if (prev.index < prev.history.length - 1) {
+      setState((prev) => {
+        if (prev.list.length === 0) {
+          return { list: [0], index: 0 };
+        }
+
+        // Stepping forward in already-seen history
+        if (prev.index < prev.list.length - 1) {
           return {
-            history: prev.history,
+            list: prev.list,
             index: prev.index + 1,
           };
-        } else {
-          const currentPhotoIdx = prev.history[prev.index];
-          let next = Math.floor(Math.random() * photos.length);
-          while (next === currentPhotoIdx && photos.length > 1) {
-            next = Math.floor(Math.random() * photos.length);
-          }
-          return {
-            history: [...prev.history, next],
-            index: prev.history.length,
-          };
         }
+
+        // At the tip: pick a new random photo not equal to current
+        const currentPhoto = prev.list[prev.index];
+        let next = Math.floor(Math.random() * photos.length);
+        while (next === currentPhoto && photos.length > 1) {
+          next = Math.floor(Math.random() * photos.length);
+        }
+
+        return {
+          list: [...prev.list, next],
+          index: prev.list.length,
+        };
       });
+
       setIsTransitioning(false);
-      setProgress(0);
-    }, 300);
+    }, 200);
   }, [photos]);
 
-  // Prev: moves back to the previous random photo you just saw
+  // Advance to Prev:
+  // Moves back to the exact photograph that was shown right before this one!
   const advanceToPrev = useCallback(() => {
     if (photos.length <= 1) return;
     setIsTransitioning(true);
 
     setTimeout(() => {
-      setHistoryState((prev) => {
+      setState((prev) => {
         if (prev.index > 0) {
           return {
-            history: prev.history,
+            list: prev.list,
             index: prev.index - 1,
           };
-        } else {
-          // At the beginning of history: pick a random photo and prepend to history
-          const currentPhotoIdx = prev.history[0];
-          let next = Math.floor(Math.random() * photos.length);
-          while (next === currentPhotoIdx && photos.length > 1) {
-            next = Math.floor(Math.random() * photos.length);
-          }
-          return {
-            history: [next, ...prev.history],
-            index: 0,
-          };
         }
+        return prev;
       });
+
       setIsTransitioning(false);
-      setProgress(0);
-    }, 300);
+    }, 200);
   }, [photos]);
 
-  // Progress bar ticker for auto-rotation
+  // Slide transition timer: pure and reliable setTimeout keyed to state.index
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || photos.length <= 1) return;
 
-    const stepMs = 100;
-    const totalMs = intervalSeconds * 1000;
+    const timer = setTimeout(() => {
+      advanceToNext();
+    }, intervalSeconds * 1000);
 
-    progressIntervalRef.current = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + (stepMs / totalMs) * 100;
-        if (next >= 100) {
-          advanceToNext();
-          return 0;
-        }
-        return next;
-      });
-    }, stepMs);
-
-    return () => {
-      if (progressIntervalRef.current)
-        clearInterval(progressIntervalRef.current);
-    };
-  }, [isPaused, intervalSeconds, advanceToNext]);
+    return () => clearTimeout(timer);
+  }, [isPaused, intervalSeconds, state.index, advanceToNext, photos.length]);
 
   if (!photos || photos.length === 0) return null;
 
   const current = photos[currentIndex] || photos[0];
+  const canGoPrev = state.index > 0;
 
   return (
     <section
@@ -178,11 +193,20 @@ export function RandomHeroSlideshow({
             <button
               onClick={(e) => {
                 e.preventDefault();
-                advanceToPrev();
+                if (canGoPrev) advanceToPrev();
               }}
-              aria-label="Previous photo in slideshow history"
-              title="Previous photo you just saw"
-              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer"
+              disabled={!canGoPrev}
+              aria-label="Previous photo in slideshow"
+              title={
+                canGoPrev
+                  ? "Previous photo you just saw"
+                  : "At the start of slideshow history"
+              }
+              className={`p-2 rounded-full border border-white/10 backdrop-blur-sm transition-all ${
+                canGoPrev
+                  ? "bg-black/60 hover:bg-black/90 text-white cursor-pointer"
+                  : "bg-black/30 text-white/30 cursor-not-allowed opacity-40"
+              }`}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -292,10 +316,14 @@ export function RandomHeroSlideshow({
       </div>
 
       {/* Subtle Progress Bar */}
-      <div className="w-full bg-surface-border h-0.5 relative">
+      <div className="w-full bg-surface-border/40 h-0.5 relative overflow-hidden">
         <div
-          className="bg-accent h-0.5 transition-all duration-100 ease-linear"
-          style={{ width: `${isPaused ? progress : progress}%` }}
+          key={`${state.index}-${isPaused}`}
+          className="bg-accent h-0.5 animate-progress-bar"
+          style={{
+            animationDuration: `${intervalSeconds}s`,
+            animationPlayState: isPaused ? "paused" : "running",
+          }}
         />
       </div>
     </section>
