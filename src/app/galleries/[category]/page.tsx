@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPhotosByCategory } from "@/lib/photos";
 import { PaginatedGallery } from "@/components/PaginatedGallery";
-import { ArrowLeft, Folder, Images } from "lucide-react";
+import { Folder, Images } from "lucide-react";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { BackButton } from "@/components/BackButton";
 
 interface CategoryPageProps {
   params: Promise<{
@@ -47,13 +49,15 @@ export default async function CategoryPage({
   return (
     <div className="space-y-8">
       <div className="border-b border-surface-border pb-4 space-y-2">
-        <Link
-          href="/galleries"
-          className="inline-flex items-center space-x-1.5 text-xs text-muted hover:text-accent transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>All Galleries</span>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Breadcrumbs
+            items={[
+              { label: "Galleries", href: "/galleries" },
+              { label: title },
+            ]}
+          />
+          <BackButton fallback="/galleries" label="Back" />
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h1 className="text-2xl sm:text-3xl font-light text-white tracking-tight flex items-center space-x-2.5">

@@ -13,6 +13,8 @@
     "import:all": "tsx scripts/import-photos.ts"
   },
   "dependencies": {
+    "@types/leaflet": "^1.9.22",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.470.0",
     "next": "^15.1.0",
     "react": "^19.0.0",

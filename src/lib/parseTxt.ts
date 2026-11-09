@@ -1,6 +1,41 @@
+import fs from "fs";
 import { Photo, PhotoLocation, PhotoSize } from "../types/photo";
 
-export function parseTxtMetadata(content: string, fallbackId?: string): Photo {
+// Extract real image dimensions from JPEG SOF marker
+export function getJpegDimensions(filePath: string): { width: number; height: number } | null {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const fd = fs.openSync(filePath, "r");
+    const buffer = Buffer.alloc(65536);
+    fs.readSync(fd, buffer, 0, 65536, 0);
+    fs.closeSync(fd);
+
+    if (buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+
+    let offset = 2;
+    while (offset < buffer.length - 8) {
+      if (buffer[offset] !== 0xff) {
+        offset++;
+        continue;
+      }
+      const marker = buffer[offset + 1];
+      if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
+        const height = buffer.readUInt16BE(offset + 5);
+        const width = buffer.readUInt16BE(offset + 7);
+        if (width > 0 && height > 0) {
+          return { width, height };
+        }
+      }
+      const length = buffer.readUInt16BE(offset + 2);
+      offset += 2 + length;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function parseTxtMetadata(content: string, fallbackId?: string, imageFilePath?: string): Photo {
   const lines = content.split(/\r?\n/);
   const raw: Record<string, string> = {};
 
@@ -39,11 +74,27 @@ export function parseTxtMetadata(content: string, fallbackId?: string): Photo {
     const height = parseInt(hStr.trim(), 10);
     if (!isNaN(width) && !isNaN(height) && height > 0) {
       const aspectRatio = parseFloat((width / height).toFixed(3));
-      let orientation: "horizontal" | "vertical" | "square" = "horizontal";
-      if (width === height) orientation = "square";
-      else if (height > width) orientation = "vertical";
+      // Sanity check: normal photos and wide panoramas are within 0.25 to 4.5
+      if (aspectRatio >= 0.25 && aspectRatio <= 4.5) {
+        let orientation: "horizontal" | "vertical" | "square" = "horizontal";
+        if (width === height) orientation = "square";
+        else if (height > width) orientation = "vertical";
 
-      size = { width, height, aspectRatio, orientation };
+        size = { width, height, aspectRatio, orientation };
+      }
+    }
+  }
+
+  // Fallback: probe actual JPEG dimensions if size is missing or invalid
+  if (!size && imageFilePath && fs.existsSync(imageFilePath)) {
+    const dims = getJpegDimensions(imageFilePath);
+    if (dims) {
+      const aspectRatio = parseFloat((dims.width / dims.height).toFixed(3));
+      let orientation: "horizontal" | "vertical" | "square" = "horizontal";
+      if (dims.width === dims.height) orientation = "square";
+      else if (dims.height > dims.width) orientation = "vertical";
+
+      size = { width: dims.width, height: dims.height, aspectRatio, orientation };
     }
   }
 

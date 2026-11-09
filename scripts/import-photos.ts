@@ -40,9 +40,11 @@ async function main() {
     let countInFolder = 0;
     for (const txtFile of txtFiles) {
       const filePath = path.join(subPath, txtFile);
+      const baseName = path.parse(txtFile).name;
+      const imagePath = path.join(subPath, `${baseName}_desktop.jpg`);
       try {
         const content = fs.readFileSync(filePath, "utf-8");
-        const photo = parseTxtMetadata(content, path.parse(txtFile).name);
+        const photo = parseTxtMetadata(content, baseName, imagePath);
 
         // Adjust desktop image path to preserve folder structure
         photo.imageDesktop = `/photos/${sub}/${photo.photoID}_desktop.jpg`;

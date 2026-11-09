@@ -58,53 +58,72 @@ export function JustifiedGallery({
     return targetRowHeight; // ~210px on desktop
   }, [containerWidth, targetRowHeight]);
 
-  // Compute justified rows
+  // Compute justified rows with min-height safety guard
   const rows = useMemo(() => {
     if (containerWidth <= 0 || photos.length === 0) return [];
 
     const calculatedRows: CalculatedRow[] = [];
+    const minRowHeight = Math.round(effectiveTargetHeight * 0.72); // Never shrink below ~150px desktop
     let currentRow: { photo: Photo; ar: number }[] = [];
     let currentArSum = 0;
 
+    const finalizeRow = (items: { photo: Photo; ar: number }[], arSum: number, forceHeight?: number) => {
+      if (items.length === 0) return;
+      const gapsWidth = (items.length - 1) * gap;
+      const availableWidth = containerWidth - gapsWidth;
+      const rowHeight = forceHeight || Math.round(availableWidth / arSum);
+      let remainingWidth = availableWidth;
+
+      const rowPhotos: CalculatedPhoto[] = items.map((item, idx) => {
+        const isLastInRow = idx === items.length - 1;
+        const itemWidth = isLastInRow
+          ? remainingWidth
+          : Math.round(rowHeight * item.ar);
+        remainingWidth -= itemWidth;
+
+        return {
+          photo: item.photo,
+          width: itemWidth,
+          height: rowHeight,
+        };
+      });
+
+      calculatedRows.push({ photos: rowPhotos, height: rowHeight });
+    };
+
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i];
-      // Default aspect ratio fallback: 1.5 (3:2)
-      const ar = photo.size?.aspectRatio || 1.5;
+      // Default aspect ratio fallback: 1.5 (3:2), clamped to sane bounds
+      const rawAr = photo.size?.aspectRatio || 1.5;
+      const ar = Math.max(0.4, Math.min(4.0, rawAr));
+
+      // Check what height would be if we add this photo to currentRow
+      const testArSum = currentArSum + ar;
+      const gapsWidth = currentRow.length * gap;
+      const availableWidth = containerWidth - gapsWidth;
+      const potentialHeight = availableWidth / testArSum;
+
+      // If adding this photo causes the row height to collapse below minRowHeight,
+      // close the current row FIRST so existing photos aren't squished!
+      if (currentRow.length > 0 && potentialHeight < minRowHeight) {
+        finalizeRow(currentRow, currentArSum);
+        currentRow = [{ photo, ar }];
+        currentArSum = ar;
+        continue;
+      }
 
       currentRow.push({ photo, ar });
       currentArSum += ar;
 
-      // Calculate what row height would be needed to stretch current items across containerWidth
-      const gapsWidth = (currentRow.length - 1) * gap;
-      const availableWidth = containerWidth - gapsWidth;
-      const potentialHeight = availableWidth / currentArSum;
-
-      // If potential height is within target height, finalize row to align edges flush
+      // If potential height reached target height, finalize row flush to edges
       if (potentialHeight <= effectiveTargetHeight) {
-        const rowHeight = Math.round(potentialHeight);
-        let remainingWidth = availableWidth;
-
-        const rowPhotos: CalculatedPhoto[] = currentRow.map((item, idx) => {
-          const isLastInRow = idx === currentRow.length - 1;
-          const itemWidth = isLastInRow
-            ? remainingWidth
-            : Math.round(rowHeight * item.ar);
-          remainingWidth -= itemWidth;
-
-          return {
-            photo: item.photo,
-            width: itemWidth,
-            height: rowHeight,
-          };
-        });
-
-        calculatedRows.push({ photos: rowPhotos, height: rowHeight });
+        finalizeRow(currentRow, currentArSum, Math.round(potentialHeight));
         currentRow = [];
         currentArSum = 0;
       }
     }
 
-    // Handle leftover photos in the last row (keep them at target height without stretching)
+    // Handle leftover photos in the last row (keep at target height without stretching)
     if (currentRow.length > 0) {
       const rowPhotos: CalculatedPhoto[] = currentRow.map((item) => ({
         photo: item.photo,

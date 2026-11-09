@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPhotoById, getAdjacentPhotos } from "@/lib/photos";
 import { TechnicalDetails } from "@/components/TechnicalDetails";
-import { ChevronLeft, ChevronRight, ArrowLeft, Tag, Folder } from "lucide-react";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { BackButton } from "@/components/BackButton";
+import { ChevronLeft, ChevronRight, Tag, Folder } from "lucide-react";
 
 interface PhotoPageProps {
   params: Promise<{
@@ -22,15 +24,28 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto">
-      {/* Top Navigation Bar */}
+      {/* Top Navigation & Breadcrumb Trail */}
       <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
-        <Link
-          href="/"
-          className="inline-flex items-center space-x-1.5 hover:text-accent transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Gallery</span>
-        </Link>
+        <div className="flex items-center space-x-3">
+          <BackButton fallback="/galleries" label="Back to Gallery" />
+          <span className="text-gray-700 hidden sm:inline">|</span>
+          <div className="hidden sm:block">
+            <Breadcrumbs
+              items={[
+                { label: "Galleries", href: "/galleries" },
+                ...(photo.categories[0]
+                  ? [
+                      {
+                        label: photo.categories[0],
+                        href: `/galleries/${encodeURIComponent(photo.categories[0])}`,
+                      },
+                    ]
+                  : []),
+                { label: photo.title },
+              ]}
+            />
+          </div>
+        </div>
 
         <div className="flex items-center space-x-4">
           {prev ? (

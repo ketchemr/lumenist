@@ -1,5 +1,6 @@
 import { Photo } from "@/types/photo";
 import { Camera, Film, Compass, Crosshair, Sliders, Calendar, MapPin, ShoppingBag } from "lucide-react";
+import { PhotoMap } from "./PhotoMap";
 
 interface TechnicalDetailsProps {
   photo: Photo;
@@ -96,24 +97,34 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
         </div>
       </div>
 
-      {/* Geospatial Location */}
+      {/* Geospatial Location & Embedded Map */}
       {photo.location && (
-        <div className="border-t border-surface-border pt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center space-x-2 text-gray-300">
-            <MapPin className="w-4 h-4 text-accent" />
-            <span>Coordinates:</span>
-            <span className="font-mono text-gray-400">
-              {photo.location.latitude.toFixed(5)}, {photo.location.longitude.toFixed(5)}
-            </span>
+        <div className="border-t border-surface-border pt-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center space-x-2 text-gray-300">
+              <MapPin className="w-4 h-4 text-accent" />
+              <span>Coordinates:</span>
+              <span className="font-mono text-gray-400">
+                {photo.location.latitude.toFixed(5)}, {photo.location.longitude.toFixed(5)}
+              </span>
+            </div>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${photo.location.latitude},${photo.location.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:text-accent-light underline underline-offset-4"
+            >
+              Open in Google Maps ↗
+            </a>
           </div>
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${photo.location.latitude},${photo.location.longitude}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:text-accent-light underline underline-offset-4"
-          >
-            View on Map ↗
-          </a>
+
+          <PhotoMap
+            latitude={photo.location.latitude}
+            longitude={photo.location.longitude}
+            title={photo.title}
+            thumbnailUrl={photo.imageDesktop}
+            height="260px"
+          />
         </div>
       )}
     </div>
