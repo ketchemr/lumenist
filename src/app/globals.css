@@ -5,7 +5,12 @@
 :root {
   --background: #000000;
   --foreground: #f5f5f5;
-  --accent: #9999FF;
+  --accent: #f59e0b;
+  --accent-rgb: 245 158 11;
+  --accent-light: #fbbf24;
+  --accent-light-rgb: 251 191 36;
+  --accent-dark: #d97706;
+  --accent-dark-rgb: 217 119 6;
 }
 
 body {

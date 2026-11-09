@@ -360,9 +360,9 @@ export function PhotoViewer({
               <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-400 font-mono pt-1">
                 <div>Camera: {photo.camera}</div>
                 <div>Lens: {photo.lens}</div>
-                <div>Shutter: {photo.shutterSpeed}</div>
+                <div>Shutter: {photo.shutterspeed || (photo as any).shutterSpeed}</div>
                 <div>Aperture: {photo.aperture}</div>
-                <div>ISO: {photo.iso}</div>
+                <div>ISO: {photo.sensitivity || (photo as any).iso}</div>
                 <div>Focal: {photo.focalLength}</div>
               </div>
             </div>

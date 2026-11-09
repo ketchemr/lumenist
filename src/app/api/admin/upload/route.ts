@@ -4,7 +4,7 @@ import path from "path";
 import sharp from "sharp";
 import exifr from "exifr";
 import { isAuthenticatedAdmin } from "@/lib/auth";
-import { Photo } from "@/types/photo";
+import { Photo, PhotoSize } from "@/types/photo";
 
 function cleanCameraName(make?: string, model?: string): string {
   if (!model && !make) return "Unknown Camera";
@@ -96,11 +96,18 @@ export async function POST(req: NextRequest) {
     const minute = parseInt(formData.get("minute") as string, 10) || dateObj.getMinutes();
     const second = parseInt(formData.get("second") as string, 10) || dateObj.getSeconds();
 
-    // Generate canonical photoID if not passed (e.g. d20261027151131)
+    // Generate canonical photoID if not passed (e.g. d20261027151131 or filename ID)
     const passedPhotoID = (formData.get("photoID") as string)?.trim();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const generatedPhotoID = `d${year}${pad(month)}${pad(day)}${pad(hour)}${pad(minute)}${pad(second)}`;
-    const photoID = passedPhotoID || generatedPhotoID;
+    let photoID = passedPhotoID;
+    if (!photoID) {
+      const baseName = (file.name || "").replace(/\.[^.]+$/, "").replace(/_desktop$/, "");
+      if (/^[ds]\d+/i.test(baseName)) {
+        photoID = baseName;
+      } else {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        photoID = `d${year}${pad(month)}${pad(day)}${pad(hour)}${pad(minute)}${pad(second)}`;
+      }
+    }
 
     // Location coordinates (form overrides EXIF)
     let latitude: number | null = null;
@@ -143,12 +150,16 @@ export async function POST(req: NextRequest) {
         : "0 Ev";
     const whiteBalance = exifData.WhiteBalance || "Auto";
 
-    // Dimensions
+    // Dimensions & Geometry
     const sharpInstance = sharp(buffer);
     const imgMeta = await sharpInstance.metadata();
     const width = imgMeta.width || 1600;
     const height = imgMeta.height || 1067;
     const sizeStr = `${width}x${height}`;
+    const orientation: "horizontal" | "vertical" | "square" =
+      width === height ? "square" : height > width ? "vertical" : "horizontal";
+    const aspectRatio = parseFloat((width / height).toFixed(3));
+    const photoSize: PhotoSize = { width, height, aspectRatio, orientation };
 
     // Target folder on disk
     const photosRoot = resolvePhotosDir();
@@ -181,6 +192,7 @@ export async function POST(req: NextRequest) {
       latitude !== null && longitude !== null ? `location:${latitude.toFixed(6)},${longitude.toFixed(6)}` : "",
       categories.length > 0 ? `albums:${categories.join(",")}` : "",
       keywords.length > 0 ? `tags:${keywords.join(",")}` : "",
+      `size:${sizeStr}`,
       tripod ? `tripod:${tripod}` : "tripod:None",
       availability ? `availability:${availability}` : "availability:Available for Order",
     ].filter(Boolean);
@@ -204,17 +216,18 @@ export async function POST(req: NextRequest) {
         iso: dateObj.toISOString(),
       },
       imageDesktop: `/photos/${year}/${desktopFilename}`,
-      imageOriginal: `/photos/${year}/${desktopFilename}`,
-      size: sizeStr,
-      aspectRatio: width / height,
+      imageFullsize: `/photos/${year}/${desktopFilename}`,
+      size: photoSize,
       camera,
       lens,
       focalLength,
-      shutterSpeed,
+      shutterspeed: shutterSpeed,
       aperture,
-      iso,
-      exposureComp,
+      sensitivity: iso,
+      exposureCompensation: exposureComp,
       whiteBalance,
+      toneCompensation: "Auto",
+      hueAdjustment: 0,
       film: "Digital",
       tripod,
       availability,

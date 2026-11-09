@@ -88,8 +88,8 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
       {/* Main Photographic Presentation with Fullscreen Controls */}
       <PhotoViewer
         photo={photo}
-        prevPhoto={prev}
-        nextPhoto={next}
+        prevPhoto={prev || null}
+        nextPhoto={next || null}
       />
 
       {/* Story & Narrative */}

@@ -12,9 +12,9 @@ const config: Config = {
         background: "#000000",
         foreground: "#f5f5f5",
         accent: {
-          DEFAULT: "#9999FF",
-          light: "#CCCCFF",
-          dark: "#7777DD",
+          DEFAULT: "rgb(var(--accent-rgb, 245 158 11) / <alpha-value>)",
+          light: "rgb(var(--accent-light-rgb, 251 191 36) / <alpha-value>)",
+          dark: "rgb(var(--accent-dark-rgb, 217 119 6) / <alpha-value>)",
         },
         surface: {
           DEFAULT: "#111111",

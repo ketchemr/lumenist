@@ -9,10 +9,27 @@ interface TechnicalDetailsProps {
 export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
   const isAnalogFilm = photo.film && photo.film.toLowerCase() !== "digital";
 
-  // Calculate megapixels if size exists
-  const megapixels = photo.size
-    ? ((photo.size.width * photo.size.height) / 1_000_000).toFixed(1)
-    : null;
+  // Safely extract width and height from object or legacy string format
+  let width: number | undefined;
+  let height: number | undefined;
+  if (photo.size && typeof photo.size === "object") {
+    width = photo.size.width;
+    height = photo.size.height;
+  } else if (typeof photo.size === "string") {
+    const parts = (photo.size as string).toLowerCase().split("x");
+    const w = parseInt(parts[0], 10);
+    const h = parseInt(parts[1], 10);
+    if (!isNaN(w) && !isNaN(h)) {
+      width = w;
+      height = h;
+    }
+  }
+
+  // Calculate megapixels if dimensions are valid numbers
+  const megapixels =
+    width && height && !isNaN(width * height)
+      ? ((width * height) / 1_000_000).toFixed(1)
+      : null;
 
   return (
     <div className="bg-surface border border-surface-border rounded-sm p-6 space-y-6 text-sm">
@@ -81,9 +98,9 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
               <span className="text-muted text-xs">Date:</span>{" "}
               {photo.dateTaken.year}-{String(photo.dateTaken.month).padStart(2, "0")}-{String(photo.dateTaken.day).padStart(2, "0")}
             </div>
-            {photo.size && (
+            {width && height && (
               <div>
-                <span className="text-muted text-xs">Resolution:</span> {photo.size.width} × {photo.size.height}
+                <span className="text-muted text-xs">Resolution:</span> {width} × {height}
                 {megapixels && <span className="text-gray-400 text-xs"> ({megapixels} MP)</span>}
               </div>
             )}

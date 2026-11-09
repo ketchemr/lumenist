@@ -1,5 +1,5 @@
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Camera, Tripod, Mail, Instagram, ShoppingBag, Sparkles } from "lucide-react";
+import { Camera, Mail, Instagram, ShoppingBag, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
