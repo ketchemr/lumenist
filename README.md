@@ -12,7 +12,7 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
 - **Dark Exhibition Backgrounds**: Pre-configured with Pure OLED Black (`#000000`), Deep Obsidian, Midnight Slate, Warm Espresso, and Charcoal to maximize human eye dynamic range and eliminate ambient glare.
 - **Studio Light Themes**: Built-in Clean Studio White, Warm Gallery Parchment, and Soft Silver modes.
 - **Dynamic Contrast Intelligence**: Automatic contrast inversion ensures buttons, badges, navigation headers, and metadata cards remain razor-sharp regardless of background or accent color selections.
-- **6 Accent Presets + Hex Picker**: Amber Gold, Pure Silver, Pacific Cyan, Cascade Emerald, Alpine Crimson, and Amethyst Violet.
+- **6 Accent Presets + Custom Hex Picker**: Amber Gold, Pure Silver, Pacific Cyan, Cascade Emerald, Alpine Crimson, and Amethyst Violet.
 
 ### 🎞️ Craft-First Photographic Metadata
 Native, first-class display for details that matter to serious photographers:
@@ -43,115 +43,125 @@ Native, first-class display for details that matter to serious photographers:
 
 ---
 
-## Quick Start & Installation
+## Server Installation & Setup Guide
+
+This guide covers installing and deploying Lumenist on an Ubuntu/Debian Linux server (e.g. Oracle Cloud, DigitalOcean, Hetzner, AWS, or home lab server).
 
 ### Prerequisites
-- **Node.js** v18.18+ or v20+ (Node.js 22 LTS recommended)
-- **npm** v9+
+- **Ubuntu 22.04 / 24.04 LTS** (or Debian 12)
+- **Node.js 20+ or 22 LTS**
+- **Nginx** (reverse proxy & SSL termination)
+- **PM2** (process manager for zero-downtime restarts)
+- A registered domain name pointing to your server's public IP
 
-### 1. Clone the Repository
 ```bash
-git clone https://github.com/ketchemr/lumenist.git
-cd lumenist
+# Update packages and install Node.js 22 LTS & essential tools
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs nginx git certbot python3-certbot-nginx
+
+# Install PM2 globally
+sudo npm install -g pm2
 ```
 
-### 2. Install Dependencies
+---
+
+### Step 1: Clone the Repository
+
+Clone Lumenist to your web directory (e.g. `/var/www/lumenist`):
+
+```bash
+sudo mkdir -p /var/www/lumenist
+sudo chown -R $USER:$USER /var/www/lumenist
+
+git clone https://github.com/ketchemr/lumenist.git /var/www/lumenist
+cd /var/www/lumenist
+```
+
+### Step 2: Install Dependencies
+
 ```bash
 npm install
 ```
 
-### 3. Setup Environment Variables
-Create your local environment configuration:
+### Step 3: Configure Environment Variables
+
+Create your server environment file from the template:
+
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local` to define your administrative credentials:
+Edit `.env.local` to define your secure administrator credentials:
+
 ```env
-# Administrative security
+# Administrative Passphrase for /admin access
 ADMIN_PASSWORD=your-secure-admin-passphrase
-ADMIN_SECRET=your-random-32-char-secret-key
+
+# 32+ character random secret used for session token signing
+ADMIN_SECRET=generate-a-secure-random-secret-string-here
 ```
 
-### 4. Link or Add Your Photos
-Lumenist serves high-resolution photos through `public/photos`. You can symlink an existing local photo directory or place images directly:
+### Step 4: Set Up Your Photo Directory
+
+Lumenist serves high-resolution photos via `public/photos`. You can symlink an existing photo drive, storage volume, or dedicated folder:
 
 ```bash
-# Example: Symlinking an external photo drive or Google Drive folder
-ln -s "/path/to/your/photos" public/photos
+# Example: Symlinking a dedicated photo storage directory
+ln -s /var/photos /var/www/lumenist/public/photos
 ```
 
 Organize your photo files by year or category (e.g. `public/photos/2026/my_photo.jpg`).
 
-### 5. Ingest Photo Metadata
-If you have companion `.txt` metadata files (Piwigo/IPTC format) or wish to scan existing image files for EXIF:
+### Step 5: Ingest Existing Photo Catalog & Metadata
+
+If you have existing images or companion `.txt` metadata files (Piwigo/IPTC format):
+
 ```bash
 npm run import:all
 ```
-This parses image dimensions, dates, camera data, descriptions, categories, and tags, writing the unified catalog to `data/photos.json`.
 
-*(Optional)* Pre-cache WebP thumbnails for instant gallery navigation:
+This parses image dimensions, dates, camera exposure details, descriptions, categories, and tags, writing your unified catalog to `data/photos.json`.
+
+*(Recommended)* Pre-cache WebP thumbnails for instant exhibition loading:
+
 ```bash
 npm run thumbnails:precache
 ```
 
-### 6. Start the Development Server
-```bash
-npm run dev
-```
+### Step 6: Build & Launch with PM2
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Build the optimized production application:
 
----
-
-## Using Lumenist
-
-### Public Gallery Navigation
-- **Home (`/`)**: Dynamic randomized hero slideshow with smooth crossfades and previous/next slide history, followed by curated gallery cards.
-- **Galleries (`/galleries`)**: Curated collections and albums. Each gallery displays a representative photo framed full-size.
-- **Explore (`/explore`)**: Instant live search by title, location, camera, or keyword, alongside category pills and year timeline filters.
-- **Map (`/map`)**: Global interactive map with dark mode, topographic, and satellite views.
-- **Photo Viewer (`/photo/[id]`)**: Fullscreen-capable display with dark matting, deep exposure technical drawer, and companion shooting location map.
-- **About (`/about`)**: Artist statement, biography, and camera/film gear list.
-
-### Accessing the Web Admin
-1. Navigate to [`http://localhost:3000/admin`](http://localhost:3000/admin) (or `/admin` on your production domain).
-2. Enter your `ADMIN_PASSWORD`.
-3. Use the tabs:
-   - **Upload**: Publish new photographs with automated EXIF extraction and interactive map pinning.
-   - **Manage**: Search, edit metadata, delete, or perform bulk batch updates across your catalog.
-   - **Settings**: Adjust studio title, tagline, slideshow interval, default catalog sort order, background/accent color schemes, or change your passphrase.
-
----
-
-## Production Deployment
-
-### Build for Production
 ```bash
 npm run build
 ```
 
-### Running with PM2 (Recommended for Ubuntu / Debian / VPS)
-```bash
-# Install PM2 globally if not already installed
-npm install -g pm2
+Start the application with PM2:
 
-# Start Lumenist with PM2
+```bash
+# Start Lumenist on port 3000
 pm2 start npm --name "lumenist" -- start
 
-# Configure PM2 to start on system boot
+# Configure PM2 to automatically start on server boot
 pm2 startup
 pm2 save
 ```
 
-### Nginx Reverse Proxy Configuration
-Example Nginx server block with SSL and large photo upload support:
+### Step 7: Configure Nginx & SSL
+
+Create an Nginx configuration file for your domain:
+
+```bash
+sudo nano /etc/nginx/sites-available/lumenist
+```
+
+Paste the following production configuration (replace `your-domain.com` with your actual domain):
 
 ```nginx
 server {
-    server_name rrkphoto.com www.rrkphoto.com;
+    server_name your-domain.com www.your-domain.com;
 
-    # Allow high-resolution image uploads up to 100MB
+    # Allow high-resolution photo uploads through /admin
     client_max_body_size 100M;
 
     location / {
@@ -166,17 +176,82 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Cache pre-generated thumbnails aggressively
+    # Serve pre-generated thumbnails with aggressive client caching
     location /.thumbnails/ {
         alias /var/www/lumenist/.thumbnails/;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000, immutable";
     }
 
-    listen 443 ssl http2;
-    # SSL certificates managed by certbot or Cloudflare
+    listen 80;
 }
 ```
+
+Enable the site and reload Nginx:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/lumenist /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Obtain a free SSL certificate with Let's Encrypt:
+
+```bash
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+
+---
+
+## Managing Your Site via Web Admin
+
+Once your server is running, manage your entire portfolio from any web browser:
+
+1. Navigate to:
+   ```
+   https://your-domain.com/admin
+   ```
+2. Enter your `ADMIN_PASSWORD` (from `.env.local`).
+3. Use the integrated control tabs:
+   - **Upload**: Publish new photographs with automated EXIF extraction and interactive visual map pinning.
+   - **Manage**: Search, edit metadata, delete, or perform bulk batch updates (add/remove albums, tag/untag, batch delete) across your entire catalog.
+   - **Settings**: Customize your studio identity (Artist Name, Site Title, Tagline), slideshow timing, default catalog sort order, background/accent color schemes, or update your passphrase.
+
+---
+
+## Public Gallery Features
+
+- **Home (`/`)**: Dynamic randomized hero slideshow with smooth crossfades and previous/next slide history, followed by curated gallery cards.
+- **Galleries (`/galleries`)**: Curated collections and albums. Each gallery displays a representative photo framed full-size.
+- **Explore (`/explore`)**: Instant live search by title, location, camera, or keyword, alongside category pills and year timeline filters.
+- **Map (`/map`)**: Global interactive map with dark mode, topographic, and satellite views.
+- **Photo Viewer (`/photo/[id]`)**: Fullscreen-capable display with dark matting, deep exposure technical drawer, and companion shooting location map.
+- **About (`/about`)**: Artist statement, biography, and camera/film gear list.
+
+---
+
+## Local Development (Optional)
+
+If you wish to test or develop Lumenist locally on your personal machine before deploying to your server:
+
+```bash
+# Clone and install dependencies
+git clone https://github.com/ketchemr/lumenist.git
+cd lumenist
+npm install
+
+# Setup local credentials
+cp .env.example .env.local
+
+# Link sample photos and import
+ln -s /path/to/photos public/photos
+npm run import:all
+
+# Run local dev server with hot reloading
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) for the public site, and [http://localhost:3000/admin](http://localhost:3000/admin) for the admin dashboard.
 
 ---
 
