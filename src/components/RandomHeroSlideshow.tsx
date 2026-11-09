@@ -33,9 +33,15 @@ export function RandomHeroSlideshow({
   });
 
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Overall effective paused state
+  const isPaused = isManuallyPaused || isHovered;
 
   const descScrollRef = useRef<HTMLDivElement>(null);
+  const remainingTimeRef = useRef<number>(intervalSeconds * 1000);
+  const startedAtRef = useRef<number>(Date.now());
 
   // Initialize from sessionStorage or pick initial random photo on mount
   useEffect(() => {
@@ -147,16 +153,34 @@ export function RandomHeroSlideshow({
     }, 200);
   }, [photos]);
 
-  // Slide transition timer: pure and reliable setTimeout keyed to state.index
+  // Reset remaining time counter whenever slide changes
   useEffect(() => {
-    if (isPaused || photos.length <= 1) return;
+    remainingTimeRef.current = intervalSeconds * 1000;
+    startedAtRef.current = Date.now();
+  }, [state.index, intervalSeconds]);
 
+  // Slide transition timer: pauses gracefully and resumes with remaining time
+  useEffect(() => {
+    if (photos.length <= 1) return;
+
+    if (isPaused) {
+      // Record elapsed time and deduct from remaining balance
+      const elapsed = Date.now() - startedAtRef.current;
+      remainingTimeRef.current = Math.max(
+        100,
+        remainingTimeRef.current - elapsed
+      );
+      return;
+    }
+
+    // Resume / Start: stamp current time and schedule for remaining milliseconds
+    startedAtRef.current = Date.now();
     const timer = setTimeout(() => {
       advanceToNext();
-    }, intervalSeconds * 1000);
+    }, remainingTimeRef.current);
 
     return () => clearTimeout(timer);
-  }, [isPaused, intervalSeconds, state.index, advanceToNext, photos.length]);
+  }, [isPaused, state.index, advanceToNext, photos.length]);
 
   if (!photos || photos.length === 0) return null;
 
@@ -166,8 +190,8 @@ export function RandomHeroSlideshow({
   return (
     <section
       className="relative rounded-sm overflow-hidden border border-surface-border bg-black group w-full"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
         {/* Photo Display: Constant Width & Constant Height Frame */}
@@ -246,11 +270,11 @@ export function RandomHeroSlideshow({
               </h2>
 
               <button
-                onClick={() => setIsPaused((p) => !p)}
+                onClick={() => setIsManuallyPaused((p) => !p)}
                 className="text-xs text-muted hover:text-white flex-shrink-0 flex items-center space-x-1 bg-black border border-surface-border px-2 py-1 rounded transition-colors mt-1 cursor-pointer"
-                title={isPaused ? "Resume rotation" : "Pause rotation"}
+                title={isManuallyPaused ? "Resume rotation" : "Pause rotation"}
               >
-                {isPaused ? (
+                {isManuallyPaused ? (
                   <>
                     <Play className="w-3 h-3 text-accent" />
                     <span className="hidden sm:inline">Resume</span>
@@ -315,10 +339,10 @@ export function RandomHeroSlideshow({
         </div>
       </div>
 
-      {/* Subtle Progress Bar */}
+      {/* Subtle Progress Bar: Freezes on pause, resumes smoothly */}
       <div className="w-full bg-surface-border/40 h-0.5 relative overflow-hidden">
         <div
-          key={`${state.index}-${isPaused}`}
+          key={state.index}
           className="bg-accent h-0.5 animate-progress-bar"
           style={{
             animationDuration: `${intervalSeconds}s`,
