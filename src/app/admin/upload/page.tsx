@@ -146,6 +146,14 @@ export default function AdminUploadPage() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
+  // Change password states
+  const [currentPasswordChange, setCurrentPasswordChange] = useState("");
+  const [newPasswordChange, setNewPasswordChange] = useState("");
+  const [confirmPasswordChange, setConfirmPasswordChange] = useState("");
+  const [passwordChangeError, setPasswordChangeError] = useState("");
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check auth and load metadata on mount
@@ -716,6 +724,52 @@ export default function AdminUploadPage() {
       alert("Failed to save settings");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError("");
+    setPasswordChangeSuccess("");
+
+    if (!currentPasswordChange) {
+      setPasswordChangeError("Please enter your current password");
+      return;
+    }
+    if (newPasswordChange.length < 6) {
+      setPasswordChangeError("New password must be at least 6 characters long");
+      return;
+    }
+    if (newPasswordChange !== confirmPasswordChange) {
+      setPasswordChangeError("New passwords do not match");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: currentPasswordChange,
+          newPassword: newPasswordChange,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to update password");
+      }
+
+      setPasswordChangeSuccess("Password updated successfully!");
+      setCurrentPasswordChange("");
+      setNewPasswordChange("");
+      setConfirmPasswordChange("");
+      setTimeout(() => setPasswordChangeSuccess(""), 5000);
+    } catch (err: any) {
+      setPasswordChangeError(err.message || "Failed to update password");
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -2369,7 +2423,8 @@ export default function AdminUploadPage() {
 
       {/* TAB 3: SITE & THEME SETTINGS */}
       {activeTab === "settings" && (
-        <form onSubmit={handleSaveSettings} className="space-y-8">
+        <div className="space-y-8">
+          <form onSubmit={handleSaveSettings} className="space-y-8">
           {/* Theme Palette & Accent Colors */}
           <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
             <div className="flex items-center justify-between border-b border-surface-border pb-3">
@@ -2734,7 +2789,7 @@ export default function AdminUploadPage() {
             <button
               type="submit"
               disabled={isSavingSettings}
-              className="px-8 py-3.5 bg-accent text-black font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all shadow-lg flex items-center space-x-2"
+              className="px-8 py-3.5 bg-accent text-black font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all shadow-lg flex items-center space-x-2 cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>
@@ -2743,6 +2798,91 @@ export default function AdminUploadPage() {
             </button>
           </div>
         </form>
+
+        {/* Security & Admin Passphrase Form */}
+        <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm mt-8">
+          <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider border-b border-surface-border pb-3">
+            <Lock className="w-3.5 h-3.5 text-accent" />
+            <span>Security & Admin Passphrase</span>
+          </div>
+
+          <p className="text-xs text-muted">
+            Update your administrative passphrase used to sign in to this management dashboard.
+          </p>
+
+          <form onSubmit={handleChangePassword} className="space-y-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-gray-300">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Current passphrase"
+                  value={currentPasswordChange}
+                  onChange={(e) => setCurrentPasswordChange(e.target.value)}
+                  required
+                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-gray-300">
+                  New Password (min 6 chars)
+                </label>
+                <input
+                  type="password"
+                  placeholder="New passphrase"
+                  value={newPasswordChange}
+                  onChange={(e) => setNewPasswordChange(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-gray-300">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="Repeat new passphrase"
+                  value={confirmPasswordChange}
+                  onChange={(e) => setConfirmPasswordChange(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full bg-black border border-surface-border rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+
+            {passwordChangeError && (
+              <p className="text-xs text-red-400 font-medium">{passwordChangeError}</p>
+            )}
+
+            {passwordChangeSuccess && (
+              <div className="p-3 bg-emerald-950/40 border border-emerald-700 rounded text-emerald-300 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>{passwordChangeSuccess}</span>
+              </div>
+            )}
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isUpdatingPassword}
+                className="px-6 py-2.5 bg-black border border-surface-border hover:border-accent text-white font-medium text-xs uppercase tracking-wider rounded transition-colors flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5 text-accent" />
+                <span>
+                  {isUpdatingPassword ? "Updating..." : "Change Password"}
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
       )}
     </div>
   );
