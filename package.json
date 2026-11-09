@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "import:test": "tsx scripts/test-parser.ts",
-    "import:all": "tsx scripts/import-photos.ts"
+    "import:all": "tsx scripts/import-photos.ts",
+    "sync:oci": "rsync -avz --progress --exclude '.DS_Store' \"/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com/photos/\" personal-web:/var/www/rrkphoto.com/photos/"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.22",
