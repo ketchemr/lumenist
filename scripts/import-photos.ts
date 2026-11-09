@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { parseTxtMetadata } from "../src/lib/parseTxt";
 import { Photo } from "../src/types/photo";
+import exifr from "exifr";
 
 const DEFAULT_SOURCE_DIR =
   "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com/photos";
@@ -48,6 +49,77 @@ async function main() {
 
         // Adjust desktop image path to preserve folder structure
         photo.imageDesktop = `/photos/${sub}/${photo.photoID}_desktop.jpg`;
+
+        // Automatically populate missing technical specs directly from JPEG EXIF/XMP
+        if (fs.existsSync(imagePath)) {
+          const needsExif =
+            photo.camera === "Unknown Camera" ||
+            !photo.lens ||
+            !photo.shutterspeed ||
+            !photo.aperture ||
+            !photo.sensitivity ||
+            !photo.dateTaken.year;
+
+          if (needsExif) {
+            try {
+              const data = await exifr.parse(imagePath, {
+                tiff: true,
+                exif: true,
+                xmp: true,
+              });
+              if (data) {
+                if (photo.camera === "Unknown Camera" && (data.Model || data.Make)) {
+                  photo.camera =
+                    data.Model && data.Make && !data.Model.includes(data.Make)
+                      ? `${data.Make} ${data.Model}`
+                      : data.Model || data.Make || "Digital";
+                }
+                if (!photo.lens && (data.LensModel || data.Lens)) {
+                  photo.lens = data.LensModel || data.Lens;
+                }
+                if (!photo.focalLength && data.FocalLength) {
+                  photo.focalLength = `${data.FocalLength} mm`;
+                }
+                if (!photo.shutterspeed && data.ExposureTime) {
+                  photo.shutterspeed =
+                    data.ExposureTime >= 1
+                      ? `${data.ExposureTime} s`
+                      : `1/${Math.round(1 / data.ExposureTime)} s`;
+                }
+                if (!photo.aperture && data.FNumber) {
+                  photo.aperture = `f${data.FNumber}`;
+                }
+                if (!photo.sensitivity && data.ISO) {
+                  photo.sensitivity = `ISO ${data.ISO}`;
+                }
+                if (!photo.exposureCompensation && data.ExposureCompensation !== undefined) {
+                  photo.exposureCompensation = `${data.ExposureCompensation} Ev`;
+                }
+                if (!photo.whiteBalance && data.Temperature) {
+                  photo.whiteBalance = `${data.Temperature}${
+                    data.Tint !== undefined
+                      ? ` ${data.Tint >= 0 ? "+" : ""}${data.Tint}`
+                      : ""
+                  }`;
+                }
+                if (!photo.dateTaken.year && (data.DateTimeOriginal || data.CreateDate)) {
+                  const d = new Date(data.DateTimeOriginal || data.CreateDate);
+                  photo.dateTaken = {
+                    year: d.getUTCFullYear(),
+                    month: d.getUTCMonth() + 1,
+                    day: d.getUTCDate(),
+                    hour: d.getUTCHours(),
+                    minute: d.getUTCMinutes(),
+                    second: d.getUTCSeconds(),
+                    iso: d.toISOString(),
+                  };
+                }
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
 
         photos.push(photo);
         countInFolder++;

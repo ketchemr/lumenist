@@ -98,16 +98,19 @@ export function parseTxtMetadata(content: string, fallbackId?: string, imageFile
     }
   }
 
-  // Parse categories & keywords
-  const categories = raw["category"]
-    ? raw["category"]
+  // Parse categories & keywords (supports 'albums', 'album', 'category', 'categories')
+  const rawCategories = raw["albums"] || raw["album"] || raw["category"] || raw["categories"];
+  const categories = rawCategories
+    ? rawCategories
         .split(",")
         .map((c) => c.trim())
         .filter(Boolean)
     : [];
 
-  const keywords = raw["keyword"]
-    ? raw["keyword"]
+  // Parse tags & keywords (supports 'tags', 'tag', 'keyword', 'keywords')
+  const rawKeywords = raw["tags"] || raw["tag"] || raw["keyword"] || raw["keywords"];
+  const keywords = rawKeywords
+    ? rawKeywords
         .split(",")
         .map((k) => k.trim())
         .filter(Boolean)
