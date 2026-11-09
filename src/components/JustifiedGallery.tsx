@@ -27,7 +27,8 @@ export function JustifiedGallery({
   gap = 8,
 }: JustifiedGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
+  // Default to 1200px for SSR so initial HTML pre-renders real justified images
+  const [containerWidth, setContainerWidth] = useState<number>(1200);
 
   // Measure container width responsively with ResizeObserver
   useEffect(() => {
@@ -35,7 +36,10 @@ export function JustifiedGallery({
     if (!el) return;
 
     // Set initial width
-    setContainerWidth(el.getBoundingClientRect().width);
+    const measured = el.getBoundingClientRect().width;
+    if (measured > 0) {
+      setContainerWidth(measured);
+    }
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -141,18 +145,6 @@ export function JustifiedGallery({
 
   return (
     <div ref={containerRef} className="w-full">
-      {/* If container width is not yet measured, render an initial clean fallback */}
-      {containerWidth === 0 && (
-        <div className="flex flex-wrap gap-2 opacity-0">
-          {photos.slice(0, 16).map((p) => (
-            <div
-              key={p.photoID}
-              className="h-[200px] w-[300px] bg-neutral-900"
-            />
-          ))}
-        </div>
-      )}
-
       {/* Justified rows with flush left & right margins */}
       <div className="space-y-2" style={{ gap: `${gap}px` }}>
         {rows.map((row, rowIdx) => (
@@ -165,7 +157,7 @@ export function JustifiedGallery({
               marginBottom: `${gap}px`,
             }}
           >
-            {row.photos.map(({ photo, width, height }) => (
+            {row.photos.map(({ photo, width, height }, photoIdx) => (
               <Link
                 key={photo.photoID}
                 href={`/photo/${photo.photoID}`}
@@ -176,11 +168,13 @@ export function JustifiedGallery({
                 className="relative block overflow-hidden group bg-black shrink-0 transition-transform duration-200 hover:z-10"
                 title={`${photo.title} (${photo.dateTaken.year || ""})`}
               >
-                {/* Full uncropped thumbnail served via Lanczos3 anti-aliasing thumbnailer to eliminate moire */}
+                {/* Full uncropped thumbnail served via Lanczos3 anti-aliasing thumbnailer in WebP with prioritized above-the-fold loading */}
                 <img
-                  src={`/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=600`}
+                  src={`/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=600&fmt=webp`}
                   alt={photo.title}
-                  loading="lazy"
+                  loading={rowIdx < 2 ? "eager" : "lazy"}
+                  fetchPriority={rowIdx === 0 && photoIdx < 4 ? "high" : "auto"}
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 />
 

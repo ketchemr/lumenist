@@ -36,37 +36,60 @@ export async function GET(request: NextRequest) {
 
   try {
     const stats = fs.statSync(fullPath);
-    // Cache key incorporates image path, mtime, and requested width
-    const safeKey = cleanSrc.replace(/[^a-zA-Z0-9_-]/g, "_") + `_${stats.mtimeMs}_w${width}.jpg`;
+
+    // Determine output format (WebP by default for modern browsers, JPEG fallback)
+    const acceptHeader = request.headers.get("accept") || "";
+    const formatParam = searchParams.get("fmt") || searchParams.get("format");
+    let isWebP = true;
+    if (formatParam === "jpg" || formatParam === "jpeg") {
+      isWebP = false;
+    } else if (formatParam === "webp") {
+      isWebP = true;
+    } else {
+      isWebP = acceptHeader.includes("image/webp") || !acceptHeader.includes("image/jpeg");
+    }
+
+    const ext = isWebP ? "webp" : "jpg";
+    const contentType = isWebP ? "image/webp" : "image/jpeg";
+
+    // Cache key incorporates image path, mtime, requested width, and format
+    const safeKey = cleanSrc.replace(/[^a-zA-Z0-9_-]/g, "_") + `_${stats.mtimeMs}_w${width}.${ext}`;
     const cachedFilePath = path.join(THUMB_CACHE_DIR, safeKey);
 
-    // If already generated and cached, serve from cache
+    // If already generated and cached, serve directly from disk cache
     if (fs.existsSync(cachedFilePath)) {
       const cachedBuffer = fs.readFileSync(cachedFilePath);
       return new NextResponse(cachedBuffer, {
         headers: {
-          "Content-Type": "image/jpeg",
+          "Content-Type": contentType,
           "Cache-Control": "public, max-age=31536000, immutable",
+          "Vary": "Accept",
         },
       });
     }
 
     // Downsample using sharp with high-quality Lanczos3 anti-aliasing filter
-    const thumbBuffer = await sharp(fullPath)
-      .resize(width, null, {
-        kernel: sharp.kernel.lanczos3,
-        withoutEnlargement: true,
-      })
-      .jpeg({ quality: 84, mozjpeg: true })
-      .toBuffer();
+    let pipeline = sharp(fullPath).resize(width, null, {
+      kernel: sharp.kernel.lanczos3,
+      withoutEnlargement: true,
+    });
+
+    if (isWebP) {
+      pipeline = pipeline.webp({ quality: 80, effort: 4 });
+    } else {
+      pipeline = pipeline.jpeg({ quality: 84, mozjpeg: true });
+    }
+
+    const thumbBuffer = await pipeline.toBuffer();
 
     // Save to disk cache asynchronously
     fs.writeFile(cachedFilePath, thumbBuffer, () => {});
 
     return new NextResponse(thumbBuffer, {
       headers: {
-        "Content-Type": "image/jpeg",
+        "Content-Type": contentType,
         "Cache-Control": "public, max-age=31536000, immutable",
+        "Vary": "Accept",
       },
     });
   } catch (err: any) {

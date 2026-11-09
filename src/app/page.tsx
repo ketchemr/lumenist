@@ -29,8 +29,11 @@ export default function HomePage() {
                 <img
                   src={`/api/thumbnail?src=${encodeURIComponent(
                     allCategory.coverPhoto.imageDesktop
-                  )}&w=800`}
+                  )}&w=800&fmt=webp`}
                   alt="All Photographs Archive"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
               </div>
@@ -73,7 +76,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {otherCategories.map((cat) => (
+            {otherCategories.map((cat, idx) => (
               <Link
                 key={cat.name}
                 href={`/galleries/${cat.slug}`}
@@ -84,9 +87,10 @@ export default function HomePage() {
                     <img
                       src={`/api/thumbnail?src=${encodeURIComponent(
                         cat.coverPhoto.imageDesktop
-                      )}&w=600`}
+                      )}&w=600&fmt=webp`}
                       alt={cat.coverPhoto.title || cat.name}
-                      loading="lazy"
+                      loading={idx < 4 ? "eager" : "lazy"}
+                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
