@@ -1,0 +1,251 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import { Photo } from "@/types/photo";
+import {
+  Sparkles,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play,
+  Camera,
+  Film,
+} from "lucide-react";
+
+interface RandomHeroSlideshowProps {
+  photos: Photo[];
+  intervalSeconds?: number;
+}
+
+export function RandomHeroSlideshow({
+  photos,
+  intervalSeconds = 10,
+}: RandomHeroSlideshowProps) {
+  // Use index state
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Pick a random photo different from current
+  const advanceToRandom = useCallback(() => {
+    if (photos.length <= 1) return;
+    setIsTransitioning(true);
+
+    setTimeout(() => {
+      setCurrentIndex((prev) => {
+        let next = prev;
+        while (next === prev) {
+          next = Math.floor(Math.random() * photos.length);
+        }
+        return next;
+      });
+      setIsTransitioning(false);
+      setProgress(0);
+    }, 300); // 300ms fade transition
+  }, [photos]);
+
+  const advanceToNext = useCallback(() => {
+    advanceToRandom();
+  }, [advanceToRandom]);
+
+  const advanceToPrev = useCallback(() => {
+    if (photos.length <= 1) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
+      setIsTransitioning(false);
+      setProgress(0);
+    }, 300);
+  }, [photos]);
+
+  // Pick initial random photo once mounted on client (avoids SSR hydration mismatch)
+  useEffect(() => {
+    if (photos.length > 0) {
+      const initial = Math.floor(Math.random() * photos.length);
+      setCurrentIndex(initial);
+    }
+  }, [photos.length]);
+
+  // Progress bar ticker
+  useEffect(() => {
+    if (isPaused) return;
+
+    const stepMs = 100;
+    const totalMs = intervalSeconds * 1000;
+
+    progressIntervalRef.current = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + (stepMs / totalMs) * 100;
+        if (next >= 100) {
+          advanceToRandom();
+          return 0;
+        }
+        return next;
+      });
+    }, stepMs);
+
+    return () => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    };
+  }, [isPaused, intervalSeconds, advanceToRandom]);
+
+  if (!photos || photos.length === 0) return null;
+
+  const current = photos[currentIndex] || photos[0];
+  const isAnalogFilm = current.film && current.film.toLowerCase() !== "digital";
+
+  return (
+    <section
+      className="relative rounded-sm overflow-hidden border border-surface-border bg-black group"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-10">
+        {/* Photo Display with Crossfade */}
+        <div className="lg:col-span-8 overflow-hidden rounded-sm bg-neutral-950 relative min-h-[360px] sm:min-h-[500px] flex items-center justify-center">
+          <Link
+            href={`/photo/${current.photoID}`}
+            className="block w-full h-full flex items-center justify-center"
+          >
+            <img
+              src={current.imageDesktop}
+              alt={current.title}
+              key={current.photoID}
+              className={`w-full h-auto max-h-[72vh] object-contain mx-auto rounded shadow-2xl transition-all duration-500 ${
+                isTransitioning ? "opacity-20 scale-[0.99]" : "opacity-100 scale-100"
+              }`}
+            />
+          </Link>
+
+          {/* Film badge */}
+          {isAnalogFilm && (
+            <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-sm border border-white/10 px-2.5 py-1 rounded text-xs text-amber-200 flex items-center space-x-1.5">
+              <Film className="w-3.5 h-3.5 text-amber-300" />
+              <span>{current.film}</span>
+            </div>
+          )}
+
+          {/* Navigation Controls Overlay */}
+          <div className="absolute inset-y-0 left-0 flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                advanceToPrev();
+              }}
+              aria-label="Previous random photo"
+              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                advanceToNext();
+              }}
+              aria-label="Next random photo"
+              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Narrative & Details Column */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center space-x-1.5 text-xs text-accent font-medium tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Random Exhibition ({intervalSeconds}s)</span>
+            </div>
+
+            {/* Play/Pause Button */}
+            <button
+              onClick={() => setIsPaused((p) => !p)}
+              className="text-xs text-muted hover:text-white flex items-center space-x-1 bg-surface border border-surface-border px-2 py-0.5 rounded transition-colors"
+              title={isPaused ? "Resume rotation" : "Pause rotation"}
+            >
+              {isPaused ? (
+                <>
+                  <Play className="w-3 h-3 text-accent" />
+                  <span>Resume</span>
+                </>
+              ) : (
+                <>
+                  <Pause className="w-3 h-3 text-gray-400" />
+                  <span>Pause</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div
+            className={`transition-opacity duration-300 ${
+              isTransitioning ? "opacity-0" : "opacity-100"
+            }`}
+          >
+            <h2 className="text-2xl sm:text-3xl font-light text-white tracking-tight">
+              {current.title}
+            </h2>
+
+            <p className="text-sm text-gray-400 line-clamp-4 leading-relaxed pt-2">
+              {current.description ||
+                "A fine art landscape photograph exploring natural light and form."}
+            </p>
+
+            <div className="pt-3 flex flex-wrap gap-1.5">
+              {current.categories.map((c) => (
+                <Link
+                  key={c}
+                  href={`/galleries/${encodeURIComponent(c)}`}
+                  className="text-xs bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded text-gray-300 transition-colors"
+                >
+                  {c}
+                </Link>
+              ))}
+            </div>
+
+            {/* Camera & Year Metadata */}
+            <div className="pt-4 flex items-center space-x-3 text-xs text-muted">
+              {current.camera && (
+                <span className="flex items-center space-x-1">
+                  <Camera className="w-3.5 h-3.5 text-gray-400" />
+                  <span>{current.camera.replace("ILCE-", "A")}</span>
+                </span>
+              )}
+              {current.dateTaken.year > 0 && (
+                <span>· {current.dateTaken.year}</span>
+              )}
+            </div>
+
+            <div className="pt-5">
+              <Link
+                href={`/photo/${current.photoID}`}
+                className="inline-flex items-center space-x-2 text-sm text-accent hover:text-accent-light transition-colors font-medium group/link"
+              >
+                <span>View Full Exhibition & Technicals</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Subtle Progress Bar */}
+      <div className="w-full bg-surface-border h-0.5 relative">
+        <div
+          className="bg-accent h-0.5 transition-all duration-100 ease-linear"
+          style={{ width: `${isPaused ? progress : progress}%` }}
+        />
+      </div>
+    </section>
+  );
+}

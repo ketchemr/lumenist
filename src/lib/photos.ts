@@ -29,6 +29,11 @@ export function getPhotoById(id: string): Photo | undefined {
 export function getPhotosByCategory(category: string): Photo[] {
   const photos = getAllPhotos();
   const decoded = decodeURIComponent(category).toLowerCase();
+  
+  if (decoded === "all") {
+    return photos;
+  }
+
   return photos.filter((p) =>
     p.categories.some((c) => c.toLowerCase() === decoded)
   );
@@ -56,14 +61,24 @@ export function getAllCategories(): CategorySummary[] {
     }
   }
 
-  return Array.from(map.entries())
-    .map(([name, data]) => ({
-      name,
-      slug: encodeURIComponent(name),
-      count: data.count,
-      coverPhoto: data.cover,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const categoryList: CategorySummary[] = [
+    {
+      name: "All Photographs",
+      slug: "All",
+      count: photos.length,
+      coverPhoto: photos[0],
+    },
+    ...Array.from(map.entries())
+      .map(([name, data]) => ({
+        name,
+        slug: encodeURIComponent(name),
+        count: data.count,
+        coverPhoto: data.cover,
+      }))
+      .sort((a, b) => b.count - a.count),
+  ];
+
+  return categoryList;
 }
 
 export function getAdjacentPhotos(currentId: string): {

@@ -16,7 +16,9 @@ export function parseTxtMetadata(content: string, fallbackId?: string): Photo {
     raw[key] = value;
   }
 
-  const photoID = raw["photoID"] || fallbackId || "unknown";
+  // The filename (fallbackId) is the canonical identifier for the file on disk.
+  // If the .txt file contains an outdated or copied photoID, prefer fallbackId.
+  const photoID = fallbackId || raw["photoID"] || "unknown";
 
   // Parse location
   let location: PhotoLocation | undefined;
