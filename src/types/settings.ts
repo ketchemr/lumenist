@@ -5,6 +5,7 @@ export interface SiteSettings {
   themeBackground: string; // e.g. "#000000"
   themeSurface: string; // e.g. "#111111"
   themeBorder: string; // e.g. "#262626"
+  themeTextMode?: "auto" | "light" | "dark"; // auto (dynamic by background), light (dark text), dark (light text)
   defaultSortOrder: "date-desc" | "date-asc" | "created-desc" | "title-asc";
   slideshowInterval: number; // in seconds (e.g. 10)
   siteTitle: string;
@@ -63,15 +64,18 @@ export interface BackgroundPreset {
   background: string;
   surface: string;
   border: string;
+  isLight?: boolean;
 }
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
+  // Dark Exhibition Presets
   {
     id: "oled-black",
     name: "Pure OLED Black (Default)",
     background: "#000000",
     surface: "#111111",
     border: "#262626",
+    isLight: false,
   },
   {
     id: "deep-obsidian",
@@ -79,6 +83,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     background: "#08080a",
     surface: "#131317",
     border: "#24242c",
+    isLight: false,
   },
   {
     id: "midnight-slate",
@@ -86,6 +91,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     background: "#0a0e17",
     surface: "#111827",
     border: "#1f293d",
+    isLight: false,
   },
   {
     id: "warm-espresso",
@@ -93,6 +99,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     background: "#100d0c",
     surface: "#1a1614",
     border: "#2d2420",
+    isLight: false,
   },
   {
     id: "charcoal",
@@ -100,6 +107,32 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     background: "#141414",
     surface: "#1e1e1e",
     border: "#2e2e2e",
+    isLight: false,
+  },
+  // Light Exhibition Presets
+  {
+    id: "studio-white",
+    name: "Clean Studio White",
+    background: "#ffffff",
+    surface: "#f8fafc",
+    border: "#e2e8f0",
+    isLight: true,
+  },
+  {
+    id: "gallery-parchment",
+    name: "Warm Gallery Parchment",
+    background: "#f9f8f5",
+    surface: "#ffffff",
+    border: "#e7e4dc",
+    isLight: true,
+  },
+  {
+    id: "soft-silver",
+    name: "Soft Silver / Slate",
+    background: "#f1f5f9",
+    surface: "#ffffff",
+    border: "#cbd5e1",
+    isLight: true,
   },
 ];
 
@@ -110,9 +143,29 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   themeBackground: "#000000",
   themeSurface: "#111111",
   themeBorder: "#262626",
+  themeTextMode: "auto",
   defaultSortOrder: "date-desc",
   slideshowInterval: 10,
   siteTitle: "Randal R. Ketchem Photography",
   siteTagline: "Fine Art Landscape, Nature, and Pacific Northwest Photography",
   artistName: "Randal R. Ketchem",
 };
+
+export function isLightBackground(hex?: string): boolean {
+  if (!hex) return false;
+  const clean = hex.replace("#", "").trim();
+  const num = parseInt(clean, 16);
+  if (isNaN(num)) return false;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  // Perceived brightness formula (sRGB standard)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 140;
+}
+
+export function isLightModeActive(settings: SiteSettings): boolean {
+  if (settings.themeTextMode === "light") return true;
+  if (settings.themeTextMode === "dark") return false;
+  return isLightBackground(settings.themeBackground || "#000000");
+}

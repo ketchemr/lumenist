@@ -6,10 +6,18 @@ import {
   THEME_PRESETS,
   BACKGROUND_PRESETS,
   BackgroundPreset,
+  isLightBackground,
+  isLightModeActive,
 } from "@/types/settings";
 
 export type { SiteSettings, BackgroundPreset };
-export { DEFAULT_SETTINGS, THEME_PRESETS, BACKGROUND_PRESETS };
+export {
+  DEFAULT_SETTINGS,
+  THEME_PRESETS,
+  BACKGROUND_PRESETS,
+  isLightBackground,
+  isLightModeActive,
+};
 
 let cachedSettings: SiteSettings | null = null;
 let lastMtime = 0;
@@ -87,23 +95,53 @@ export function getThemeCssVariables(settings: SiteSettings): string {
   const accentRgb = hexToRgb(settings.themeAccent);
   const lightRgb = hexToRgb(settings.themeAccentLight);
   const darkRgb = hexToRgb(settings.themeAccentDark);
-  const bgRgb = hexToRgb(settings.themeBackground || "#000000");
   const bg = settings.themeBackground || "#000000";
-  const surface = settings.themeSurface || "#111111";
-  const border = settings.themeBorder || "#262626";
+  const bgRgb = hexToRgb(bg);
+
+  const isLight = isLightModeActive(settings);
+
+  // Dynamic surface & border with smart light/dark adaptation
+  let surface = settings.themeSurface;
+  let border = settings.themeBorder;
+
+  if (isLight) {
+    if (!surface || !isLightBackground(surface)) {
+      surface = "#ffffff";
+    }
+    if (!border || !isLightBackground(border)) {
+      border = "#e2e8f0";
+    }
+  } else {
+    if (!surface || isLightBackground(surface)) {
+      surface = "#111111";
+    }
+    if (!border || isLightBackground(border)) {
+      border = "#262626";
+    }
+  }
+
+  const surfaceHover = isLight ? "#f1f5f9" : "#1a1a1a";
+  const foreground = isLight ? "#0f172a" : "#f8fafc";
+  const foregroundRgb = hexToRgb(foreground);
+  const textMuted = isLight ? "#64748b" : "#94a3b8";
 
   return `
     :root {
       --background: ${bg};
       --background-rgb: ${bgRgb};
       --surface: ${surface};
+      --surface-hover: ${surfaceHover};
       --surface-border: ${border};
+      --foreground: ${foreground};
+      --foreground-rgb: ${foregroundRgb};
+      --text-muted: ${textMuted};
       --accent: ${settings.themeAccent};
       --accent-rgb: ${accentRgb};
       --accent-light: ${settings.themeAccentLight};
       --accent-light-rgb: ${lightRgb};
       --accent-dark: ${settings.themeAccentDark};
       --accent-dark-rgb: ${darkRgb};
+      color-scheme: ${isLight ? "light" : "dark"};
     }
   `.trim();
 }

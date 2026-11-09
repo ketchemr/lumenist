@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { getSettings, getThemeCssVariables } from "@/lib/settings";
+import { getSettings, getThemeCssVariables, isLightModeActive } from "@/lib/settings";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +28,14 @@ export default function RootLayout({
 }) {
   const settings = getSettings();
   const themeCss = getThemeCssVariables(settings);
+  const isLight = isLightModeActive(settings);
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={isLight ? "light" : "dark"} data-theme={isLight ? "light" : "dark"}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
-      <body className="min-h-screen flex flex-col bg-background text-gray-100 antialiased selection:bg-accent/30 selection:text-white">
+      <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-accent/30 selection:text-white">
         <Header settings={settings} />
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}

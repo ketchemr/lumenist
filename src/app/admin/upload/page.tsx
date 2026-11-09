@@ -45,6 +45,8 @@ import {
   BACKGROUND_PRESETS,
   SiteSettings,
   DEFAULT_SETTINGS,
+  isLightBackground,
+  isLightModeActive,
 } from "@/types/settings";
 
 interface MetadataResponse {
@@ -693,6 +695,12 @@ export default function AdminUploadPage() {
       if (data.success) {
         setSettingsSuccess(true);
         // Apply theme variables immediately to active document
+        const isLight = isLightModeActive(settings);
+        document.documentElement.className = isLight ? "light" : "dark";
+        document.documentElement.setAttribute(
+          "data-theme",
+          isLight ? "light" : "dark"
+        );
         document.documentElement.style.setProperty(
           "--accent",
           settings.themeAccent
@@ -711,11 +719,19 @@ export default function AdminUploadPage() {
         );
         document.documentElement.style.setProperty(
           "--surface",
-          settings.themeSurface || "#111111"
+          settings.themeSurface || (isLight ? "#ffffff" : "#111111")
         );
         document.documentElement.style.setProperty(
           "--surface-border",
-          settings.themeBorder || "#262626"
+          settings.themeBorder || (isLight ? "#e2e8f0" : "#262626")
+        );
+        document.documentElement.style.setProperty(
+          "--foreground",
+          isLight ? "#0f172a" : "#f8fafc"
+        );
+        document.documentElement.style.setProperty(
+          "--text-muted",
+          isLight ? "#64748b" : "#94a3b8"
         );
         router.refresh();
         setTimeout(() => setSettingsSuccess(false), 3500);
@@ -2544,7 +2560,7 @@ export default function AdminUploadPage() {
             </div>
 
             <p className="text-xs text-muted">
-              Select the backdrop tone for the gallery. Fine-art photography can be framed on pure OLED black, soft obsidian, midnight slate, or warm espresso.
+              Select the backdrop tone for the gallery. Fine-art photography can be framed on OLED black, deep obsidian, or clean studio exhibition white and warm parchment.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
@@ -2585,7 +2601,7 @@ export default function AdminUploadPage() {
                         {preset.name}
                       </span>
                       <span className="block text-[10px] font-mono text-muted">
-                        {preset.background}
+                        {preset.background} {preset.isLight ? "· Light Theme" : "· Dark Theme"}
                       </span>
                     </div>
                   </button>
@@ -2601,10 +2617,24 @@ export default function AdminUploadPage() {
                 value={settings.themeBackground || "#000000"}
                 onChange={(e) => {
                   const hex = e.target.value;
-                  setSettings((prev) => ({
-                    ...prev,
-                    themeBackground: hex,
-                  }));
+                  const isLight = isLightBackground(hex);
+                  setSettings((prev) => {
+                    let surface = prev.themeSurface;
+                    let border = prev.themeBorder;
+                    if (isLight) {
+                      if (!isLightBackground(surface)) surface = "#ffffff";
+                      if (!isLightBackground(border)) border = "#e2e8f0";
+                    } else {
+                      if (isLightBackground(surface)) surface = "#111111";
+                      if (isLightBackground(border)) border = "#262626";
+                    }
+                    return {
+                      ...prev,
+                      themeBackground: hex,
+                      themeSurface: surface,
+                      themeBorder: border,
+                    };
+                  });
                 }}
                 className="w-8 h-8 rounded border border-surface-border bg-black cursor-pointer p-0"
               />
@@ -2613,14 +2643,83 @@ export default function AdminUploadPage() {
                 value={settings.themeBackground || "#000000"}
                 onChange={(e) => {
                   const hex = e.target.value;
-                  setSettings((prev) => ({
-                    ...prev,
-                    themeBackground: hex,
-                  }));
+                  const isLight = isLightBackground(hex);
+                  setSettings((prev) => {
+                    let surface = prev.themeSurface;
+                    let border = prev.themeBorder;
+                    if (isLight) {
+                      if (!isLightBackground(surface)) surface = "#ffffff";
+                      if (!isLightBackground(border)) border = "#e2e8f0";
+                    } else {
+                      if (isLightBackground(surface)) surface = "#111111";
+                      if (isLightBackground(border)) border = "#262626";
+                    }
+                    return {
+                      ...prev,
+                      themeBackground: hex,
+                      themeSurface: surface,
+                      themeBorder: border,
+                    };
+                  });
                 }}
                 placeholder="#000000"
                 className="w-28 bg-black border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-accent"
               />
+            </div>
+
+            {/* Text Contrast & Dynamic Mode */}
+            <div className="pt-4 border-t border-surface-border space-y-3">
+              <label className="block text-xs font-medium text-gray-200 uppercase tracking-wider">
+                Text Contrast & Typography Tone
+              </label>
+              <p className="text-xs text-muted">
+                Lumenist dynamically calculates contrast to guarantee readable typography based on your background. You can also manually force light or dark text.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "auto",
+                    label: "Automatic (Dynamic)",
+                    desc: "Auto-detects contrast from background luminance",
+                  },
+                  {
+                    id: "light",
+                    label: "Dark Text (Light Mode)",
+                    desc: "Forces deep charcoal typography",
+                  },
+                  {
+                    id: "dark",
+                    label: "Light Text (Dark Mode)",
+                    desc: "Forces crisp white typography",
+                  },
+                ].map((mode) => {
+                  const isSelected = (settings.themeTextMode || "auto") === mode.id;
+                  return (
+                    <button
+                      type="button"
+                      key={mode.id}
+                      onClick={() =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          themeTextMode: mode.id as any,
+                        }))
+                      }
+                      className={`p-3 rounded border text-left transition-all ${
+                        isSelected
+                          ? "border-accent bg-accent/10 shadow-md ring-1 ring-accent"
+                          : "border-surface-border bg-black hover:border-gray-600"
+                      }`}
+                    >
+                      <span className="block text-xs font-medium text-white">
+                        {mode.label}
+                      </span>
+                      <span className="block text-[10px] text-muted">
+                        {mode.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

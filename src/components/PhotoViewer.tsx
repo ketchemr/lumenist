@@ -237,7 +237,7 @@ export function PhotoViewer({
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
-          className={`fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none ${
+          className={`fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none photo-theater ${
             showControls ? "cursor-default" : "cursor-none"
           }`}
         >

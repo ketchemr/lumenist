@@ -10,7 +10,7 @@ const config: Config = {
     extend: {
       colors: {
         background: "rgb(var(--background-rgb, 0 0 0) / <alpha-value>)",
-        foreground: "#f5f5f5",
+        foreground: "rgb(var(--foreground-rgb, 248 250 252) / <alpha-value>)",
         accent: {
           DEFAULT: "rgb(var(--accent-rgb, 245 158 11) / <alpha-value>)",
           light: "rgb(var(--accent-light-rgb, 251 191 36) / <alpha-value>)",
@@ -21,7 +21,7 @@ const config: Config = {
           hover: "var(--surface-hover, #1a1a1a)",
           border: "var(--surface-border, #262626)",
         },
-        muted: "#888888",
+        muted: "var(--text-muted, #94a3b8)",
       },
       fontFamily: {
         sans: [
