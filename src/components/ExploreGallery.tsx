@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Photo } from "@/types/photo";
-import { PhotoCard } from "@/components/PhotoCard";
+import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { Search, SlidersHorizontal, Film } from "lucide-react";
 
 interface ExploreGalleryProps {
@@ -142,13 +142,9 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         )}
       </div>
 
-      {/* Full Thumbnail Flex Gallery */}
+      {/* Justified Flush Gallery */}
       {filteredPhotos.length > 0 ? (
-        <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center justify-start">
-          {filteredPhotos.map((photo) => (
-            <PhotoCard key={photo.photoID} photo={photo} />
-          ))}
-        </div>
+        <JustifiedGallery photos={filteredPhotos} targetRowHeight={210} gap={8} />
       ) : (
         <div className="text-center py-20 bg-surface border border-surface-border rounded-sm space-y-3">
           <p className="text-gray-400 text-sm">No photographs found matching your criteria.</p>

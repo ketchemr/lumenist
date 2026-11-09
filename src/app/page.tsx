@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAllPhotos, getAllCategories } from "@/lib/photos";
-import { PhotoCard } from "@/components/PhotoCard";
+import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { RandomHeroSlideshow } from "@/components/RandomHeroSlideshow";
 import { ArrowRight, Compass } from "lucide-react";
 
@@ -80,11 +80,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center justify-start">
-          {recentPhotos.map((photo) => (
-            <PhotoCard key={photo.photoID} photo={photo} />
-          ))}
-        </div>
+        <JustifiedGallery photos={recentPhotos} targetRowHeight={210} gap={8} />
       </section>
     </div>
   );

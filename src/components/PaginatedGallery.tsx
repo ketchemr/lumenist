@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Photo } from "@/types/photo";
-import { PhotoCard } from "@/components/PhotoCard";
+import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { ChevronDown } from "lucide-react";
 
 interface PaginatedGalleryProps {
@@ -24,12 +24,8 @@ export function PaginatedGallery({
 
   return (
     <div className="space-y-10">
-      {/* Full-thumbnail flex row gallery matching rrkphoto.com */}
-      <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center justify-start">
-        {displayedPhotos.map((photo) => (
-          <PhotoCard key={photo.photoID} photo={photo} />
-        ))}
-      </div>
+      {/* Justified gallery with flush aligned edges and full uncropped thumbnails */}
+      <JustifiedGallery photos={displayedPhotos} targetRowHeight={210} gap={8} />
 
       {hasMore && (
         <div className="text-center pt-8 pb-12 space-y-3">
