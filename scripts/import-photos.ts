@@ -7,6 +7,31 @@ import exifr from "exifr";
 const DEFAULT_SOURCE_DIR =
   "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/www/rrkphoto.com/photos";
 
+function cleanCameraName(make?: string, model?: string): string {
+  if (!model && !make) return "Unknown Camera";
+  let m = (model || "").trim();
+  let mk = (make || "").trim();
+
+  // Normalize vendor strings
+  if (mk.toUpperCase().includes("NIKON")) mk = "Nikon";
+  else if (mk.toUpperCase().includes("SONY")) mk = "Sony";
+  else if (mk.toUpperCase().includes("CANON")) mk = "Canon";
+  else if (mk.toUpperCase().includes("GOOGLE")) mk = "Google";
+  else if (mk.toUpperCase().includes("SAMSUNG")) mk = "Samsung";
+
+  if (m.toUpperCase().startsWith("NIKON ")) {
+    return "Nikon " + m.slice(6).trim();
+  }
+  if (m.toUpperCase().startsWith("SONY ")) {
+    return "Sony " + m.slice(5).trim();
+  }
+
+  if (mk && !m.toLowerCase().includes(mk.toLowerCase())) {
+    return `${mk} ${m}`.trim();
+  }
+  return m || mk;
+}
+
 async function main() {
   const sourceDir = process.argv[2] || DEFAULT_SOURCE_DIR;
   console.log(`\n📷 Lumenist Importer`);
@@ -50,74 +75,73 @@ async function main() {
         // Adjust desktop image path to preserve folder structure
         photo.imageDesktop = `/photos/${sub}/${photo.photoID}_desktop.jpg`;
 
-        // Automatically populate missing technical specs directly from JPEG EXIF/XMP
+        // Automatically extract technical metadata from JPEG EXIF/XMP (overriding manual txt values)
         if (fs.existsSync(imagePath)) {
-          const needsExif =
-            photo.camera === "Unknown Camera" ||
-            !photo.lens ||
-            !photo.shutterspeed ||
-            !photo.aperture ||
-            !photo.sensitivity ||
-            !photo.dateTaken.year;
-
-          if (needsExif) {
-            try {
-              const data = await exifr.parse(imagePath, {
-                tiff: true,
-                exif: true,
-                xmp: true,
-              });
-              if (data) {
-                if (photo.camera === "Unknown Camera" && (data.Model || data.Make)) {
-                  photo.camera =
-                    data.Model && data.Make && !data.Model.includes(data.Make)
-                      ? `${data.Make} ${data.Model}`
-                      : data.Model || data.Make || "Digital";
-                }
-                if (!photo.lens && (data.LensModel || data.Lens)) {
-                  photo.lens = data.LensModel || data.Lens;
-                }
-                if (!photo.focalLength && data.FocalLength) {
-                  photo.focalLength = `${data.FocalLength} mm`;
-                }
-                if (!photo.shutterspeed && data.ExposureTime) {
-                  photo.shutterspeed =
-                    data.ExposureTime >= 1
-                      ? `${data.ExposureTime} s`
-                      : `1/${Math.round(1 / data.ExposureTime)} s`;
-                }
-                if (!photo.aperture && data.FNumber) {
-                  photo.aperture = `f${data.FNumber}`;
-                }
-                if (!photo.sensitivity && data.ISO) {
-                  photo.sensitivity = `ISO ${data.ISO}`;
-                }
-                if (!photo.exposureCompensation && data.ExposureCompensation !== undefined) {
-                  photo.exposureCompensation = `${data.ExposureCompensation} Ev`;
-                }
-                if (!photo.whiteBalance && data.Temperature) {
-                  photo.whiteBalance = `${data.Temperature}${
-                    data.Tint !== undefined
-                      ? ` ${data.Tint >= 0 ? "+" : ""}${data.Tint}`
-                      : ""
-                  }`;
-                }
-                if (!photo.dateTaken.year && (data.DateTimeOriginal || data.CreateDate)) {
-                  const d = new Date(data.DateTimeOriginal || data.CreateDate);
-                  photo.dateTaken = {
-                    year: d.getUTCFullYear(),
-                    month: d.getUTCMonth() + 1,
-                    day: d.getUTCDate(),
-                    hour: d.getUTCHours(),
-                    minute: d.getUTCMinutes(),
-                    second: d.getUTCSeconds(),
-                    iso: d.toISOString(),
-                  };
+          try {
+            const data = await exifr.parse(imagePath, {
+              tiff: true,
+              exif: true,
+              xmp: true,
+            });
+            if (data) {
+              // 1. Camera
+              if (data.Model || data.Make) {
+                photo.camera = cleanCameraName(data.Make, data.Model);
+              }
+              // 2. Lens
+              if (data.LensModel || data.Lens) {
+                photo.lens = (data.LensModel || data.Lens).trim();
+              }
+              // 3. Focal Length
+              if (data.FocalLength) {
+                photo.focalLength = `${data.FocalLength} mm`;
+              }
+              // 4. Shutter Speed
+              if (data.ExposureTime) {
+                photo.shutterspeed =
+                  data.ExposureTime >= 1
+                    ? `${data.ExposureTime} s`
+                    : `1/${Math.round(1 / data.ExposureTime)} s`;
+              }
+              // 5. Aperture
+              if (data.FNumber) {
+                photo.aperture = `f${data.FNumber}`;
+              }
+              // 6. ISO
+              if (data.ISO) {
+                photo.sensitivity = `ISO ${data.ISO}`;
+              }
+              // 7. Exposure Compensation
+              if (data.ExposureCompensation !== undefined) {
+                const ec = Number(data.ExposureCompensation);
+                photo.exposureCompensation =
+                  ec === 0
+                    ? "0 Ev"
+                    : `${ec > 0 ? "+" : ""}${ec.toFixed(1).replace(/\.0$/, "")} Ev`;
+              }
+              // 8. White Balance
+              if (data.Temperature) {
+                photo.whiteBalance = `${data.Temperature}${
+                  data.Tint !== undefined
+                    ? ` ${data.Tint >= 0 ? "+" : ""}${data.Tint}`
+                    : ""
+                }`;
+              } else if (data.WhiteBalance) {
+                photo.whiteBalance = String(data.WhiteBalance);
+              }
+              // 9. Digital Medium
+              if (data.Model || data.Make || data.ExposureTime) {
+                if (
+                  !photo.film ||
+                  photo.film === "Unknown" ||
+                  photo.film.toLowerCase() === "digital"
+                ) {
+                  photo.film = "Digital";
                 }
               }
-            } catch {
-              // ignore
             }
+          } catch {
+            // ignore
           }
         }
 
