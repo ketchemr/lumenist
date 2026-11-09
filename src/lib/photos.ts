@@ -48,17 +48,50 @@ export interface CategorySummary {
 
 export function getAllCategories(): CategorySummary[] {
   const photos = getAllPhotos();
-  const map = new Map<string, { count: number; cover?: Photo }>();
+  if (photos.length === 0) return [];
 
+  // Group photos by category
+  const catMap = new Map<string, Photo[]>();
   for (const photo of photos) {
     for (const cat of photo.categories) {
-      const existing = map.get(cat);
-      if (!existing) {
-        map.set(cat, { count: 1, cover: photo });
-      } else {
-        existing.count++;
+      if (!catMap.has(cat)) {
+        catMap.set(cat, []);
       }
+      catMap.get(cat)!.push(photo);
     }
+  }
+
+  // To guarantee no two galleries share the same cover photo,
+  // we sort categories by candidate pool size ascending (smallest pool first).
+  const sortedCategories = Array.from(catMap.entries()).sort(
+    (a, b) => a[1].length - b[1].length
+  );
+
+  const usedPhotoIds = new Set<string>();
+  const coverMap = new Map<string, Photo>();
+
+  for (const [catName, catPhotos] of sortedCategories) {
+    const available = catPhotos.filter((p) => !usedPhotoIds.has(p.photoID));
+    if (available.length > 0) {
+      const chosen = available[Math.floor(Math.random() * available.length)];
+      usedPhotoIds.add(chosen.photoID);
+      coverMap.set(catName, chosen);
+    } else {
+      // Fallback if every photo in category has already been used
+      const chosen = catPhotos[Math.floor(Math.random() * catPhotos.length)];
+      coverMap.set(catName, chosen);
+    }
+  }
+
+  // Unique random cover for "All Photographs"
+  const allAvailable = photos.filter((p) => !usedPhotoIds.has(p.photoID));
+  const allCover =
+    allAvailable.length > 0
+      ? allAvailable[Math.floor(Math.random() * allAvailable.length)]
+      : photos[Math.floor(Math.random() * photos.length)];
+
+  if (allCover) {
+    usedPhotoIds.add(allCover.photoID);
   }
 
   const categoryList: CategorySummary[] = [
@@ -66,14 +99,14 @@ export function getAllCategories(): CategorySummary[] {
       name: "All Photographs",
       slug: "All",
       count: photos.length,
-      coverPhoto: photos[0],
+      coverPhoto: allCover,
     },
-    ...Array.from(map.entries())
-      .map(([name, data]) => ({
+    ...Array.from(catMap.entries())
+      .map(([name, catPhotos]) => ({
         name,
         slug: encodeURIComponent(name),
-        count: data.count,
-        coverPhoto: data.cover,
+        count: catPhotos.length,
+        coverPhoto: coverMap.get(name),
       }))
       .sort((a, b) => b.count - a.count),
   ];

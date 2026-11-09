@@ -2,9 +2,12 @@ import Link from "next/link";
 import { getAllCategories, getAllPhotos } from "@/lib/photos";
 import { Folder, Images, ArrowRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function GalleriesIndexPage() {
   const allPhotos = getAllPhotos();
   const categories = getAllCategories();
+  const allCategory = categories.find((c) => c.slug === "All");
   const otherCategories = categories.filter((c) => c.slug !== "All");
 
   return (
@@ -18,38 +21,57 @@ export default function GalleriesIndexPage() {
         </p>
       </div>
 
-      {/* Featured "All Photographs" Banner */}
+      {/* Featured "All Photographs" Banner with unique random cover */}
       <Link
         href="/galleries/All"
-        className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent transition-all p-6 sm:p-8"
+        className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent transition-all"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-12 items-center">
+          {allCategory?.coverPhoto && (
+            <div className="md:col-span-5 lg:col-span-4 aspect-[3/2] overflow-hidden bg-black">
+              <img
+                src={allCategory.coverPhoto.imageDesktop}
+                alt="All Photographs Archive"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              />
+            </div>
+          )}
+          <div
+            className={`p-6 sm:p-8 space-y-3 ${
+              allCategory?.coverPhoto
+                ? "md:col-span-7 lg:col-span-8"
+                : "md:col-span-12"
+            }`}
+          >
             <div className="inline-flex items-center space-x-2 text-xs text-accent uppercase tracking-wider font-semibold">
               <Images className="w-4 h-4" />
-              <span>Full Archive</span>
+              <span>Complete Collection</span>
             </div>
-            <h2 className="text-2xl font-light text-white group-hover:text-accent transition-colors">
+            <h2 className="text-2xl sm:text-3xl font-light text-white group-hover:text-accent transition-colors">
               All Photographs
             </h2>
             <p className="text-sm text-gray-400 max-w-xl leading-relaxed">
-              Browse the complete collection of {allPhotos.length} cataloged fine art photographs, 
+              Browse all {allPhotos.length} cataloged fine art photographs across all years, 
               spanning from early medium format and 35mm film transparencies to modern ultra-high-resolution digital captures.
             </p>
-          </div>
-
-          <div className="flex items-center space-x-2 text-sm text-accent group-hover:text-accent-light font-medium self-start sm:self-center">
-            <span>Explore Complete Archive ({allPhotos.length})</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <div className="pt-2 flex items-center space-x-2 text-sm text-accent group-hover:text-accent-light font-medium">
+              <span>Explore Complete Archive ({allPhotos.length} works)</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </div>
           </div>
         </div>
       </Link>
 
       {/* Category Grid */}
       <div className="space-y-4">
-        <h2 className="text-sm uppercase tracking-wider text-muted font-medium">
-          Collections by Category ({otherCategories.length})
-        </h2>
+        <div className="flex items-center justify-between border-b border-surface-border pb-2">
+          <h2 className="text-sm uppercase tracking-wider text-muted font-medium">
+            Curated Categories ({otherCategories.length})
+          </h2>
+          <span className="text-xs text-muted">
+            Each gallery shows a unique random photograph
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {otherCategories.map((cat) => (
@@ -59,13 +81,18 @@ export default function GalleriesIndexPage() {
               className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent/40 transition-all"
             >
               {cat.coverPhoto && (
-                <div className="aspect-[3/2] overflow-hidden bg-black">
+                <div className="aspect-[3/2] overflow-hidden bg-black relative">
                   <img
                     src={cat.coverPhoto.imageDesktop}
-                    alt={cat.name}
+                    alt={cat.coverPhoto.title || cat.name}
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                   />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-[11px] text-gray-200 truncate">
+                      {cat.coverPhoto.title}
+                    </p>
+                  </div>
                 </div>
               )}
               <div className="p-4 flex items-center justify-between">
