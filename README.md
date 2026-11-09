@@ -4,6 +4,8 @@
 
 Named after the 19th-century **Luminism** art movement—which celebrated the poetic, atmospheric rendering of natural light and landscape—Lumenist is built as a high-performance, distraction-free alternative to legacy platforms like Piwigo and walled-garden portfolio builders.
 
+🌐 **Live Exhibition Example**: See Lumenist running in production at [**rrkphoto.com**](https://rrkphoto.com) (*Randal R. Ketchem Photography: Fine Art Landscape and Nature Photography*).
+
 ---
 
 ## Key Features
