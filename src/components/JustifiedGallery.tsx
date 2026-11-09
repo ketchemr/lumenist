@@ -176,9 +176,9 @@ export function JustifiedGallery({
                 className="relative block overflow-hidden group bg-black shrink-0 transition-transform duration-200 hover:z-10"
                 title={`${photo.title} (${photo.dateTaken.year || ""})`}
               >
-                {/* 100% full uncropped image */}
+                {/* Full uncropped thumbnail served via Lanczos3 anti-aliasing thumbnailer to eliminate moire */}
                 <img
-                  src={photo.imageDesktop}
+                  src={`/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=600`}
                   alt={photo.title}
                   loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"

@@ -1,86 +1,117 @@
 import Link from "next/link";
 import { getAllPhotos, getAllCategories } from "@/lib/photos";
-import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { RandomHeroSlideshow } from "@/components/RandomHeroSlideshow";
-import { ArrowRight, Compass } from "lucide-react";
+import { Folder, Images, ArrowRight } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const photos = getAllPhotos();
   const categories = getAllCategories();
-
-  // Show recent captures below the random hero
-  const recentPhotos = photos.slice(0, 16);
-  // Show top categories (excluding 'All Photographs' for the quick row)
-  const topCategories = categories.filter((c) => c.slug !== "All").slice(0, 8);
+  const allCategory = categories.find((c) => c.slug === "All");
+  const otherCategories = categories.filter((c) => c.slug !== "All");
 
   return (
-    <div className="space-y-16">
-      {/* Random Hero Slideshow with smooth timed transitions */}
+    <div className="space-y-12">
+      {/* Random Hero Slideshow with smooth timed transitions & constant frame */}
       <RandomHeroSlideshow photos={photos} intervalSeconds={10} />
 
-      {/* Curated Category Shortcuts */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-surface-border pb-3">
-          <h2 className="text-lg font-medium text-white tracking-tight flex items-center space-x-2">
-            <Compass className="w-4 h-4 text-accent" />
-            <span>Curated Galleries</span>
-          </h2>
-          <div className="flex items-center space-x-4 text-xs">
-            <Link
-              href="/galleries/All"
-              className="text-accent hover:underline font-medium"
+      {/* Galleries Collection */}
+      <section className="space-y-8">
+        {/* Featured "All Photographs" Banner with unique random cover */}
+        <Link
+          href="/galleries/All"
+          className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent transition-all"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-12 items-center">
+            {allCategory?.coverPhoto && (
+              <div className="md:col-span-5 lg:col-span-4 aspect-[3/2] overflow-hidden bg-black">
+                <img
+                  src={`/api/thumbnail?src=${encodeURIComponent(
+                    allCategory.coverPhoto.imageDesktop
+                  )}&w=800`}
+                  alt="All Photographs Archive"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+              </div>
+            )}
+            <div
+              className={`p-6 sm:p-8 space-y-3 ${
+                allCategory?.coverPhoto
+                  ? "md:col-span-7 lg:col-span-8"
+                  : "md:col-span-12"
+              }`}
             >
-              All Photographs ({photos.length})
-            </Link>
-            <span className="text-gray-600">·</span>
-            <Link
-              href="/galleries"
-              className="text-muted hover:text-accent transition-colors flex items-center space-x-1"
-            >
-              <span>View All Categories</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
+              <div className="inline-flex items-center space-x-2 text-xs text-accent uppercase tracking-wider font-semibold">
+                <Images className="w-4 h-4" />
+                <span>Complete Collection</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-light text-white group-hover:text-accent transition-colors">
+                All Photographs
+              </h2>
+              <p className="text-sm text-gray-400 max-w-xl leading-relaxed">
+                Browse all {photos.length} fine art photographs across all years, 
+                spanning from medium format and 35mm film transparencies to modern digital captures.
+              </p>
+              <div className="pt-2 flex items-center space-x-2 text-sm text-accent group-hover:text-accent-light font-medium">
+                <span>Explore Complete Archive ({photos.length} works)</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {topCategories.map((cat) => (
-            <Link
-              key={cat.name}
-              href={`/galleries/${cat.slug}`}
-              className="group p-3 rounded-sm bg-surface border border-surface-border hover:border-accent/40 text-center transition-all"
-            >
-              <div className="text-sm font-medium text-gray-200 group-hover:text-accent transition-colors truncate">
-                {cat.name}
-              </div>
-              <div className="text-[11px] text-muted pt-0.5">
-                {cat.count} photos
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Recent Works Grid */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between border-b border-surface-border pb-3">
-          <div>
-            <h2 className="text-xl font-light text-white tracking-tight">
-              Recent Additions
+        {/* The Curated Galleries Grid */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-surface-border pb-2">
+            <h2 className="text-sm uppercase tracking-wider text-muted font-medium">
+              Curated Galleries ({otherCategories.length})
             </h2>
-            <p className="text-xs text-muted pt-0.5">
-              Chronological fine art additions from the {photos.length} cataloged works
-            </p>
+            <span className="text-xs text-muted">
+              Each gallery displays a unique random photograph
+            </span>
           </div>
-          <Link
-            href="/galleries/All"
-            className="text-xs text-accent hover:text-accent-light transition-colors"
-          >
-            Browse All {photos.length} Photos &rarr;
-          </Link>
-        </div>
 
-        <JustifiedGallery photos={recentPhotos} targetRowHeight={210} gap={8} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {otherCategories.map((cat) => (
+              <Link
+                key={cat.name}
+                href={`/galleries/${cat.slug}`}
+                className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent/40 transition-all"
+              >
+                {cat.coverPhoto && (
+                  <div className="aspect-[3/2] overflow-hidden bg-black relative">
+                    <img
+                      src={`/api/thumbnail?src=${encodeURIComponent(
+                        cat.coverPhoto.imageDesktop
+                      )}&w=600`}
+                      alt={cat.coverPhoto.title || cat.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-[11px] text-gray-200 truncate">
+                        {cat.coverPhoto.title}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="p-4 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <h3 className="text-base font-medium text-white group-hover:text-accent transition-colors flex items-center space-x-1.5">
+                      <Folder className="w-3.5 h-3.5 text-accent" />
+                      <span>{cat.name}</span>
+                    </h3>
+                    <p className="text-xs text-muted">{cat.count} photographs</p>
+                  </div>
+                  <span className="text-xs text-muted group-hover:text-accent transition-colors">
+                    &rarr;
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   );

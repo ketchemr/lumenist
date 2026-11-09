@@ -100,22 +100,22 @@ export function RandomHeroSlideshow({
 
   return (
     <section
-      className="relative rounded-sm overflow-hidden border border-surface-border bg-black group"
+      className="relative rounded-sm overflow-hidden border border-surface-border bg-black group w-full"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-10">
-        {/* Photo Display with Crossfade */}
-        <div className="lg:col-span-8 overflow-hidden rounded-sm bg-neutral-950 relative min-h-[360px] sm:min-h-[500px] flex items-center justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
+        {/* Photo Display: Constant Width & Constant Height Frame */}
+        <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-neutral-950 relative flex items-center justify-center">
           <Link
             href={`/photo/${current.photoID}`}
-            className="block w-full h-full flex items-center justify-center"
+            className="w-full h-full flex items-center justify-center p-2"
           >
             <img
               src={current.imageDesktop}
               alt={current.title}
               key={current.photoID}
-              className={`w-full h-auto max-h-[72vh] object-contain mx-auto rounded shadow-2xl transition-all duration-500 ${
+              className={`max-w-full max-h-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 ${
                 isTransitioning ? "opacity-20 scale-[0.99]" : "opacity-100 scale-100"
               }`}
             />
@@ -149,8 +149,8 @@ export function RandomHeroSlideshow({
           </div>
         </div>
 
-        {/* Narrative & Details Column */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* Narrative & Details Column: Stable height */}
+        <div className="lg:col-span-4 h-full flex flex-col justify-between py-1 space-y-3">
           <div className="flex items-center justify-between">
             <div className="inline-flex items-center space-x-1.5 text-xs text-accent font-medium tracking-wider uppercase">
               <Sparkles className="w-3.5 h-3.5" />

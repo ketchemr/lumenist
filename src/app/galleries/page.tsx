@@ -30,7 +30,7 @@ export default function GalleriesIndexPage() {
           {allCategory?.coverPhoto && (
             <div className="md:col-span-5 lg:col-span-4 aspect-[3/2] overflow-hidden bg-black">
               <img
-                src={allCategory.coverPhoto.imageDesktop}
+                src={`/api/thumbnail?src=${encodeURIComponent(allCategory.coverPhoto.imageDesktop)}&w=800`}
                 alt="All Photographs Archive"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
               />
@@ -83,7 +83,7 @@ export default function GalleriesIndexPage() {
               {cat.coverPhoto && (
                 <div className="aspect-[3/2] overflow-hidden bg-black relative">
                   <img
-                    src={cat.coverPhoto.imageDesktop}
+                    src={`/api/thumbnail?src=${encodeURIComponent(cat.coverPhoto.imageDesktop)}&w=600`}
                     alt={cat.coverPhoto.title || cat.name}
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
