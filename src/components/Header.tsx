@@ -11,7 +11,7 @@ export function Header({ settings }: HeaderProps) {
   const tagline = settings?.siteTagline || siteConfig.tagline;
 
   return (
-    <header className="border-b border-surface-border bg-black/80 backdrop-blur sticky top-0 z-50">
+    <header className="border-b border-surface-border bg-background/80 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href="/" className="group">
           <h1 className="text-lg sm:text-xl font-medium tracking-tight text-white group-hover:text-accent transition-colors">

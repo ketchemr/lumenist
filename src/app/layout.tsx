@@ -31,7 +31,7 @@ export default function RootLayout({
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
-      <body className="min-h-screen flex flex-col bg-black text-gray-100 antialiased selection:bg-accent/30 selection:text-white">
+      <body className="min-h-screen flex flex-col bg-background text-gray-100 antialiased selection:bg-accent/30 selection:text-white">
         <Header settings={settings} />
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}

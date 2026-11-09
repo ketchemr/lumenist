@@ -2,6 +2,9 @@ export interface SiteSettings {
   themeAccent: string; // e.g. "#f59e0b"
   themeAccentLight: string; // e.g. "#fbbf24"
   themeAccentDark: string; // e.g. "#d97706"
+  themeBackground: string; // e.g. "#000000"
+  themeSurface: string; // e.g. "#111111"
+  themeBorder: string; // e.g. "#262626"
   defaultSortOrder: "date-desc" | "date-asc" | "created-desc" | "title-asc";
   slideshowInterval: number; // in seconds (e.g. 10)
   siteTitle: string;
@@ -54,10 +57,59 @@ export const THEME_PRESETS = [
   },
 ];
 
+export interface BackgroundPreset {
+  id: string;
+  name: string;
+  background: string;
+  surface: string;
+  border: string;
+}
+
+export const BACKGROUND_PRESETS: BackgroundPreset[] = [
+  {
+    id: "oled-black",
+    name: "Pure OLED Black (Default)",
+    background: "#000000",
+    surface: "#111111",
+    border: "#262626",
+  },
+  {
+    id: "deep-obsidian",
+    name: "Deep Obsidian",
+    background: "#08080a",
+    surface: "#131317",
+    border: "#24242c",
+  },
+  {
+    id: "midnight-slate",
+    name: "Midnight Slate",
+    background: "#0a0e17",
+    surface: "#111827",
+    border: "#1f293d",
+  },
+  {
+    id: "warm-espresso",
+    name: "Warm Espresso",
+    background: "#100d0c",
+    surface: "#1a1614",
+    border: "#2d2420",
+  },
+  {
+    id: "charcoal",
+    name: "Charcoal Neutral",
+    background: "#141414",
+    surface: "#1e1e1e",
+    border: "#2e2e2e",
+  },
+];
+
 export const DEFAULT_SETTINGS: SiteSettings = {
   themeAccent: "#f59e0b",
   themeAccentLight: "#fbbf24",
   themeAccentDark: "#d97706",
+  themeBackground: "#000000",
+  themeSurface: "#111111",
+  themeBorder: "#262626",
   defaultSortOrder: "date-desc",
   slideshowInterval: 10,
   siteTitle: "Randal R. Ketchem Photography",

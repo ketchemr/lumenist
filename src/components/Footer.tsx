@@ -11,7 +11,7 @@ export function Footer({ settings }: FooterProps) {
   const artistName = settings?.artistName || siteConfig.artistName;
 
   return (
-    <footer className="border-t border-surface-border bg-black mt-20 py-12 text-center text-xs text-muted">
+    <footer className="border-t border-surface-border bg-background mt-20 py-12 text-center text-xs text-muted">
       <div className="max-w-7xl mx-auto px-4 space-y-3">
         <p className="tracking-wide">
           &copy; 2003–{currentYear} {artistName}. All rights reserved.

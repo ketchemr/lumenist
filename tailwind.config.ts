@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#000000",
+        background: "rgb(var(--background-rgb, 0 0 0) / <alpha-value>)",
         foreground: "#f5f5f5",
         accent: {
           DEFAULT: "rgb(var(--accent-rgb, 245 158 11) / <alpha-value>)",
@@ -17,9 +17,9 @@ const config: Config = {
           dark: "rgb(var(--accent-dark-rgb, 217 119 6) / <alpha-value>)",
         },
         surface: {
-          DEFAULT: "#111111",
-          hover: "#1a1a1a",
-          border: "#262626",
+          DEFAULT: "var(--surface, #111111)",
+          hover: "var(--surface-hover, #1a1a1a)",
+          border: "var(--surface-border, #262626)",
         },
         muted: "#888888",
       },

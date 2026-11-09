@@ -1,9 +1,15 @@
 import fs from "fs";
 import path from "path";
-import { SiteSettings, DEFAULT_SETTINGS, THEME_PRESETS } from "@/types/settings";
+import {
+  SiteSettings,
+  DEFAULT_SETTINGS,
+  THEME_PRESETS,
+  BACKGROUND_PRESETS,
+  BackgroundPreset,
+} from "@/types/settings";
 
-export type { SiteSettings };
-export { DEFAULT_SETTINGS, THEME_PRESETS };
+export type { SiteSettings, BackgroundPreset };
+export { DEFAULT_SETTINGS, THEME_PRESETS, BACKGROUND_PRESETS };
 
 let cachedSettings: SiteSettings | null = null;
 let lastMtime = 0;
@@ -81,9 +87,17 @@ export function getThemeCssVariables(settings: SiteSettings): string {
   const accentRgb = hexToRgb(settings.themeAccent);
   const lightRgb = hexToRgb(settings.themeAccentLight);
   const darkRgb = hexToRgb(settings.themeAccentDark);
+  const bgRgb = hexToRgb(settings.themeBackground || "#000000");
+  const bg = settings.themeBackground || "#000000";
+  const surface = settings.themeSurface || "#111111";
+  const border = settings.themeBorder || "#262626";
 
   return `
     :root {
+      --background: ${bg};
+      --background-rgb: ${bgRgb};
+      --surface: ${surface};
+      --surface-border: ${border};
       --accent: ${settings.themeAccent};
       --accent-rgb: ${accentRgb};
       --accent-light: ${settings.themeAccentLight};

@@ -28,7 +28,12 @@ import {
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { THEME_PRESETS, SiteSettings, DEFAULT_SETTINGS } from "@/types/settings";
+import {
+  THEME_PRESETS,
+  BACKGROUND_PRESETS,
+  SiteSettings,
+  DEFAULT_SETTINGS,
+} from "@/types/settings";
 
 interface MetadataResponse {
   albums: string[];
@@ -438,6 +443,18 @@ export default function AdminUploadPage() {
         document.documentElement.style.setProperty(
           "--accent-dark",
           settings.themeAccentDark
+        );
+        document.documentElement.style.setProperty(
+          "--background",
+          settings.themeBackground || "#000000"
+        );
+        document.documentElement.style.setProperty(
+          "--surface",
+          settings.themeSurface || "#111111"
+        );
+        document.documentElement.style.setProperty(
+          "--surface-border",
+          settings.themeBorder || "#262626"
         );
         router.refresh();
         setTimeout(() => setSettingsSuccess(false), 3500);
@@ -1206,6 +1223,106 @@ export default function AdminUploadPage() {
                   }));
                 }}
                 placeholder="#f59e0b"
+                className="w-28 bg-black border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          {/* Theme Background & Gallery Atmosphere */}
+          <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
+            <div className="flex items-center justify-between border-b border-surface-border pb-3">
+              <div className="flex items-center space-x-2 text-xs font-medium text-gray-200 uppercase tracking-wider">
+                <Sliders className="w-3.5 h-3.5 text-accent" />
+                <span>Gallery Background & Atmosphere</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-muted">Active:</span>
+                <span
+                  className="w-4 h-4 rounded-full border border-white/20 inline-block shadow-sm"
+                  style={{ backgroundColor: settings.themeBackground || "#000000" }}
+                />
+                <code className="text-xs font-mono text-white">
+                  {settings.themeBackground || "#000000"}
+                </code>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted">
+              Select the backdrop tone for the gallery. Fine-art photography can be framed on pure OLED black, soft obsidian, midnight slate, or warm espresso.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+              {BACKGROUND_PRESETS.map((preset) => {
+                const isSelected =
+                  (settings.themeBackground || "#000000").toLowerCase() ===
+                  preset.background.toLowerCase();
+                return (
+                  <button
+                    type="button"
+                    key={preset.id}
+                    onClick={() => {
+                      setSettings((prev) => ({
+                        ...prev,
+                        themeBackground: preset.background,
+                        themeSurface: preset.surface,
+                        themeBorder: preset.border,
+                      }));
+                    }}
+                    className={`flex items-center space-x-3 p-3 rounded border text-left transition-all ${
+                      isSelected
+                        ? "border-accent bg-accent/10 shadow-md ring-1 ring-accent"
+                        : "border-surface-border bg-black hover:border-gray-600"
+                    }`}
+                  >
+                    <div className="flex items-center -space-x-1 flex-shrink-0">
+                      <span
+                        className="w-5 h-5 rounded-full border border-white/30 shadow-sm"
+                        style={{ backgroundColor: preset.background }}
+                      />
+                      <span
+                        className="w-4 h-4 rounded-full border border-white/20 shadow-sm"
+                        style={{ backgroundColor: preset.surface }}
+                      />
+                    </div>
+                    <div className="truncate">
+                      <span className="block text-xs font-medium text-white truncate">
+                        {preset.name}
+                      </span>
+                      <span className="block text-[10px] font-mono text-muted">
+                        {preset.background}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Background Color Picker */}
+            <div className="pt-2 flex items-center space-x-3">
+              <label className="text-xs text-muted">Custom Background Hex:</label>
+              <input
+                type="color"
+                value={settings.themeBackground || "#000000"}
+                onChange={(e) => {
+                  const hex = e.target.value;
+                  setSettings((prev) => ({
+                    ...prev,
+                    themeBackground: hex,
+                  }));
+                }}
+                className="w-8 h-8 rounded border border-surface-border bg-black cursor-pointer p-0"
+              />
+              <input
+                type="text"
+                value={settings.themeBackground || "#000000"}
+                onChange={(e) => {
+                  const hex = e.target.value;
+                  setSettings((prev) => ({
+                    ...prev,
+                    themeBackground: hex,
+                  }));
+                }}
+                placeholder="#000000"
                 className="w-28 bg-black border border-surface-border rounded px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-accent"
               />
             </div>
