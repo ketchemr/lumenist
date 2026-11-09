@@ -108,7 +108,7 @@ export function getAllCategories(): CategorySummary[] {
         count: catPhotos.length,
         coverPhoto: coverMap.get(name),
       }))
-      .sort((a, b) => b.count - a.count),
+      .sort((a, b) => a.name.localeCompare(b.name)),
   ];
 
   return categoryList;
