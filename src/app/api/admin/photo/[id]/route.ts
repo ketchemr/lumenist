@@ -3,20 +3,12 @@ import fs from "fs";
 import path from "path";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 import { Photo } from "@/types/photo";
+import {
+  resolvePhotosDir,
+  findCandidateFilesToDelete,
+} from "@/lib/adminCatalog";
 
 export const dynamic = "force-dynamic";
-
-function resolvePhotosDir(): string {
-  if (process.env.PHOTOS_DIR && fs.existsSync(process.env.PHOTOS_DIR)) {
-    return process.env.PHOTOS_DIR;
-  }
-  const publicPhotos = path.join(process.cwd(), "public", "photos");
-  try {
-    return fs.realpathSync(publicPhotos);
-  } catch {
-    return publicPhotos;
-  }
-}
 
 export async function DELETE(
   req: NextRequest,
@@ -63,34 +55,7 @@ export async function DELETE(
     const photosRoot = resolvePhotosDir();
 
     // Determine candidate files to delete on disk
-    const filesToDelete: string[] = [];
-
-    // 1. Files based on imageDesktop path (e.g. /photos/2026/test_desktop.jpg)
-    if (photo.imageDesktop && photo.imageDesktop.startsWith("/photos/")) {
-      const relPath = photo.imageDesktop.replace(/^\/photos\//, "");
-      const fullDesktopPath = path.join(photosRoot, relPath);
-      filesToDelete.push(fullDesktopPath);
-
-      // Sibling txt metadata file
-      const dirName = path.dirname(fullDesktopPath);
-      filesToDelete.push(path.join(dirName, `${id}.txt`));
-
-      // Sibling source image (e.g. test.jpg without _desktop)
-      filesToDelete.push(path.join(dirName, `${id}.jpg`));
-      filesToDelete.push(path.join(dirName, `${id}.jpeg`));
-    }
-
-    // 2. Also check year directory if dateTaken exists
-    if (photo.dateTaken?.year) {
-      const yearDir = path.join(photosRoot, String(photo.dateTaken.year));
-      filesToDelete.push(path.join(yearDir, `${id}.txt`));
-      filesToDelete.push(path.join(yearDir, `${id}_desktop.jpg`));
-      filesToDelete.push(path.join(yearDir, `${id}.jpg`));
-      filesToDelete.push(path.join(yearDir, `${id}.jpeg`));
-    }
-
-    // Delete unique candidate files from disk
-    const uniqueFiles = Array.from(new Set(filesToDelete));
+    const uniqueFiles = findCandidateFilesToDelete(photo, photosRoot);
     const deletedFiles: string[] = [];
 
     for (const filePath of uniqueFiles) {

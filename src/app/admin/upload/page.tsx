@@ -15,7 +15,10 @@ import {
   LogOut,
   Sparkles,
   ExternalLink,
+  ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Sliders,
   Settings as SettingsIcon,
   Palette,
@@ -29,6 +32,11 @@ import {
   Search,
   Image as ImageIcon,
   AlertTriangle,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  FolderPlus,
+  Filter,
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -54,10 +62,35 @@ export default function AdminUploadPage() {
     "upload"
   );
 
-  // Manage / Delete Photos state
+  // Manage / Catalog state
   const [catalogPhotos, setCatalogPhotos] = useState<any[]>([]);
-  const [catalogSearch, setCatalogSearch] = useState("");
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogAlbumFilter, setCatalogAlbumFilter] = useState("all");
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogPageSize, setCatalogPageSize] = useState<number | "all">(50);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogTotalPages, setCatalogTotalPages] = useState(1);
+  const [availableAlbums, setAvailableAlbums] = useState<string[]>([]);
+
+  // Selection state
+  const [selectedPhotoIDs, setSelectedPhotoIDs] = useState<string[]>([]);
+
+  // Bulk actions state
+  const [activeBulkModal, setActiveBulkModal] = useState<
+    "addAlbum" | "removeAlbum" | "addTags" | "removeTag" | "delete" | null
+  >(null);
+  const [bulkAlbumChoice, setBulkAlbumChoice] = useState("");
+  const [bulkCustomAlbum, setBulkCustomAlbum] = useState("");
+  const [bulkTagsInput, setBulkTagsInput] = useState("");
+  const [bulkRemoveTagInput, setBulkRemoveTagInput] = useState("");
+  const [isExecutingBulk, setIsExecutingBulk] = useState(false);
+  const [bulkStatusMsg, setBulkStatusMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  // Single delete confirmation
   const [confirmDelete, setConfirmDelete] = useState<{
     id: string;
     title: string;
@@ -158,15 +191,30 @@ export default function AdminUploadPage() {
     } catch {}
   }, []);
 
-  const loadCatalog = async (q = "") => {
+  const loadCatalog = async (
+    page = catalogPage,
+    query = catalogSearch,
+    album = catalogAlbumFilter,
+    size = catalogPageSize
+  ) => {
     setIsLoadingCatalog(true);
     try {
-      const res = await fetch(
-        `/api/admin/photos?q=${encodeURIComponent(q)}&limit=100`
-      );
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(size));
+      if (query.trim()) params.set("q", query.trim());
+      if (album && album !== "all") params.set("album", album.trim());
+
+      const res = await fetch(`/api/admin/photos?${params.toString()}`);
       const data = await res.json();
       if (data.photos) {
         setCatalogPhotos(data.photos);
+        setCatalogTotal(data.total || 0);
+        setCatalogTotalPages(data.totalPages || 1);
+        setCatalogPage(data.page || 1);
+        if (data.allAlbums) {
+          setAvailableAlbums(data.allAlbums);
+        }
       }
     } catch {
       console.warn("Failed to load catalog");
@@ -177,9 +225,138 @@ export default function AdminUploadPage() {
 
   useEffect(() => {
     if (activeTab === "manage" && isAuthenticated) {
-      loadCatalog(catalogSearch);
+      loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
     }
-  }, [activeTab, isAuthenticated]);
+  }, [activeTab, isAuthenticated, catalogPage, catalogAlbumFilter, catalogPageSize]);
+
+  // Debounced search when query changes
+  useEffect(() => {
+    if (activeTab !== "manage" || !isAuthenticated) return;
+    const timer = setTimeout(() => {
+      setCatalogPage(1);
+      loadCatalog(1, catalogSearch, catalogAlbumFilter, catalogPageSize);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [catalogSearch]);
+
+  // Selection helpers
+  const isAllCurrentPageSelected =
+    catalogPhotos.length > 0 &&
+    catalogPhotos.every((p) => selectedPhotoIDs.includes(p.photoID));
+
+  const toggleSelectPhoto = (id: string) => {
+    setSelectedPhotoIDs((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllCurrentPage = () => {
+    if (isAllCurrentPageSelected) {
+      const currentIds = new Set(catalogPhotos.map((p) => p.photoID));
+      setSelectedPhotoIDs((prev) => prev.filter((id) => !currentIds.has(id)));
+    } else {
+      const combined = Array.from(
+        new Set([...selectedPhotoIDs, ...catalogPhotos.map((p) => p.photoID)])
+      );
+      setSelectedPhotoIDs(combined);
+    }
+  };
+
+  const selectAllMatching = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set("page", "1");
+      params.set("limit", "all");
+      if (catalogSearch.trim()) params.set("q", catalogSearch.trim());
+      if (catalogAlbumFilter && catalogAlbumFilter !== "all") {
+        params.set("album", catalogAlbumFilter.trim());
+      }
+      const res = await fetch(`/api/admin/photos?${params.toString()}`);
+      const data = await res.json();
+      if (data.photos) {
+        setSelectedPhotoIDs(data.photos.map((p: any) => p.photoID));
+      }
+    } catch {
+      alert("Failed to select all photographs");
+    }
+  };
+
+  const clearSelection = () => setSelectedPhotoIDs([]);
+
+  // Bulk actions executor
+  const handleExecuteBulkAction = async () => {
+    if (!activeBulkModal || selectedPhotoIDs.length === 0) return;
+    setIsExecutingBulk(true);
+    setBulkStatusMsg(null);
+
+    try {
+      const body: any = {
+        action: activeBulkModal,
+        photoIDs: selectedPhotoIDs,
+      };
+
+      if (activeBulkModal === "addAlbum") {
+        const finalAlbum = bulkCustomAlbum.trim() || bulkAlbumChoice.trim();
+        if (!finalAlbum) throw new Error("Please specify an album name");
+        body.album = finalAlbum;
+      } else if (activeBulkModal === "removeAlbum") {
+        if (!bulkAlbumChoice.trim()) {
+          throw new Error("Please select an album to remove");
+        }
+        body.album = bulkAlbumChoice.trim();
+      } else if (activeBulkModal === "addTags") {
+        const tags = bulkTagsInput
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+        if (tags.length === 0) throw new Error("Please enter at least one tag");
+        body.tags = tags;
+      } else if (activeBulkModal === "removeTag") {
+        if (!bulkRemoveTagInput.trim()) {
+          throw new Error("Please specify a tag to remove");
+        }
+        body.tag = bulkRemoveTagInput.trim();
+      }
+
+      const res = await fetch("/api/admin/photos/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Bulk action failed");
+      }
+
+      let msg = "";
+      if (activeBulkModal === "delete") {
+        msg = `Permanently deleted ${data.affectedCount} photographs and associated files.`;
+        setSelectedPhotoIDs([]);
+      } else if (activeBulkModal === "addAlbum") {
+        msg = `Added album "${body.album}" to ${data.affectedCount} photograph${data.affectedCount === 1 ? "" : "s"}.`;
+      } else if (activeBulkModal === "removeAlbum") {
+        msg = `Removed album "${body.album}" from ${data.affectedCount} photograph${data.affectedCount === 1 ? "" : "s"}.`;
+      } else if (activeBulkModal === "addTags") {
+        msg = `Added tags [${body.tags.join(", ")}] to ${data.affectedCount} photograph${data.affectedCount === 1 ? "" : "s"}.`;
+      } else if (activeBulkModal === "removeTag") {
+        msg = `Removed tag "${body.tag}" from ${data.affectedCount} photograph${data.affectedCount === 1 ? "" : "s"}.`;
+      }
+
+      setBulkStatusMsg({ type: "success", text: msg });
+      setActiveBulkModal(null);
+      await loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
+      router.refresh();
+      setTimeout(() => setBulkStatusMsg(null), 5500);
+    } catch (err: any) {
+      setBulkStatusMsg({
+        type: "error",
+        text: err.message || "Failed to complete bulk action",
+      });
+    } finally {
+      setIsExecutingBulk(false);
+    }
+  };
 
   const handleDeletePhoto = async () => {
     if (!confirmDelete) return;
@@ -200,6 +377,10 @@ export default function AdminUploadPage() {
       setCatalogPhotos((prev) =>
         prev.filter((p) => p.photoID !== confirmDelete.id)
       );
+      setSelectedPhotoIDs((prev) =>
+        prev.filter((id) => id !== confirmDelete.id)
+      );
+      setCatalogTotal((prev) => Math.max(0, prev - 1));
       setDeleteSuccessMsg(
         `Deleted "${confirmDelete.title}" (${confirmDelete.id}) and all associated files.`
       );
@@ -650,7 +831,7 @@ export default function AdminUploadPage() {
               }`}
             >
               <ImageIcon className="w-3.5 h-3.5" />
-              <span>Manage ({catalogPhotos.length > 0 ? catalogPhotos.length : "Catalog"})</span>
+              <span>Manage ({catalogTotal > 0 ? catalogTotal : "Catalog"})</span>
             </button>
             <button
               onClick={() => setActiveTab("settings")}
@@ -1218,7 +1399,7 @@ export default function AdminUploadPage() {
       {/* TAB 2: MANAGE & DELETE CATALOG */}
       {activeTab === "manage" && (
         <div className="space-y-6">
-          {/* Notification banner */}
+          {/* Notification banners */}
           {deleteSuccessMsg && (
             <div className="p-4 bg-emerald-950/40 border border-emerald-700 rounded text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
@@ -1226,101 +1407,443 @@ export default function AdminUploadPage() {
             </div>
           )}
 
-          {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-surface border border-surface-border p-4 rounded-sm">
-            <div className="relative flex-1">
+          {bulkStatusMsg && (
+            <div
+              className={`p-4 border rounded text-xs flex items-center space-x-2 animate-in fade-in ${
+                bulkStatusMsg.type === "success"
+                  ? "bg-emerald-950/40 border-emerald-700 text-emerald-300"
+                  : "bg-red-950/40 border-red-700 text-red-300"
+              }`}
+            >
+              {bulkStatusMsg.type === "success" ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              )}
+              <span>{bulkStatusMsg.text}</span>
+            </div>
+          )}
+
+          {/* Search, Album Filter, & Page Size Bar */}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-surface border border-surface-border p-4 rounded-sm">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[240px]">
               <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search catalog by title, photo ID (e.g. test, d2026...), or year..."
+                placeholder="Search catalog by title, photo ID (e.g. test, d2026...), tag, or year..."
                 value={catalogSearch}
-                onChange={(e) => {
-                  setCatalogSearch(e.target.value);
-                  loadCatalog(e.target.value);
-                }}
-                className="w-full pl-10 pr-4 py-2 bg-black border border-surface-border rounded-sm text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
+                onChange={(e) => setCatalogSearch(e.target.value)}
+                className="w-full pl-10 pr-9 py-2 bg-black border border-surface-border rounded-sm text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent"
               />
-            </div>
-            <div className="text-xs text-muted">
-              Showing <strong className="text-white font-medium">{catalogPhotos.length}</strong> photographs
-            </div>
-          </div>
-
-          {/* Loading indicator */}
-          {isLoadingCatalog ? (
-            <div className="py-16 text-center text-xs text-muted font-mono">
-              Loading photograph catalog...
-            </div>
-          ) : catalogPhotos.length > 0 ? (
-            <div className="bg-surface border border-surface-border rounded-sm overflow-hidden divide-y divide-surface-border">
-              {catalogPhotos.map((item) => (
-                <div
-                  key={item.photoID}
-                  className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-black/40 transition-colors"
+              {catalogSearch && (
+                <button
+                  type="button"
+                  onClick={() => setCatalogSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
+                  title="Clear search"
                 >
-                  <div className="flex items-center space-x-4 min-w-0">
-                    <div className="w-16 h-12 bg-black rounded overflow-hidden flex-shrink-0 border border-surface-border">
-                      <img
-                        src={`/api/thumbnail?src=${encodeURIComponent(item.imageDesktop)}&w=120`}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 space-y-0.5">
-                      <h4 className="text-sm font-medium text-white truncate">
-                        {item.title}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                        <code className="text-accent font-mono text-[11px]">
-                          {item.photoID}
-                        </code>
-                        <span>&bull;</span>
-                        <span>
-                          {item.dateTaken?.year}-{String(item.dateTaken?.month || 1).padStart(2, "0")}-{String(item.dateTaken?.day || 1).padStart(2, "0")}
-                        </span>
-                        {item.categories && item.categories.length > 0 && (
-                          <>
-                            <span>&bull;</span>
-                            <span className="truncate max-w-[200px] text-gray-400">
-                              {item.categories.join(", ")}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2 self-end sm:self-center flex-shrink-0">
-                    <Link
-                      href={`/photo/${encodeURIComponent(item.photoID)}`}
-                      target="_blank"
-                      className="px-3 py-1.5 bg-black border border-surface-border text-gray-300 hover:text-white rounded text-xs transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>View</span>
-                      <ExternalLink className="w-3 h-3 text-muted" />
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setConfirmDelete({ id: item.photoID, title: item.title })
-                      }
-                      className="px-3 py-1.5 bg-red-950/20 border border-red-900/40 text-red-400 hover:bg-red-900/30 hover:border-red-600 rounded text-xs transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-16 bg-surface border border-surface-border rounded-sm space-y-2">
-              <p className="text-gray-400 text-xs">No photographs found matching your search.</p>
+
+            {/* Album Filter */}
+            <div className="flex items-center space-x-2">
+              <label className="text-xs text-muted flex items-center space-x-1 flex-shrink-0">
+                <Filter className="w-3 h-3 text-accent" />
+                <span className="hidden sm:inline">Album:</span>
+              </label>
+              <select
+                value={catalogAlbumFilter}
+                onChange={(e) => {
+                  setCatalogAlbumFilter(e.target.value);
+                  setCatalogPage(1);
+                }}
+                className="bg-black border border-surface-border text-xs rounded px-2.5 py-2 text-white focus:outline-none focus:border-accent max-w-[200px] truncate"
+              >
+                <option value="all">All Albums ({catalogTotal})</option>
+                {availableAlbums.map((alb) => (
+                  <option key={alb} value={alb}>
+                    {alb}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Items Per Page */}
+            <div className="flex items-center space-x-2">
+              <label className="text-xs text-muted flex-shrink-0 hidden sm:inline">
+                Show:
+              </label>
+              <select
+                value={catalogPageSize}
+                onChange={(e) => {
+                  const val =
+                    e.target.value === "all"
+                      ? "all"
+                      : parseInt(e.target.value, 10);
+                  setCatalogPageSize(val as any);
+                  setCatalogPage(1);
+                }}
+                className="bg-black border border-surface-border text-xs rounded px-2.5 py-2 text-white focus:outline-none focus:border-accent"
+              >
+                <option value={25}>25 / page</option>
+                <option value={50}>50 / page</option>
+                <option value={100}>100 / page</option>
+                <option value={200}>200 / page</option>
+                <option value="all">All ({catalogTotal})</option>
+              </select>
+            </div>
+
+            {(catalogSearch || catalogAlbumFilter !== "all") && (
               <button
                 type="button"
                 onClick={() => {
                   setCatalogSearch("");
-                  loadCatalog("");
+                  setCatalogAlbumFilter("all");
+                  setCatalogPage(1);
+                }}
+                className="px-2.5 py-1.5 bg-black border border-surface-border rounded text-xs text-accent hover:text-white transition-colors"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+
+          {/* Bulk Selection Action Bar (Appears when items are selected) */}
+          {selectedPhotoIDs.length > 0 && (
+            <div className="sticky top-4 z-40 bg-surface border border-accent/60 rounded-sm p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-2xl animate-in fade-in duration-200">
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={toggleSelectAllCurrentPage}
+                  className="p-1 text-white hover:text-accent transition-colors"
+                  title={
+                    isAllCurrentPageSelected
+                      ? "Deselect current page"
+                      : "Select all on current page"
+                  }
+                >
+                  {isAllCurrentPageSelected ? (
+                    <CheckSquare className="w-4 h-4 text-accent" />
+                  ) : (
+                    <MinusSquare className="w-4 h-4 text-accent" />
+                  )}
+                </button>
+                <div className="text-xs text-white">
+                  <strong className="text-accent font-semibold">
+                    {selectedPhotoIDs.length}
+                  </strong>{" "}
+                  photo{selectedPhotoIDs.length === 1 ? "" : "s"} selected
+                  {selectedPhotoIDs.length < catalogTotal && (
+                    <button
+                      type="button"
+                      onClick={selectAllMatching}
+                      className="ml-2 text-accent hover:underline font-medium"
+                    >
+                      Select all {catalogTotal} matching
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="ml-2.5 text-muted hover:text-white underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              {/* Bulk Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkAlbumChoice(availableAlbums[0] || "");
+                    setBulkCustomAlbum("");
+                    setActiveBulkModal("addAlbum");
+                  }}
+                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-accent rounded text-xs transition-colors flex items-center space-x-1.5"
+                  title="Add selected photos to an album"
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-accent" />
+                  <span>Add to Album</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkTagsInput("");
+                    setActiveBulkModal("addTags");
+                  }}
+                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-accent rounded text-xs transition-colors flex items-center space-x-1.5"
+                  title="Add tag(s) to selected photos"
+                >
+                  <Tag className="w-3.5 h-3.5 text-accent" />
+                  <span>Add Tag(s)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkAlbumChoice(availableAlbums[0] || "");
+                    setActiveBulkModal("removeAlbum");
+                  }}
+                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-red-400 rounded text-xs transition-colors flex items-center space-x-1.5"
+                  title="Remove selected photos from an album"
+                >
+                  <Folder className="w-3.5 h-3.5 text-gray-400" />
+                  <span>Remove Album</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkRemoveTagInput("");
+                    setActiveBulkModal("removeTag");
+                  }}
+                  className="px-2.5 py-1.5 bg-black border border-surface-border text-gray-200 hover:text-white hover:border-red-400 rounded text-xs transition-colors flex items-center space-x-1.5"
+                  title="Remove a tag from selected photos"
+                >
+                  <Tag className="w-3.5 h-3.5 text-gray-400" />
+                  <span>Remove Tag</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveBulkModal("delete")}
+                  className="px-2.5 py-1.5 bg-red-950/30 border border-red-900/60 text-red-400 hover:bg-red-900/40 hover:border-red-500 rounded text-xs transition-colors flex items-center space-x-1.5"
+                  title="Permanently delete all selected photos"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete ({selectedPhotoIDs.length})</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Top Pagination & Summary Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted">
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={toggleSelectAllCurrentPage}
+                className="p-1 text-muted hover:text-white transition-colors"
+                title={
+                  isAllCurrentPageSelected
+                    ? "Deselect current page"
+                    : "Select all on current page"
+                }
+              >
+                {isAllCurrentPageSelected ? (
+                  <CheckSquare className="w-4 h-4 text-accent" />
+                ) : selectedPhotoIDs.length > 0 ? (
+                  <MinusSquare className="w-4 h-4 text-accent" />
+                ) : (
+                  <Square className="w-4 h-4 text-gray-600" />
+                )}
+              </button>
+              <span>
+                Showing{" "}
+                <strong className="text-white">
+                  {catalogTotal === 0
+                    ? 0
+                    : catalogPageSize === "all"
+                    ? 1
+                    : (catalogPage - 1) * (catalogPageSize as number) + 1}
+                  –
+                  {catalogPageSize === "all"
+                    ? catalogTotal
+                    : Math.min(
+                        catalogPage * (catalogPageSize as number),
+                        catalogTotal
+                      )}
+                </strong>{" "}
+                of <strong className="text-white">{catalogTotal}</strong>{" "}
+                photographs
+              </span>
+            </div>
+
+            {/* Pagination Controls */}
+            {catalogTotalPages > 1 && catalogPageSize !== "all" && (
+              <div className="flex items-center space-x-1.5">
+                <button
+                  type="button"
+                  disabled={catalogPage <= 1}
+                  onClick={() => setCatalogPage(1)}
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={catalogPage <= 1}
+                  onClick={() => setCatalogPage((p) => Math.max(1, p - 1))}
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <span className="px-2 py-1 text-xs text-muted">
+                  Page <strong className="text-white">{catalogPage}</strong> of{" "}
+                  {catalogTotalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={catalogPage >= catalogTotalPages}
+                  onClick={() =>
+                    setCatalogPage((p) => Math.min(catalogTotalPages, p + 1))
+                  }
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={catalogPage >= catalogTotalPages}
+                  onClick={() => setCatalogPage(catalogTotalPages)}
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Loading indicator */}
+          {isLoadingCatalog ? (
+            <div className="py-20 text-center text-xs text-muted font-mono bg-surface border border-surface-border rounded-sm">
+              Loading photograph catalog...
+            </div>
+          ) : catalogPhotos.length > 0 ? (
+            <div className="bg-surface border border-surface-border rounded-sm overflow-hidden divide-y divide-surface-border">
+              {catalogPhotos.map((item) => {
+                const isSelected = selectedPhotoIDs.includes(item.photoID);
+                return (
+                  <div
+                    key={item.photoID}
+                    className={`p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors ${
+                      isSelected ? "bg-accent/5" : "hover:bg-black/40"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3.5 min-w-0 flex-1">
+                      {/* Selection Checkbox */}
+                      <button
+                        type="button"
+                        onClick={() => toggleSelectPhoto(item.photoID)}
+                        className="p-1 text-muted hover:text-white transition-colors flex-shrink-0"
+                        title={isSelected ? "Deselect" : "Select"}
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-accent" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-600" />
+                        )}
+                      </button>
+
+                      {/* Thumbnail */}
+                      <Link
+                        href={`/photo/${encodeURIComponent(item.photoID)}`}
+                        target="_blank"
+                        className="w-16 h-12 bg-black rounded overflow-hidden flex-shrink-0 border border-surface-border hover:border-accent transition-colors block"
+                      >
+                        <img
+                          src={`/api/thumbnail?src=${encodeURIComponent(
+                            item.imageDesktop
+                          )}&w=120`}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </Link>
+
+                      {/* Photo details */}
+                      <div className="min-w-0 space-y-1">
+                        <Link
+                          href={`/photo/${encodeURIComponent(item.photoID)}`}
+                          target="_blank"
+                          className="text-sm font-medium text-white truncate block hover:text-accent transition-colors"
+                        >
+                          {item.title}
+                        </Link>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                          <code className="text-accent font-mono text-[11px]">
+                            {item.photoID}
+                          </code>
+                          <span>&bull;</span>
+                          <span>
+                            {item.dateTaken?.year}-
+                            {String(item.dateTaken?.month || 1).padStart(2, "0")}
+                            -{String(item.dateTaken?.day || 1).padStart(2, "0")}
+                          </span>
+                          {item.categories && item.categories.length > 0 && (
+                            <>
+                              <span>&bull;</span>
+                              <span className="truncate max-w-[240px] text-gray-400">
+                                {item.categories.join(", ")}
+                              </span>
+                            </>
+                          )}
+                          {item.keywords && item.keywords.length > 0 && (
+                            <>
+                              <span>&bull;</span>
+                              <span className="truncate max-w-[200px] text-gray-500 text-[11px]">
+                                {item.keywords.slice(0, 3).join(", ")}
+                                {item.keywords.length > 3
+                                  ? ` +${item.keywords.length - 3}`
+                                  : ""}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center space-x-2 self-end sm:self-center flex-shrink-0">
+                      <Link
+                        href={`/photo/${encodeURIComponent(item.photoID)}`}
+                        target="_blank"
+                        className="px-3 py-1.5 bg-black border border-surface-border text-gray-300 hover:text-white rounded text-xs transition-colors inline-flex items-center space-x-1"
+                      >
+                        <span>View</span>
+                        <ExternalLink className="w-3 h-3 text-muted" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirmDelete({
+                            id: item.photoID,
+                            title: item.title,
+                          })
+                        }
+                        className="px-3 py-1.5 bg-red-950/20 border border-red-900/40 text-red-400 hover:bg-red-900/30 hover:border-red-600 rounded text-xs transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-surface border border-surface-border rounded-sm space-y-2">
+              <p className="text-gray-400 text-xs">
+                No photographs found matching your search.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setCatalogSearch("");
+                  setCatalogAlbumFilter("all");
+                  setCatalogPage(1);
                 }}
                 className="text-accent text-xs underline"
               >
@@ -1329,7 +1852,454 @@ export default function AdminUploadPage() {
             </div>
           )}
 
-          {/* Confirmation Modal */}
+          {/* Bottom Pagination Controls */}
+          {catalogTotalPages > 1 && catalogPageSize !== "all" && (
+            <div className="flex items-center justify-between border-t border-surface-border pt-4 text-xs text-muted">
+              <div>
+                Page <strong className="text-white">{catalogPage}</strong> of{" "}
+                <strong className="text-white">{catalogTotalPages}</strong>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  type="button"
+                  disabled={catalogPage <= 1}
+                  onClick={() => setCatalogPage(1)}
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={catalogPage <= 1}
+                  onClick={() => setCatalogPage((p) => Math.max(1, p - 1))}
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  disabled={catalogPage >= catalogTotalPages}
+                  onClick={() =>
+                    setCatalogPage((p) => Math.min(catalogTotalPages, p + 1))
+                  }
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={catalogPage >= catalogTotalPages}
+                  onClick={() => setCatalogPage(catalogTotalPages)}
+                  className="p-1.5 rounded border border-surface-border bg-black text-gray-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* BULK MODAL: Add to Album */}
+          {activeBulkModal === "addAlbum" && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface border border-surface-border rounded-sm max-w-md w-full p-6 space-y-5 shadow-2xl">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 rounded-full bg-accent/20 border border-accent/40 text-accent flex-shrink-0">
+                    <FolderPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-medium text-white">
+                      Add to Album
+                    </h3>
+                    <p className="text-xs text-muted mt-1">
+                      Add{" "}
+                      <strong className="text-white">
+                        {selectedPhotoIDs.length}
+                      </strong>{" "}
+                      selected photograph
+                      {selectedPhotoIDs.length === 1 ? "" : "s"} to an album.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1.5">
+                      Choose Existing Album
+                    </label>
+                    <select
+                      value={bulkAlbumChoice}
+                      onChange={(e) => {
+                        setBulkAlbumChoice(e.target.value);
+                        setBulkCustomAlbum("");
+                      }}
+                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                    >
+                      {availableAlbums.map((alb) => (
+                        <option key={alb} value={alb}>
+                          {alb}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1.5">
+                      Or Create New Album Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Blue Ridge Parkway"
+                      value={bulkCustomAlbum}
+                      onChange={(e) => setBulkCustomAlbum(e.target.value)}
+                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBulkModal(null)}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteBulkAction}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-accent text-black font-semibold rounded text-xs hover:bg-accent-light transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>
+                      {isExecutingBulk ? "Adding..." : "Add to Album"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* BULK MODAL: Remove Album */}
+          {activeBulkModal === "removeAlbum" && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface border border-surface-border rounded-sm max-w-md w-full p-6 space-y-5 shadow-2xl">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 rounded-full bg-red-950/40 border border-red-800 text-red-400 flex-shrink-0">
+                    <Folder className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-medium text-white">
+                      Remove from Album
+                    </h3>
+                    <p className="text-xs text-muted mt-1">
+                      Remove an album from{" "}
+                      <strong className="text-white">
+                        {selectedPhotoIDs.length}
+                      </strong>{" "}
+                      selected photograph
+                      {selectedPhotoIDs.length === 1 ? "" : "s"}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-xs space-y-2">
+                  <label className="block text-gray-300 font-medium">
+                    Select Album to Remove
+                  </label>
+                  <select
+                    value={bulkAlbumChoice}
+                    onChange={(e) => setBulkAlbumChoice(e.target.value)}
+                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                  >
+                    {availableAlbums.map((alb) => (
+                      <option key={alb} value={alb}>
+                        {alb}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBulkModal(null)}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteBulkAction}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                  >
+                    <span>
+                      {isExecutingBulk ? "Removing..." : "Remove Album"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* BULK MODAL: Add Tag(s) */}
+          {activeBulkModal === "addTags" && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface border border-surface-border rounded-sm max-w-md w-full p-6 space-y-5 shadow-2xl">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 rounded-full bg-accent/20 border border-accent/40 text-accent flex-shrink-0">
+                    <Tag className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-medium text-white">
+                      Add Tags
+                    </h3>
+                    <p className="text-xs text-muted mt-1">
+                      Add tags to{" "}
+                      <strong className="text-white">
+                        {selectedPhotoIDs.length}
+                      </strong>{" "}
+                      selected photograph
+                      {selectedPhotoIDs.length === 1 ? "" : "s"}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1.5">
+                      Tags (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. sunrise, ocean, landscape"
+                      value={bulkTagsInput}
+                      onChange={(e) => setBulkTagsInput(e.target.value)}
+                      className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                    />
+                  </div>
+
+                  {metadata.popularTags && metadata.popularTags.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] text-muted">
+                        Quick add popular tags:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        {metadata.popularTags.slice(0, 15).map(({ tag }) => (
+                          <button
+                            type="button"
+                            key={tag}
+                            onClick={() => {
+                              const parts = bulkTagsInput
+                                .split(",")
+                                .map((t) => t.trim())
+                                .filter(Boolean);
+                              if (
+                                !parts.some(
+                                  (p) => p.toLowerCase() === tag.toLowerCase()
+                                )
+                              ) {
+                                setBulkTagsInput([...parts, tag].join(", "));
+                              }
+                            }}
+                            className="px-2 py-0.5 bg-black border border-surface-border rounded text-[11px] text-gray-300 hover:text-accent hover:border-accent transition-colors"
+                          >
+                            +{tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBulkModal(null)}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteBulkAction}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-accent text-black font-semibold rounded text-xs hover:bg-accent-light transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>{isExecutingBulk ? "Adding..." : "Add Tags"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* BULK MODAL: Remove Tag */}
+          {activeBulkModal === "removeTag" && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface border border-surface-border rounded-sm max-w-md w-full p-6 space-y-5 shadow-2xl">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 rounded-full bg-red-950/40 border border-red-800 text-red-400 flex-shrink-0">
+                    <Tag className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-medium text-white">
+                      Remove Tag
+                    </h3>
+                    <p className="text-xs text-muted mt-1">
+                      Remove a tag from{" "}
+                      <strong className="text-white">
+                        {selectedPhotoIDs.length}
+                      </strong>{" "}
+                      selected photograph
+                      {selectedPhotoIDs.length === 1 ? "" : "s"}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-xs space-y-2">
+                  <label className="block text-gray-300 font-medium">
+                    Tag Name to Remove
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. mist"
+                    value={bulkRemoveTagInput}
+                    onChange={(e) => setBulkRemoveTagInput(e.target.value)}
+                    className="w-full bg-black border border-surface-border rounded px-3 py-2 text-white focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBulkModal(null)}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteBulkAction}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                  >
+                    <span>
+                      {isExecutingBulk ? "Removing..." : "Remove Tag"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* BULK MODAL: Bulk Delete Confirmation */}
+          {activeBulkModal === "delete" && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-surface border border-surface-border rounded-sm max-w-lg w-full p-6 space-y-5 shadow-2xl">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 rounded-full bg-red-950/40 border border-red-800 text-red-400 flex-shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-medium text-white">
+                      Permanently Delete {selectedPhotoIDs.length} Photographs?
+                    </h3>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">
+                      You are about to permanently delete{" "}
+                      <strong className="text-white">
+                        {selectedPhotoIDs.length}
+                      </strong>{" "}
+                      photographs from your library and storage.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-black/60 border border-red-900/50 rounded p-3 text-xs text-gray-300 space-y-2">
+                  <p className="text-red-300 font-medium text-[11px] uppercase tracking-wider">
+                    Permanent File Deletion:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-[11px] text-gray-400 pl-1">
+                    <li>
+                      All companion <code>_desktop.jpg</code> web images and
+                      original fullsize JPEG files will be unlinked from disk.
+                    </li>
+                    <li>
+                      Companion <code>.txt</code> metadata records will be
+                      deleted.
+                    </li>
+                    <li>
+                      All entries will be permanently removed from{" "}
+                      <code>data/photos.json</code>.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-muted">
+                    Selected Photographs ({selectedPhotoIDs.length}):
+                  </span>
+                  <div className="bg-black border border-surface-border rounded p-2.5 max-h-36 overflow-y-auto space-y-1 text-xs font-mono text-gray-400">
+                    {selectedPhotoIDs.slice(0, 50).map((id) => {
+                      const p = catalogPhotos.find((x) => x.photoID === id);
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center justify-between text-[11px]"
+                        >
+                          <span className="text-accent">{id}</span>
+                          <span className="text-gray-300 truncate max-w-[240px]">
+                            {p ? p.title : ""}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {selectedPhotoIDs.length > 50 && (
+                      <div className="text-[10px] text-muted pt-1 italic">
+                        ...and {selectedPhotoIDs.length - 50} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBulkModal(null)}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-black border border-surface-border rounded text-xs text-gray-300 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteBulkAction}
+                    disabled={isExecutingBulk}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>
+                      {isExecutingBulk
+                        ? "Deleting..."
+                        : `Permanently Delete ${selectedPhotoIDs.length} Photos`}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SINGLE PHOTO Confirmation Modal */}
           {confirmDelete && (
             <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
               <div className="bg-surface border border-surface-border rounded-sm max-w-md w-full p-6 space-y-5 shadow-2xl relative">
@@ -1342,7 +2312,15 @@ export default function AdminUploadPage() {
                       Permanently Delete Photograph?
                     </h3>
                     <p className="text-xs text-muted leading-relaxed">
-                      Are you sure you want to delete <strong className="text-white">&ldquo;{confirmDelete.title}&rdquo;</strong> (ID: <code className="text-accent font-mono">{confirmDelete.id}</code>)?
+                      Are you sure you want to delete{" "}
+                      <strong className="text-white">
+                        &ldquo;{confirmDelete.title}&rdquo;
+                      </strong>{" "}
+                      (ID:{" "}
+                      <code className="text-accent font-mono">
+                        {confirmDelete.id}
+                      </code>
+                      )?
                     </p>
                   </div>
                 </div>
@@ -1353,8 +2331,12 @@ export default function AdminUploadPage() {
                   </p>
                   <ul className="list-disc list-inside space-y-0.5 text-[11px] text-gray-400 pl-1">
                     <li>Desktop web JPEG and original fullsize file from disk</li>
-                    <li>Companion <code>.txt</code> metadata record</li>
-                    <li>Catalog entry in <code>data/photos.json</code></li>
+                    <li>
+                      Companion <code>.txt</code> metadata record
+                    </li>
+                    <li>
+                      Catalog entry in <code>data/photos.json</code>
+                    </li>
                   </ul>
                 </div>
 
@@ -1374,7 +2356,9 @@ export default function AdminUploadPage() {
                     className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded text-xs transition-colors flex items-center space-x-1.5 disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>{isDeletingPhoto ? "Deleting..." : "Permanently Delete"}</span>
+                    <span>
+                      {isDeletingPhoto ? "Deleting..." : "Permanently Delete"}
+                    </span>
                   </button>
                 </div>
               </div>

@@ -12,32 +12,70 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").trim().toLowerCase();
-  const limit = parseInt(searchParams.get("limit") || "50", 10);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limitParam = searchParams.get("limit") || "50";
+  const limit =
+    limitParam === "all" ? 100000 : Math.max(1, parseInt(limitParam, 10));
+  const albumFilter = (searchParams.get("album") || "").trim().toLowerCase();
 
   const allPhotos = getAllPhotos();
 
+  // Extract all unique albums across all photos for filtering dropdown
+  const albumSet = new Set<string>();
+  allPhotos.forEach((p) => {
+    (p.categories || []).forEach((c) => {
+      if (c && c.trim()) albumSet.add(c.trim());
+    });
+  });
+  const allAlbums = Array.from(albumSet).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+
   let results = allPhotos;
+
+  // Filter by album if specified
+  if (albumFilter && albumFilter !== "all") {
+    results = results.filter((p) =>
+      p.categories?.some((c) => c.toLowerCase() === albumFilter)
+    );
+  }
+
+  // Filter by search query across multiple fields
   if (q) {
-    results = allPhotos.filter(
+    results = results.filter(
       (p) =>
         p.photoID.toLowerCase().includes(q) ||
         p.title.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q) ||
+        p.categories?.some((c) => c.toLowerCase().includes(q)) ||
+        p.keywords?.some((k) => k.toLowerCase().includes(q)) ||
         String(p.dateTaken?.year).includes(q)
     );
   }
 
-  const photos = results.slice(0, limit).map((p) => ({
+  const total = results.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * limit;
+
+  const pageItems = results.slice(offset, offset + limit);
+
+  const photos = pageItems.map((p) => ({
     photoID: p.photoID,
     title: p.title,
     imageDesktop: p.imageDesktop,
     dateTaken: p.dateTaken,
-    categories: p.categories,
+    categories: p.categories || [],
+    keywords: p.keywords || [],
     createdTimestamp: p.createdTimestamp,
   }));
 
   return NextResponse.json({
-    total: results.length,
+    total,
+    page: currentPage,
+    pageSize: limit,
+    totalPages,
     photos,
+    allAlbums,
   });
 }
