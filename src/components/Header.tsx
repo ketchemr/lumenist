@@ -14,7 +14,7 @@ export function Header({ settings }: HeaderProps) {
     <header className="border-b border-surface-border bg-background/80 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link href="/" className="group">
-          <h1 className="text-lg sm:text-xl font-medium tracking-tight text-white group-hover:text-accent transition-colors">
+          <h1 className="text-lg sm:text-xl font-medium tracking-tight text-foreground group-hover:text-accent transition-colors">
             {title}
           </h1>
           <p className="text-xs text-muted hidden sm:block tracking-wide">
@@ -27,7 +27,7 @@ export function Header({ settings }: HeaderProps) {
             <Link
               key={item.href}
               href={item.href}
-              className="text-gray-300 hover:text-accent transition-colors font-medium"
+              className="text-muted hover:text-foreground transition-colors font-medium"
             >
               {item.label}
             </Link>

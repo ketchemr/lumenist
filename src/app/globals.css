@@ -32,25 +32,25 @@ html.light body {
 }
 
 html.light .text-white {
-  color: #0f172a;
+  color: var(--foreground, #0f172a) !important;
 }
 html.light .text-gray-100 {
-  color: #0f172a;
+  color: var(--foreground, #0f172a) !important;
 }
 html.light .text-gray-200 {
-  color: #1e293b;
+  color: #1e293b !important;
 }
 html.light .text-gray-300 {
-  color: #334155;
+  color: #334155 !important;
 }
 html.light .text-gray-400 {
-  color: #475569;
+  color: #475569 !important;
 }
 html.light .text-gray-500 {
-  color: #64748b;
+  color: #64748b !important;
 }
 html.light .text-muted {
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #64748b) !important;
 }
 
 /* Light mode breadcrumbs & divider lines */
@@ -95,20 +95,12 @@ html.light .dark-map-popup .leaflet-popup-content-wrapper {
   color: #0f172a !important;
 }
 
-/* CRITICAL: Preserve crisp white text inside dark photo overlays, fullscreen theater, accent buttons, and badges */
-html.light [class*="from-black"] *,
-html.light [class*="from-black"] .text-white,
-html.light [class*="from-black"] .text-gray-200,
-html.light [class*="from-black"] .text-gray-300,
-html.light [class*="bg-black/"] *,
-html.light [class*="bg-black/"] .text-white,
-html.light [class*="bg-black/"] .text-gray-200,
-html.light [class*="bg-black/"] .text-gray-300,
-html.light .bg-accent,
-html.light [class*="bg-accent"] .text-white,
-html.light .bg-accent.text-white,
+/* Crisp white text inside dark photo overlays and fullscreen photo theater ONLY */
 html.light .photo-theater,
 html.light .photo-theater *,
+html.light .photo-overlay,
+html.light .photo-overlay *,
+html.light [data-theater],
 html.light [data-theater] *,
 html.light .keep-white,
 html.light .keep-white * {

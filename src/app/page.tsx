@@ -25,7 +25,7 @@ export default function HomePage() {
         >
           <div className="grid grid-cols-1 md:grid-cols-12 items-center">
             {allCategory?.coverPhoto && (
-              <div className="md:col-span-5 lg:col-span-4 aspect-[3/2] overflow-hidden bg-black">
+              <div className="md:col-span-5 lg:col-span-4 aspect-[3/2] overflow-hidden bg-black/95">
                 <img
                   src={`/api/thumbnail?src=${encodeURIComponent(
                     allCategory.coverPhoto.imageDesktop
@@ -49,10 +49,10 @@ export default function HomePage() {
                 <Images className="w-4 h-4" />
                 <span>Complete Collection</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-light text-white group-hover:text-accent transition-colors">
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground group-hover:text-accent transition-colors">
                 All Photographs
               </h2>
-              <p className="text-sm text-gray-400 max-w-xl leading-relaxed">
+              <p className="text-sm text-muted max-w-xl leading-relaxed">
                 Browse all {photos.length} fine art photographs across all years, 
                 spanning from medium format and 35mm film transparencies to modern digital captures.
               </p>
@@ -83,7 +83,7 @@ export default function HomePage() {
                 className="group block rounded-sm overflow-hidden bg-surface border border-surface-border hover:border-accent/40 transition-all"
               >
                 {cat.coverPhoto && (
-                  <div className="aspect-[3/2] overflow-hidden bg-black relative">
+                  <div className="aspect-[3/2] overflow-hidden bg-black/95 relative">
                     <img
                       src={`/api/thumbnail?src=${encodeURIComponent(
                         cat.coverPhoto.imageDesktop
@@ -93,8 +93,8 @@ export default function HomePage() {
                       decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-[11px] text-gray-200 truncate">
+                    <div className="photo-overlay absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-[11px] text-white truncate">
                         {cat.coverPhoto.title}
                       </p>
                     </div>
@@ -102,7 +102,7 @@ export default function HomePage() {
                 )}
                 <div className="p-4 flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <h3 className="text-base font-medium text-white group-hover:text-accent transition-colors flex items-center space-x-1.5">
+                    <h3 className="text-base font-medium text-foreground group-hover:text-accent transition-colors flex items-center space-x-1.5">
                       <Folder className="w-3.5 h-3.5 text-accent" />
                       <span>{cat.name}</span>
                     </h3>

@@ -184,10 +184,10 @@ export function RandomHeroSlideshow({
   const canGoPrev = state.index > 0;
 
   return (
-    <section className="relative rounded-sm overflow-hidden border border-surface-border bg-black group w-full">
+    <section className="relative rounded-sm overflow-hidden border border-surface-border bg-surface group w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
-        {/* Photo Display: Constant Width & Constant Height Frame */}
-        <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black relative flex items-center justify-center">
+        {/* Photo Display: Constant Width & Constant Height Frame with dark matting */}
+        <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center">
           <Link
             href={`/photo/${current.photoID}`}
             className="w-full h-full flex items-center justify-center p-2"
@@ -252,7 +252,7 @@ export function RandomHeroSlideshow({
           >
             {/* Title with discreet Pause/Play toggle */}
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-2xl sm:text-3xl font-light text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
                 <Link
                   href={`/photo/${current.photoID}`}
                   className="hover:text-accent transition-colors"
@@ -263,7 +263,7 @@ export function RandomHeroSlideshow({
 
               <button
                 onClick={() => setIsPaused((p) => !p)}
-                className="text-xs text-muted hover:text-white flex-shrink-0 flex items-center space-x-1 bg-black border border-surface-border px-2.5 py-1 rounded transition-colors mt-1 cursor-pointer"
+                className="text-xs text-muted hover:text-foreground flex-shrink-0 flex items-center space-x-1 bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded transition-colors mt-1 cursor-pointer"
                 title={isPaused ? "Resume rotation" : "Pause rotation"}
               >
                 {isPaused ? (
@@ -273,7 +273,7 @@ export function RandomHeroSlideshow({
                   </>
                 ) : (
                   <>
-                    <Pause className="w-3 h-3 text-gray-400" />
+                    <Pause className="w-3 h-3 text-muted" />
                     <span className="hidden sm:inline">Pause</span>
                   </>
                 )}
@@ -285,7 +285,7 @@ export function RandomHeroSlideshow({
               ref={descScrollRef}
               className="max-h-[160px] sm:max-h-[190px] overflow-y-auto pr-2 space-y-2 select-text"
             >
-              <p className="text-sm text-gray-300 leading-relaxed font-normal">
+              <p className="text-sm text-muted leading-relaxed font-normal">
                 {current.description ||
                   "A fine art landscape photograph exploring natural light and form."}
               </p>
@@ -297,7 +297,7 @@ export function RandomHeroSlideshow({
                 <Link
                   key={c}
                   href={`/galleries/${encodeURIComponent(c)}`}
-                  className="text-xs bg-black hover:bg-surface-hover border border-surface-border hover:border-accent px-2.5 py-1 rounded text-gray-300 hover:text-white transition-colors"
+                  className="text-xs bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent px-2.5 py-1 rounded text-muted hover:text-foreground transition-colors"
                 >
                   {c}
                 </Link>
@@ -308,7 +308,7 @@ export function RandomHeroSlideshow({
             <div className="flex items-center space-x-3 text-xs text-muted font-mono pt-1">
               {current.camera && (
                 <span className="flex items-center space-x-1">
-                  <Camera className="w-3.5 h-3.5 text-gray-400" />
+                  <Camera className="w-3.5 h-3.5 text-muted" />
                   <span>{current.camera.replace("ILCE-", "A")}</span>
                 </span>
               )}

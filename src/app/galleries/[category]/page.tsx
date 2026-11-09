@@ -60,7 +60,7 @@ export default async function CategoryPage({
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-light text-white tracking-tight flex items-center space-x-2.5">
+            <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight flex items-center space-x-2.5">
               {isAll ? (
                 <Images className="w-6 h-6 text-accent" />
               ) : (

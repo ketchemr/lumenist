@@ -180,12 +180,12 @@ export function JustifiedGallery({
 
                 {/* Subtle hover overlay with title */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="photo-overlay absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <p className="text-xs text-white truncate font-medium drop-shadow">
                     {photo.title}
                   </p>
                   {photo.categories.length > 0 && (
-                    <p className="text-[10px] text-gray-300 truncate">
+                    <p className="text-[10px] text-gray-200 truncate">
                       {photo.categories.slice(0, 2).join(" · ")}
                     </p>
                   )}

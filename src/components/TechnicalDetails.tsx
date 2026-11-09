@@ -34,7 +34,7 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
   return (
     <div className="bg-surface border border-surface-border rounded-sm p-6 space-y-6 text-sm">
       <div className="flex items-center justify-between border-b border-surface-border pb-4">
-        <h3 className="font-semibold text-white tracking-wide flex items-center space-x-2">
+        <h3 className="font-semibold text-foreground tracking-wide flex items-center space-x-2">
           <Sliders className="w-4 h-4 text-accent" />
           <span>Technical & Exposure Details</span>
         </h3>
@@ -45,10 +45,10 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
         {/* Gear & Optics */}
         <div className="space-y-2">
           <h4 className="text-xs uppercase tracking-wider text-muted font-semibold flex items-center space-x-1.5">
-            <Camera className="w-3.5 h-3.5 text-gray-400" />
+            <Camera className="w-3.5 h-3.5 text-muted" />
             <span>Camera & Lens</span>
           </h4>
-          <div className="space-y-1 text-gray-200">
+          <div className="space-y-1 text-foreground">
             <div><span className="text-muted text-xs">Camera:</span> {photo.camera}</div>
             {photo.lens && <div><span className="text-muted text-xs">Lens:</span> {photo.lens}</div>}
             {photo.tripod && (

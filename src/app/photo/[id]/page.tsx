@@ -97,12 +97,12 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
 
       {/* Story & Narrative */}
       <div className="space-y-4 max-w-3xl mx-auto text-center sm:text-left">
-        <h1 className="text-2xl sm:text-3xl font-light text-white tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
           {photo.title}
         </h1>
 
         {photo.description && (
-          <p className="text-gray-300 leading-relaxed text-sm sm:text-base font-normal">
+          <p className="text-muted leading-relaxed text-sm sm:text-base font-normal">
             {photo.description}
           </p>
         )}

@@ -92,9 +92,6 @@ export function hexToRgb(hex: string): string {
 }
 
 export function getThemeCssVariables(settings: SiteSettings): string {
-  const accentRgb = hexToRgb(settings.themeAccent);
-  const lightRgb = hexToRgb(settings.themeAccentLight);
-  const darkRgb = hexToRgb(settings.themeAccentDark);
   const bg = settings.themeBackground || "#000000";
   const bgRgb = hexToRgb(bg);
 
@@ -120,6 +117,21 @@ export function getThemeCssVariables(settings: SiteSettings): string {
     }
   }
 
+  // Accent color contrast adaptation (e.g. silver on white becomes rich slate)
+  let accent = settings.themeAccent;
+  let accentLight = settings.themeAccentLight;
+  let accentDark = settings.themeAccentDark;
+
+  if (isLight && isLightBackground(accent)) {
+    accent = "#0f172a";
+    accentLight = "#334155";
+    accentDark = "#000000";
+  }
+
+  const accentRgb = hexToRgb(accent);
+  const lightRgb = hexToRgb(accentLight);
+  const darkRgb = hexToRgb(accentDark);
+
   const surfaceHover = isLight ? "#f1f5f9" : "#1a1a1a";
   const foreground = isLight ? "#0f172a" : "#f8fafc";
   const foregroundRgb = hexToRgb(foreground);
@@ -135,11 +147,11 @@ export function getThemeCssVariables(settings: SiteSettings): string {
       --foreground: ${foreground};
       --foreground-rgb: ${foregroundRgb};
       --text-muted: ${textMuted};
-      --accent: ${settings.themeAccent};
+      --accent: ${accent};
       --accent-rgb: ${accentRgb};
-      --accent-light: ${settings.themeAccentLight};
+      --accent-light: ${accentLight};
       --accent-light-rgb: ${lightRgb};
-      --accent-dark: ${settings.themeAccentDark};
+      --accent-dark: ${accentDark};
       --accent-dark-rgb: ${darkRgb};
       color-scheme: ${isLight ? "light" : "dark"};
     }
