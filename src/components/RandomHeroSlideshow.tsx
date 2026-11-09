@@ -21,15 +21,38 @@ export function RandomHeroSlideshow({
   photos,
   intervalSeconds = 10,
 }: RandomHeroSlideshowProps) {
-  // Use index state
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Slideshow History Stack: allows backward/forward navigation of random photos
+  const [historyState, setHistoryState] = useState<{
+    history: number[];
+    index: number;
+  }>({
+    history: [],
+    index: -1,
+  });
+
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const descScrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize with initial random photo on client mount
+  useEffect(() => {
+    if (photos.length > 0 && historyState.history.length === 0) {
+      const initial = Math.floor(Math.random() * photos.length);
+      setHistoryState({
+        history: [initial],
+        index: 0,
+      });
+    }
+  }, [photos.length, historyState.history.length]);
+
+  const currentIndex =
+    historyState.index >= 0 &&
+    historyState.history[historyState.index] !== undefined
+      ? historyState.history[historyState.index]
+      : 0;
 
   // Reset description scroll position when slide changes
   useEffect(() => {
@@ -38,47 +61,66 @@ export function RandomHeroSlideshow({
     }
   }, [currentIndex]);
 
-  // Pick a random photo different from current
-  const advanceToRandom = useCallback(() => {
-    if (photos.length <= 1) return;
-    setIsTransitioning(true);
-
-    setTimeout(() => {
-      setCurrentIndex((prev) => {
-        let next = prev;
-        while (next === prev) {
-          next = Math.floor(Math.random() * photos.length);
-        }
-        return next;
-      });
-      setIsTransitioning(false);
-      setProgress(0);
-    }, 300); // 300ms fade transition
-  }, [photos]);
-
+  // Next: moves forward in visited history, or generates a new random photo if at the tip
   const advanceToNext = useCallback(() => {
-    advanceToRandom();
-  }, [advanceToRandom]);
-
-  const advanceToPrev = useCallback(() => {
     if (photos.length <= 1) return;
     setIsTransitioning(true);
+
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
+      setHistoryState((prev) => {
+        if (prev.index < prev.history.length - 1) {
+          return {
+            history: prev.history,
+            index: prev.index + 1,
+          };
+        } else {
+          const currentPhotoIdx = prev.history[prev.index];
+          let next = Math.floor(Math.random() * photos.length);
+          while (next === currentPhotoIdx && photos.length > 1) {
+            next = Math.floor(Math.random() * photos.length);
+          }
+          return {
+            history: [...prev.history, next],
+            index: prev.history.length,
+          };
+        }
+      });
       setIsTransitioning(false);
       setProgress(0);
     }, 300);
   }, [photos]);
 
-  // Pick initial random photo once mounted on client (avoids SSR hydration mismatch)
-  useEffect(() => {
-    if (photos.length > 0) {
-      const initial = Math.floor(Math.random() * photos.length);
-      setCurrentIndex(initial);
-    }
-  }, [photos.length]);
+  // Prev: moves back to the previous random photo you just saw
+  const advanceToPrev = useCallback(() => {
+    if (photos.length <= 1) return;
+    setIsTransitioning(true);
 
-  // Progress bar ticker
+    setTimeout(() => {
+      setHistoryState((prev) => {
+        if (prev.index > 0) {
+          return {
+            history: prev.history,
+            index: prev.index - 1,
+          };
+        } else {
+          // At the beginning of history: pick a random photo and prepend to history
+          const currentPhotoIdx = prev.history[0];
+          let next = Math.floor(Math.random() * photos.length);
+          while (next === currentPhotoIdx && photos.length > 1) {
+            next = Math.floor(Math.random() * photos.length);
+          }
+          return {
+            history: [next, ...prev.history],
+            index: 0,
+          };
+        }
+      });
+      setIsTransitioning(false);
+      setProgress(0);
+    }, 300);
+  }, [photos]);
+
+  // Progress bar ticker for auto-rotation
   useEffect(() => {
     if (isPaused) return;
 
@@ -89,7 +131,7 @@ export function RandomHeroSlideshow({
       setProgress((prev) => {
         const next = prev + (stepMs / totalMs) * 100;
         if (next >= 100) {
-          advanceToRandom();
+          advanceToNext();
           return 0;
         }
         return next;
@@ -97,9 +139,10 @@ export function RandomHeroSlideshow({
     }, stepMs);
 
     return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      if (progressIntervalRef.current)
+        clearInterval(progressIntervalRef.current);
     };
-  }, [isPaused, intervalSeconds, advanceToRandom]);
+  }, [isPaused, intervalSeconds, advanceToNext]);
 
   if (!photos || photos.length === 0) return null;
 
@@ -123,19 +166,22 @@ export function RandomHeroSlideshow({
               alt={current.title}
               key={current.photoID}
               className={`max-w-full max-h-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 ${
-                isTransitioning ? "opacity-20 scale-[0.99]" : "opacity-100 scale-100"
+                isTransitioning
+                  ? "opacity-20 scale-[0.99]"
+                  : "opacity-100 scale-100"
               }`}
             />
           </Link>
 
-          {/* Navigation Controls Overlay */}
+          {/* Navigation Controls: Prev/Next in slideshow history */}
           <div className="absolute inset-y-0 left-0 flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.preventDefault();
                 advanceToPrev();
               }}
-              aria-label="Previous random photo"
+              aria-label="Previous photo in slideshow history"
+              title="Previous photo you just saw"
               className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -149,6 +195,7 @@ export function RandomHeroSlideshow({
                 advanceToNext();
               }}
               aria-label="Next random photo"
+              title="Next photo"
               className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer"
             >
               <ChevronRight className="w-5 h-5" />
