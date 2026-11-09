@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 
 interface PhotoMapProps {
@@ -12,6 +12,42 @@ interface PhotoMapProps {
   thumbnailUrl?: string;
 }
 
+type LayerMode = "dark" | "topo" | "satellite";
+
+const LAYER_CONFIGS: Record<
+  LayerMode,
+  { name: string; url: string; options: any }
+> = {
+  dark: {
+    name: "Dark",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+      className: "map-tiles-dark",
+      maxZoom: 19,
+    },
+  },
+  topo: {
+    name: "Topo",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution:
+        'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> &mdash; Topo',
+      maxZoom: 18,
+    },
+  },
+  satellite: {
+    name: "Satellite",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution:
+        'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> &mdash; Satellite',
+      maxZoom: 18,
+    },
+  },
+};
+
 export function PhotoMap({
   latitude,
   longitude,
@@ -22,7 +58,12 @@ export function PhotoMap({
 }: PhotoMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const leafletLibRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
 
+  const [activeLayer, setActiveLayer] = useState<LayerMode>("dark");
+
+  // Initialize Map
   useEffect(() => {
     let isMounted = true;
 
@@ -30,6 +71,8 @@ export function PhotoMap({
     import("leaflet").then((L) => {
       if (!isMounted || !mapContainerRef.current) return;
       if (mapInstanceRef.current) return;
+
+      leafletLibRef.current = L;
 
       const map = L.map(mapContainerRef.current, {
         center: [latitude, longitude],
@@ -40,16 +83,10 @@ export function PhotoMap({
 
       mapInstanceRef.current = map;
 
-      // Dark Matter tile layer
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-          subdomains: "abcd",
-          maxZoom: 19,
-        }
-      ).addTo(map);
+      // Initial tile layer
+      const config = LAYER_CONFIGS[activeLayer];
+      const initialTileLayer = L.tileLayer(config.url, config.options).addTo(map);
+      tileLayerRef.current = initialTileLayer;
 
       // Custom amber pin marker
       const customIcon = L.divIcon({
@@ -102,7 +139,7 @@ export function PhotoMap({
             <a href="https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}"
                target="_blank"
                rel="noopener noreferrer"
-               style="color: #f59e0b; font-size: 11px; text-decoration: underline;">
+               style="color: #9999ff; font-size: 11px; text-decoration: underline;">
                Open in Google Maps ↗
             </a>
           </div>
@@ -126,12 +163,73 @@ export function PhotoMap({
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        leafletLibRef.current = null;
+        tileLayerRef.current = null;
       }
     };
   }, [latitude, longitude, title, zoom, thumbnailUrl]);
 
+  // Handle Layer switching dynamically without re-mounting map
+  const switchLayer = (newMode: LayerMode) => {
+    setActiveLayer(newMode);
+    if (!mapInstanceRef.current || !leafletLibRef.current) return;
+
+    const L = leafletLibRef.current;
+    const map = mapInstanceRef.current;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    const config = LAYER_CONFIGS[newMode];
+    const newLayer = L.tileLayer(config.url, config.options).addTo(map);
+    // Ensure tiles stay behind marker pins
+    newLayer.bringToBack();
+    tileLayerRef.current = newLayer;
+  };
+
   return (
     <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black">
+      {/* Basemap Switcher Controls */}
+      <div className="absolute top-2.5 right-2.5 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-surface-border rounded-sm overflow-hidden text-[11px] shadow-lg">
+        <button
+          type="button"
+          onClick={() => switchLayer("dark")}
+          className={`px-2.5 py-1 transition-colors ${
+            activeLayer === "dark"
+              ? "bg-accent text-black font-semibold"
+              : "text-gray-300 hover:text-white"
+          }`}
+          title="OpenStreetMap Dark Mode (No watermarks)"
+        >
+          Dark
+        </button>
+        <button
+          type="button"
+          onClick={() => switchLayer("topo")}
+          className={`px-2.5 py-1 border-l border-surface-border transition-colors ${
+            activeLayer === "topo"
+              ? "bg-accent text-black font-semibold"
+              : "text-gray-300 hover:text-white"
+          }`}
+          title="Esri Topographic & Mountain Relief"
+        >
+          Topo
+        </button>
+        <button
+          type="button"
+          onClick={() => switchLayer("satellite")}
+          className={`px-2.5 py-1 border-l border-surface-border transition-colors ${
+            activeLayer === "satellite"
+              ? "bg-accent text-black font-semibold"
+              : "text-gray-300 hover:text-white"
+          }`}
+          title="Esri Aerial Satellite Imagery"
+        >
+          Satellite
+        </button>
+      </div>
+
       <div ref={mapContainerRef} style={{ height, width: "100%" }} />
     </div>
   );

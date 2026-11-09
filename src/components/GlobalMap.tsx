@@ -11,12 +11,50 @@ interface GlobalMapProps {
   categories: string[];
 }
 
+type LayerMode = "dark" | "topo" | "satellite";
+
+const LAYER_CONFIGS: Record<
+  LayerMode,
+  { name: string; url: string; options: any }
+> = {
+  dark: {
+    name: "Dark",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+      className: "map-tiles-dark",
+      maxZoom: 19,
+    },
+  },
+  topo: {
+    name: "Topo",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution:
+        'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> &mdash; Topo',
+      maxZoom: 18,
+    },
+  },
+  satellite: {
+    name: "Satellite",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution:
+        'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> &mdash; Satellite',
+      maxZoom: 18,
+    },
+  },
+};
+
 export function GlobalMap({ photos, categories }: GlobalMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
   const leafletLibRef = useRef<any>(null);
 
+  const [activeLayer, setActiveLayer] = useState<LayerMode>("dark");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
@@ -52,16 +90,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
       mapInstanceRef.current = map;
 
-      // Dark Matter tile layer
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-          subdomains: "abcd",
-          maxZoom: 19,
-        }
-      ).addTo(map);
+      // Initial clean tile layer
+      const config = LAYER_CONFIGS[activeLayer];
+      const initialLayer = L.tileLayer(config.url, config.options).addTo(map);
+      tileLayerRef.current = initialLayer;
 
       const layerGroup = L.layerGroup().addTo(map);
       markersLayerRef.current = layerGroup;
@@ -81,9 +113,28 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         markersLayerRef.current = null;
+        tileLayerRef.current = null;
+        leafletLibRef.current = null;
       }
     };
   }, []);
+
+  const switchLayer = (newMode: LayerMode) => {
+    setActiveLayer(newMode);
+    if (!mapInstanceRef.current || !leafletLibRef.current) return;
+
+    const L = leafletLibRef.current;
+    const map = mapInstanceRef.current;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    const config = LAYER_CONFIGS[newMode];
+    const newLayer = L.tileLayer(config.url, config.options).addTo(map);
+    newLayer.bringToBack();
+    tileLayerRef.current = newLayer;
+  };
 
   const renderMarkers = (L: any, map: any, layerGroup: any, photoList: Photo[]) => {
     layerGroup.clearLayers();
@@ -122,7 +173,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
         <div style="color: #fff; background: #111; padding: 2px; font-family: inherit; width: 200px;">
           <a href="/photo/${photo.photoID}" style="display: block; text-decoration: none; color: inherit;">
             <div style="width: 100%; height: 110px; overflow: hidden; border-radius: 2px; margin-bottom: 6px; background: #000;">
-              <img src="${photo.imageDesktop}" style="width: 100%; height: 100%; object-fit: cover;" />
+              <img src="/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=400" style="width: 100%; height: 100%; object-fit: cover;" />
             </div>
             <div style="font-weight: 600; font-size: 13px; line-height: 1.2; margin-bottom: 4px; color: #fff;">
               ${photo.title}
@@ -130,7 +181,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
             <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">
               ${photo.dateTaken.year}-${String(photo.dateTaken.month).padStart(2, "0")}-${String(photo.dateTaken.day).padStart(2, "0")}
             </div>
-            <div style="color: #f59e0b; font-size: 11px; font-weight: 500;">
+            <div style="color: #9999ff; font-size: 11px; font-weight: 500;">
               View Photograph →
             </div>
           </a>
@@ -210,13 +261,53 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
       {/* Map View */}
       <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black h-[72vh] min-h-[480px]">
+        {/* Basemap Switcher Controls */}
+        <div className="absolute top-3 right-3 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-surface-border rounded-sm overflow-hidden text-[11px] shadow-lg">
+          <button
+            type="button"
+            onClick={() => switchLayer("dark")}
+            className={`px-3 py-1.5 transition-colors ${
+              activeLayer === "dark"
+                ? "bg-accent text-black font-semibold"
+                : "text-gray-300 hover:text-white"
+            }`}
+            title="OpenStreetMap Dark Mode (No watermarks)"
+          >
+            Dark
+          </button>
+          <button
+            type="button"
+            onClick={() => switchLayer("topo")}
+            className={`px-3 py-1.5 border-l border-surface-border transition-colors ${
+              activeLayer === "topo"
+                ? "bg-accent text-black font-semibold"
+                : "text-gray-300 hover:text-white"
+            }`}
+            title="Esri Topographic & Mountain Relief"
+          >
+            Topo
+          </button>
+          <button
+            type="button"
+            onClick={() => switchLayer("satellite")}
+            className={`px-3 py-1.5 border-l border-surface-border transition-colors ${
+              activeLayer === "satellite"
+                ? "bg-accent text-black font-semibold"
+                : "text-gray-300 hover:text-white"
+            }`}
+            title="Esri Aerial Satellite Imagery"
+          >
+            Satellite
+          </button>
+        </div>
+
         <div ref={mapContainerRef} className="w-full h-full" />
 
         {/* Selected Photo Floating Card */}
         {selectedPhoto && (
           <div className="absolute bottom-4 left-4 z-[1000] bg-black/90 backdrop-blur border border-surface-border rounded-sm p-3 max-w-sm flex items-center space-x-3 shadow-2xl">
             <img
-              src={selectedPhoto.imageDesktop}
+              src={`/api/thumbnail?src=${encodeURIComponent(selectedPhoto.imageDesktop)}&w=200`}
               alt={selectedPhoto.title}
               className="w-16 h-16 object-cover rounded-sm border border-surface-border flex-shrink-0"
             />

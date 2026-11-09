@@ -40,3 +40,49 @@ body {
 .photo-frame:hover {
   box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.9), 0 0 2px 1px rgba(153, 153, 255, 0.3);
 }
+
+/* Clean dark theme for OpenStreetMap tiles without 3rd-party API key watermarks */
+.map-tiles-dark {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
+}
+
+/* Leaflet dark styling */
+.dark-map-popup .leaflet-popup-content-wrapper {
+  background: #111111 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid #27272a !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.9) !important;
+  border-radius: 4px !important;
+}
+
+.dark-map-popup .leaflet-popup-tip {
+  background: #111111 !important;
+  border: 1px solid #27272a !important;
+}
+
+.dark-map-popup .leaflet-popup-close-button {
+  color: #9ca3af !important;
+}
+.dark-map-popup .leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
+/* Leaflet Zoom control styling */
+.leaflet-bar {
+  border: 1px solid #27272a !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+}
+.leaflet-bar a {
+  background-color: #111111 !important;
+  color: #e5e7eb !important;
+  border-bottom: 1px solid #27272a !important;
+}
+.leaflet-bar a:hover {
+  background-color: #1f1f23 !important;
+  color: #ffffff !important;
+}
+.leaflet-bar a.leaflet-disabled {
+  background-color: #0a0a0a !important;
+  color: #4b5563 !important;
+}
