@@ -33,9 +33,43 @@ export function PhotoViewer({
   const [isMonitorFullscreen, setIsMonitorFullscreen] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [isPhone, setIsPhone] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Touch and swipe gesture tracking
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchMoved = useRef<boolean>(false);
+  const wasSwipeRef = useRef<boolean>(false);
+  const isClosingRef = useRef<boolean>(false);
+
+  // Detect mobile phone viewport / touch device
+  useEffect(() => {
+    const checkIfPhone = () => {
+      const isMobileUA =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+          navigator.userAgent
+        );
+      const hasTouch =
+        window.matchMedia("(pointer: coarse)").matches ||
+        "ontouchstart" in window ||
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      const isSmallViewport =
+        window.innerWidth < 768 || window.innerHeight < 500;
+
+      setIsPhone(isMobileUA || (hasTouch && isSmallViewport) || isSmallViewport);
+    };
+
+    checkIfPhone();
+    window.addEventListener("resize", checkIfPhone);
+    window.addEventListener("orientationchange", checkIfPhone);
+    return () => {
+      window.removeEventListener("resize", checkIfPhone);
+      window.removeEventListener("orientationchange", checkIfPhone);
+    };
+  }, []);
 
   // Sync native monitor fullscreen state
   useEffect(() => {
@@ -44,20 +78,28 @@ export function PhotoViewer({
       setIsMonitorFullscreen(isNativeFs);
       if (isNativeFs) {
         setIsWindowFullscreen(true);
+      } else {
+        // If native fullscreen was exited, reset monitor mode
+        const savedMode = sessionStorage.getItem("lumenist_view_mode");
+        if (savedMode === "monitor") {
+          setIsMonitorFullscreen(false);
+        }
       }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 
-    // If page loaded/transitioned while already in monitor fullscreen
+    // If page loaded/transitioned while already in fullscreen
     if (document.fullscreenElement) {
       setIsMonitorFullscreen(true);
       setIsWindowFullscreen(true);
     } else {
-      // Check if user was in window fullscreen before navigating
       const savedMode = sessionStorage.getItem("lumenist_view_mode");
-      if (savedMode === "window") {
+      if (savedMode === "monitor") {
+        setIsMonitorFullscreen(true);
+        setIsWindowFullscreen(true);
+      } else if (savedMode === "window") {
         setIsWindowFullscreen(true);
       }
     }
@@ -74,43 +116,93 @@ export function PhotoViewer({
   // Enter / Exit Fullscreen methods
   const openWindowFullscreen = useCallback(() => {
     setIsWindowFullscreen(true);
+    setIsMonitorFullscreen(false);
     sessionStorage.setItem("lumenist_view_mode", "window");
   }, []);
 
   const closeWindowFullscreen = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
     setIsWindowFullscreen(false);
+    setIsMonitorFullscreen(false);
     sessionStorage.removeItem("lumenist_view_mode");
     if (document.fullscreenElement) {
       if (document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen().catch(() => {});
       }
     }
+    if (window.history.state?.lumenistViewerFullscreen) {
+      window.history.back();
+    }
+    setTimeout(() => {
+      isClosingRef.current = false;
+    }, 200);
   }, []);
 
   const toggleMonitorFullscreen = useCallback(async () => {
     try {
-      if (!document.fullscreenElement) {
+      if (!isMonitorFullscreen && !document.fullscreenElement) {
         // Request fullscreen on documentElement so routing doesn't break fullscreen
         if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (e) {
+            // Mobile browsers may reject or omit requestFullscreen
+          }
         } else if ((document.documentElement as any).webkitRequestFullscreen) {
-          await (document.documentElement as any).webkitRequestFullscreen();
+          try {
+            await (document.documentElement as any).webkitRequestFullscreen();
+          } catch (e) {}
         }
         setIsWindowFullscreen(true);
+        setIsMonitorFullscreen(true);
         sessionStorage.setItem("lumenist_view_mode", "monitor");
       } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
+        if (document.fullscreenElement) {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            await (document as any).webkitExitFullscreen();
+          }
         }
-        // When exiting monitor fullscreen, stay in window fullscreen or close
+        setIsMonitorFullscreen(false);
         sessionStorage.setItem("lumenist_view_mode", "window");
       }
     } catch (err) {
       console.error("Fullscreen toggle error:", err);
+      setIsWindowFullscreen(true);
+      setIsMonitorFullscreen(true);
+      sessionStorage.setItem("lumenist_view_mode", "monitor");
     }
-  }, []);
+  }, [isMonitorFullscreen]);
+
+  // Handle browser back navigation / back gesture in fullscreen
+  useEffect(() => {
+    if (!isWindowFullscreen) return;
+
+    window.history.pushState({ lumenistViewerFullscreen: true }, "");
+
+    const handlePopState = () => {
+      if (isClosingRef.current) return;
+      setIsWindowFullscreen(false);
+      setIsMonitorFullscreen(false);
+      sessionStorage.removeItem("lumenist_view_mode");
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if ((document as any).webkitExitFullscreen) {
+          (document as any).webkitExitFullscreen().catch(() => {});
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isWindowFullscreen]);
 
   // Navigate to adjacent photos
   const goToPrev = useCallback(() => {
@@ -196,6 +288,59 @@ export function PhotoViewer({
     };
   }, [isWindowFullscreen]);
 
+  // Touch and swipe gestures for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchMoved.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      touchMoved.current = true;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Detect horizontal swipe
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      wasSwipeRef.current = true;
+      setTimeout(() => {
+        wasSwipeRef.current = false;
+      }, 350);
+
+      if (deltaX < 0) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
+      return;
+    }
+
+    // Single tap on phone or in monitor mode: exit back to page
+    if (!touchMoved.current && (isPhone || isMonitorFullscreen)) {
+      closeWindowFullscreen();
+    }
+  }, [goToNext, goToPrev, isPhone, isMonitorFullscreen, closeWindowFullscreen]);
+
+  const handleOverlayClick = useCallback(() => {
+    if (wasSwipeRef.current) return;
+    if (isPhone || isMonitorFullscreen) {
+      closeWindowFullscreen();
+    }
+  }, [isPhone, isMonitorFullscreen, closeWindowFullscreen]);
+
+  const isPhoneOnlyPicture = isPhone || isMonitorFullscreen;
+
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
@@ -237,94 +382,117 @@ export function PhotoViewer({
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={handleOverlayClick}
           className={`fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none photo-theater ${
-            showControls ? "cursor-default" : "cursor-none"
+            showControls && !isPhoneOnlyPicture ? "cursor-default" : "cursor-none"
           }`}
         >
           {/* Main Fullscreen Photograph */}
-          <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-4">
+          <div
+            className={`relative w-full h-full flex items-center justify-center ${
+              isPhoneOnlyPicture ? "p-0" : "p-2 sm:p-4"
+            }`}
+          >
             <img
               src={photo.imageDesktop}
               alt={photo.title}
-              className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200"
+              onClick={handleOverlayClick}
+              className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 cursor-pointer"
             />
           </div>
 
-          {/* Top Control Bar (Fades on inactivity) */}
-          <div
-            className={`fixed top-0 inset-x-0 z-[10000] p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex items-center justify-between transition-opacity duration-300 ${
-              showControls ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-          >
-            {/* Title & Date Caption */}
-            <div className="space-y-0.5 max-w-md truncate">
-              <h2 className="text-white text-sm sm:text-base font-medium truncate drop-shadow-md">
-                {photo.title}
-              </h2>
-              <p className="text-xs text-gray-400 font-mono">
-                {photo.dateTaken.year}-{String(photo.dateTaken.month).padStart(2, "0")}-{String(photo.dateTaken.day).padStart(2, "0")} · {photo.camera}
-              </p>
+          {/* Top Control Bar (Hidden when on a phone or in Extend to Monitor mode) */}
+          {!isPhoneOnlyPicture && (
+            <div
+              className={`fixed top-0 inset-x-0 z-[10000] p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex items-center justify-between transition-opacity duration-300 hidden md:flex ${
+                showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+            >
+              {/* Title & Date Caption */}
+              <div className="space-y-0.5 max-w-md truncate">
+                <h2 className="text-white text-sm sm:text-base font-medium truncate drop-shadow-md">
+                  {photo.title}
+                </h2>
+                <p className="text-xs text-gray-400 font-mono">
+                  {photo.dateTaken.year}-{String(photo.dateTaken.month).padStart(2, "0")}-{String(photo.dateTaken.day).padStart(2, "0")} · {photo.camera}
+                </p>
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center space-x-2 bg-black/70 backdrop-blur-md border border-white/10 rounded-sm p-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowInfo((prev) => !prev);
+                  }}
+                  className={`p-1.5 rounded transition-colors ${
+                    showInfo ? "bg-accent text-black" : "text-gray-300 hover:text-white hover:bg-white/10"
+                  }`}
+                  title="Toggle Photo Details"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+
+                <span className="text-gray-700">|</span>
+
+                {/* Monitor Fullscreen Toggle Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMonitorFullscreen();
+                  }}
+                  className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                  title={
+                    isMonitorFullscreen
+                      ? "Exit Monitor Fullscreen (Return to window)"
+                      : "Extend to physical monitor (Shortcut: F)"
+                  }
+                >
+                  {isMonitorFullscreen ? (
+                    <>
+                      <Shrink className="w-4 h-4 text-accent" />
+                      <span className="hidden sm:inline">Exit Monitor</span>
+                    </>
+                  ) : (
+                    <>
+                      <Monitor className="w-4 h-4 text-accent" />
+                      <span className="hidden sm:inline">Extend to Monitor</span>
+                    </>
+                  )}
+                </button>
+
+                <span className="text-gray-700">|</span>
+
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeWindowFullscreen();
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                  title="Exit Fullscreen (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-
-            {/* Controls */}
-            <div className="flex items-center space-x-2 bg-black/70 backdrop-blur-md border border-white/10 rounded-sm p-1">
-              <button
-                type="button"
-                onClick={() => setShowInfo((prev) => !prev)}
-                className={`p-1.5 rounded transition-colors ${
-                  showInfo ? "bg-accent text-black" : "text-gray-300 hover:text-white hover:bg-white/10"
-                }`}
-                title="Toggle Photo Details"
-              >
-                <Info className="w-4 h-4" />
-              </button>
-
-              <span className="text-gray-700">|</span>
-
-              {/* Monitor Fullscreen Toggle Button */}
-              <button
-                type="button"
-                onClick={toggleMonitorFullscreen}
-                className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-white/10 rounded transition-colors"
-                title={
-                  isMonitorFullscreen
-                    ? "Exit Monitor Fullscreen (Return to window)"
-                    : "Extend to physical monitor (Shortcut: F)"
-                }
-              >
-                {isMonitorFullscreen ? (
-                  <>
-                    <Shrink className="w-4 h-4 text-accent" />
-                    <span className="hidden sm:inline">Exit Monitor</span>
-                  </>
-                ) : (
-                  <>
-                    <Monitor className="w-4 h-4 text-accent" />
-                    <span className="hidden sm:inline">Extend to Monitor</span>
-                  </>
-                )}
-              </button>
-
-              <span className="text-gray-700">|</span>
-
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={closeWindowFullscreen}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
-                title="Exit Fullscreen (Esc)"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* Left Arrow (Previous Photo) */}
-          {prevPhoto && (
+          {!isPhoneOnlyPicture && prevPhoto && (
             <button
               type="button"
-              onClick={goToPrev}
-              className={`fixed left-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-black/60 hover:bg-black/90 border border-white/15 hover:border-accent text-white/80 hover:text-white transition-all backdrop-blur-sm shadow-2xl ${
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrev();
+              }}
+              className={`fixed left-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-black/60 hover:bg-black/90 border border-white/15 hover:border-accent text-white/80 hover:text-white transition-all backdrop-blur-sm shadow-2xl hidden md:block ${
                 showControls ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
               }`}
               title={`Previous: ${prevPhoto.title} (← Left Arrow)`}
@@ -334,11 +502,14 @@ export function PhotoViewer({
           )}
 
           {/* Right Arrow (Next Photo) */}
-          {nextPhoto && (
+          {!isPhoneOnlyPicture && nextPhoto && (
             <button
               type="button"
-              onClick={goToNext}
-              className={`fixed right-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-black/60 hover:bg-black/90 border border-white/15 hover:border-accent text-white/80 hover:text-white transition-all backdrop-blur-sm shadow-2xl ${
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNext();
+              }}
+              className={`fixed right-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-black/60 hover:bg-black/90 border border-white/15 hover:border-accent text-white/80 hover:text-white transition-all backdrop-blur-sm shadow-2xl hidden md:block ${
                 showControls ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
               }`}
               title={`Next: ${nextPhoto.title} (→ Right Arrow)`}
@@ -348,8 +519,8 @@ export function PhotoViewer({
           )}
 
           {/* Optional Info Drawer Overlay */}
-          {showInfo && (
-            <div className="fixed bottom-6 left-6 z-[10000] bg-black/90 backdrop-blur-md border border-surface-border rounded-sm p-4 max-w-md text-xs text-gray-300 space-y-2 shadow-2xl">
+          {!isPhoneOnlyPicture && showInfo && (
+            <div className="fixed bottom-6 left-6 z-[10000] bg-black/90 backdrop-blur-md border border-surface-border rounded-sm p-4 max-w-md text-xs text-gray-300 space-y-2 shadow-2xl hidden md:block">
               <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
                 <span className="font-semibold text-white">{photo.title}</span>
                 <span className="text-gray-500 font-mono">{photo.photoID}</span>
@@ -369,13 +540,15 @@ export function PhotoViewer({
           )}
 
           {/* Bottom subtle keyboard shortcuts hint */}
-          <div
-            className={`fixed bottom-3 inset-x-0 z-[10000] text-center text-[11px] text-gray-500 font-mono pointer-events-none transition-opacity duration-300 ${
-              showControls ? "opacity-70" : "opacity-0"
-            }`}
-          >
-            Use ← → arrow keys to navigate · F for Monitor Fullscreen · Esc to exit
-          </div>
+          {!isPhoneOnlyPicture && (
+            <div
+              className={`fixed bottom-3 inset-x-0 z-[10000] text-center text-[11px] text-gray-500 font-mono pointer-events-none transition-opacity duration-300 hidden md:block ${
+                showControls ? "opacity-70" : "opacity-0"
+              }`}
+            >
+              Use ← → arrow keys to navigate · F for Monitor Fullscreen · Esc to exit
+            </div>
+          )}
         </div>
       )}
     </>
