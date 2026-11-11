@@ -196,7 +196,7 @@ export function RandomHeroSlideshow({
               src={current.imageDesktop}
               alt={current.title}
               key={current.photoID}
-              className={`max-w-full max-h-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 ${
+              className={`max-w-full max-h-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 photo-frame ${
                 isTransitioning
                   ? "opacity-20 scale-[0.99]"
                   : "opacity-100 scale-100"

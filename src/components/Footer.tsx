@@ -23,7 +23,16 @@ export function Footer({ settings }: FooterProps) {
         </p>
         <p className="pt-2 text-[10px] text-gray-600 flex items-center justify-center space-x-3">
           <span>
-            Powered by <span className="text-gray-400 font-medium">Lumenist</span> — The Open-Source Fine-Art Photography CMS
+            Powered by{" "}
+            <a
+              href="https://github.com/ketchemr/lumenist"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-foreground font-medium transition-colors underline-offset-2 hover:underline"
+            >
+              Lumenist
+            </a>{" "}
+            — The Open-Source Fine-Art Photography CMS
           </span>
           <span>·</span>
           <Link href="/admin/upload" className="hover:text-gray-400 transition-colors">

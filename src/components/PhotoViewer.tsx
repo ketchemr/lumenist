@@ -482,7 +482,7 @@ export function PhotoViewer({
             <img
               src={photo.imageDesktop}
               alt={photo.title}
-              className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 pointer-events-auto cursor-pointer"
+              className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 pointer-events-auto cursor-pointer photo-frame"
               style={{
                 touchAction: "none",
                 WebkitTouchCallout: "none",

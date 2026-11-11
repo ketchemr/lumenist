@@ -170,8 +170,22 @@ html.light a[class~="bg-black"] * {
 
 /* Image frame styling consistent with fine-art exhibition */
 .photo-frame {
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+  outline: 1px solid rgba(255, 255, 255, 0.15);
+  outline-offset: -1px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, outline-color 0.2s ease;
+}
+
+html.light .photo-frame {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.12);
+  outline: 1px solid rgba(0, 0, 0, 0.10);
+  outline-offset: -1px;
+}
+
+/* When displayed over dark mats or within fullscreen theater, preserve the subtle light keyline */
+html.light .photo-theater .photo-frame,
+html.light [class*="bg-black"] .photo-frame {
+  outline: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* Completely suppress site header & menu bars whenever fullscreen viewer is active */
