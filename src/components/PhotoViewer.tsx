@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-  Maximize2,
-  Minimize2,
-  Expand,
   Shrink,
   ChevronLeft,
   ChevronRight,
@@ -34,9 +32,13 @@ export function PhotoViewer({
   const [showInfo, setShowInfo] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isPhone, setIsPhone] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce to prevent ghost clicks / touch leakage from immediately closing the overlay
+  const openedAtRef = useRef<number>(0);
 
   // Touch and swipe gesture tracking
   const touchStartX = useRef<number | null>(null);
@@ -44,6 +46,10 @@ export function PhotoViewer({
   const touchMoved = useRef<boolean>(false);
   const wasSwipeRef = useRef<boolean>(false);
   const isClosingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Detect mobile phone viewport / touch device
   useEffect(() => {
@@ -115,6 +121,7 @@ export function PhotoViewer({
 
   // Enter / Exit Fullscreen methods
   const openWindowFullscreen = useCallback(() => {
+    openedAtRef.current = Date.now();
     setIsWindowFullscreen(true);
     setIsMonitorFullscreen(false);
     sessionStorage.setItem("lumenist_view_mode", "window");
@@ -138,11 +145,12 @@ export function PhotoViewer({
     }
     setTimeout(() => {
       isClosingRef.current = false;
-    }, 200);
+    }, 250);
   }, []);
 
   const toggleMonitorFullscreen = useCallback(async () => {
     try {
+      openedAtRef.current = Date.now();
       if (!isMonitorFullscreen && !document.fullscreenElement) {
         // Request fullscreen on documentElement so routing doesn't break fullscreen
         if (document.documentElement.requestFullscreen) {
@@ -276,16 +284,41 @@ export function PhotoViewer({
     }
   }, [isWindowFullscreen]);
 
-  // Prevent background scroll when window fullscreen is open
+  // Prevent background scroll and completely hide site header when fullscreen is active
   useEffect(() => {
     if (isWindowFullscreen) {
+      openedAtRef.current = Date.now();
+      document.body.classList.add("viewer-fullscreen-active");
+      document.documentElement.classList.add("viewer-fullscreen-active");
+
+      const prevBodyOverflow = document.body.style.overflow;
+      const prevDocOverflow = document.documentElement.style.overflow;
+      const prevBodyOverscroll = document.body.style.overscrollBehavior;
+      const prevDocOverscroll = document.documentElement.style.overscrollBehavior;
+
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overscrollBehavior = "none";
+      document.documentElement.style.overscrollBehavior = "none";
+
+      const header = document.querySelector("header");
+      const prevHeaderDisplay = header ? header.style.display : "";
+      if (header) {
+        header.style.setProperty("display", "none", "important");
+      }
+
+      return () => {
+        document.body.classList.remove("viewer-fullscreen-active");
+        document.documentElement.classList.remove("viewer-fullscreen-active");
+        document.body.style.overflow = prevBodyOverflow;
+        document.documentElement.style.overflow = prevDocOverflow;
+        document.body.style.overscrollBehavior = prevBodyOverscroll;
+        document.documentElement.style.overscrollBehavior = prevDocOverscroll;
+        if (header) {
+          header.style.display = prevHeaderDisplay;
+        }
+      };
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, [isWindowFullscreen]);
 
   // Touch and swipe gestures for mobile
@@ -326,6 +359,11 @@ export function PhotoViewer({
       return;
     }
 
+    // Debounce check: ignore taps within 450ms of entering fullscreen
+    if (Date.now() - openedAtRef.current < 450) {
+      return;
+    }
+
     // Single tap on phone or in monitor mode: exit back to page
     if (!touchMoved.current && (isPhone || isMonitorFullscreen)) {
       closeWindowFullscreen();
@@ -334,6 +372,7 @@ export function PhotoViewer({
 
   const handleOverlayClick = useCallback(() => {
     if (wasSwipeRef.current) return;
+    if (Date.now() - openedAtRef.current < 450) return;
     if (isPhone || isMonitorFullscreen) {
       closeWindowFullscreen();
     }
@@ -378,7 +417,7 @@ export function PhotoViewer({
       </div>
 
       {/* 2. Fullscreen Theater / Monitor Presentation Overlay */}
-      {isWindowFullscreen && (
+      {isWindowFullscreen && mounted && typeof document !== "undefined" && createPortal(
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
@@ -386,7 +425,7 @@ export function PhotoViewer({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onClick={handleOverlayClick}
-          className={`fixed inset-0 z-[9999] bg-black flex items-center justify-center select-none photo-theater ${
+          className={`fixed inset-0 top-0 left-0 w-screen h-screen h-[100dvh] z-[99999] bg-black flex items-center justify-center select-none photo-theater ${
             showControls && !isPhoneOnlyPicture ? "cursor-default" : "cursor-none"
           }`}
         >
@@ -549,7 +588,8 @@ export function PhotoViewer({
               Use ← → arrow keys to navigate · F for Monitor Fullscreen · Esc to exit
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
