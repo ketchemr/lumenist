@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPhotosByCategory } from "@/lib/photos";
@@ -15,6 +16,40 @@ interface CategoryPageProps {
   }>;
 }
 
+function cleanCategoryString(raw: string): string {
+  let decoded = raw;
+  try {
+    while (decoded.includes("%")) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+  } catch {
+    try {
+      decoded = decodeURIComponent(raw);
+    } catch {
+      decoded = raw;
+    }
+  }
+  return decoded;
+}
+
+export async function generateMetadata({
+  params,
+}: CategoryPageProps): Promise<Metadata> {
+  const { category } = await params;
+  const decodedCategory = cleanCategoryString(category);
+  const isAll = decodedCategory.toLowerCase() === "all";
+  const title = isAll ? "All Photographs" : decodedCategory;
+
+  return {
+    title,
+    description: isAll
+      ? "Complete fine-art photography archive across all years and subjects."
+      : `Photographs curated in the ${decodedCategory} collection.`,
+  };
+}
+
 export default async function CategoryPage({
   params,
   searchParams,
@@ -22,7 +57,7 @@ export default async function CategoryPage({
   const { category } = await params;
   const { page } = await searchParams;
 
-  const decodedCategory = decodeURIComponent(category);
+  const decodedCategory = cleanCategoryString(category);
   const isAll = decodedCategory.toLowerCase() === "all";
   const allCategoryPhotos = getPhotosByCategory(decodedCategory);
 
@@ -83,7 +118,11 @@ export default async function CategoryPage({
         totalPages={totalPages}
         totalItems={allCategoryPhotos.length}
         pageSize={pageSize}
-        baseUrl={`/galleries/${encodeURIComponent(category)}`}
+        baseUrl={
+          isAll
+            ? "/galleries/All"
+            : `/galleries/${encodeURIComponent(decodedCategory)}`
+        }
       />
     </div>
   );

@@ -77,7 +77,21 @@ export function getPhotoById(id: string): Photo | undefined {
 
 export function getPhotosByCategory(category: string): Photo[] {
   const photos = getAllPhotos();
-  const decoded = decodeURIComponent(category).toLowerCase();
+  let decoded = category;
+  try {
+    while (decoded.includes("%")) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+  } catch {
+    try {
+      decoded = decodeURIComponent(category);
+    } catch {
+      decoded = category;
+    }
+  }
+  decoded = decoded.toLowerCase();
   
   if (decoded === "all") {
     return photos;
