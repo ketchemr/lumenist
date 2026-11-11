@@ -43,7 +43,8 @@ export function PhotoViewer({
   // Touch and swipe gesture tracking
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const touchMoved = useRef<boolean>(false);
+  const touchStartTime = useRef<number>(0);
+  const maxDistanceMoved = useRef<number>(0);
   const wasSwipeRef = useRef<boolean>(false);
   const isClosingRef = useRef<boolean>(false);
 
@@ -325,27 +326,45 @@ export function PhotoViewer({
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    touchMoved.current = false;
+    touchStartTime.current = Date.now();
+    maxDistanceMoved.current = 0;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-    const deltaX = e.touches[0].clientX - touchStartX.current;
-    const deltaY = e.touches[0].clientY - touchStartY.current;
-    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-      touchMoved.current = true;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    const dist = Math.hypot(dx, dy);
+    if (dist > maxDistanceMoved.current) {
+      maxDistanceMoved.current = dist;
     }
+  }, []);
+
+  const handleTouchCancel = useCallback(() => {
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchStartTime.current = 0;
+    maxDistanceMoved.current = 0;
   }, []);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    const totalDistance = Math.hypot(deltaX, deltaY);
+    const maxDist = Math.max(maxDistanceMoved.current, totalDistance);
+    const elapsed = Date.now() - touchStartTime.current;
+
     touchStartX.current = null;
     touchStartY.current = null;
 
-    // Detect horizontal swipe
-    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+    // Ignore gestures that began before or during the fullscreen opening transition
+    if (touchStartTime.current <= openedAtRef.current + 100) {
+      return;
+    }
+
+    // 1. Horizontal swipe: Left or Right for navigation
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
       wasSwipeRef.current = true;
       setTimeout(() => {
         wasSwipeRef.current = false;
@@ -359,24 +378,38 @@ export function PhotoViewer({
       return;
     }
 
-    // Debounce check: ignore taps within 450ms of entering fullscreen
-    if (Date.now() - openedAtRef.current < 450) {
+    // 2. Vertical swipe: Flick down or up to exit fullscreen (natural mobile photo gesture)
+    if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.3) {
+      wasSwipeRef.current = true;
+      setTimeout(() => {
+        wasSwipeRef.current = false;
+      }, 350);
+      closeWindowFullscreen();
       return;
     }
 
-    // Single tap on phone or in monitor mode: exit back to page
-    if (!touchMoved.current && (isPhone || isMonitorFullscreen)) {
+    // 3. Tap detection:
+    // If the touch moved less than 35px and was released within 600ms, it is a single tap -> exit fullscreen!
+    if (maxDist < 35 && elapsed < 600) {
       closeWindowFullscreen();
+      return;
     }
-  }, [goToNext, goToPrev, isPhone, isMonitorFullscreen, closeWindowFullscreen]);
+  }, [goToNext, goToPrev, closeWindowFullscreen]);
 
-  const handleOverlayClick = useCallback(() => {
-    if (wasSwipeRef.current) return;
-    if (Date.now() - openedAtRef.current < 450) return;
-    if (isPhone || isMonitorFullscreen) {
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (wasSwipeRef.current) return;
+      if (Date.now() - openedAtRef.current < 250) return;
+
+      const target = e.target as HTMLElement;
+      if (target.closest("button") || target.closest(".photo-info-drawer")) {
+        return;
+      }
+
       closeWindowFullscreen();
-    }
-  }, [isPhone, isMonitorFullscreen, closeWindowFullscreen]);
+    },
+    [closeWindowFullscreen]
+  );
 
   const isPhoneOnlyPicture = isPhone || isMonitorFullscreen;
 
@@ -388,7 +421,10 @@ export function PhotoViewer({
           <img
             src={photo.imageDesktop}
             alt={photo.title}
-            onClick={openWindowFullscreen}
+            onClick={(e) => {
+              e.stopPropagation();
+              openWindowFullscreen();
+            }}
             className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame cursor-pointer"
             title="Click to view full screen (Shortcut: W, Monitor: F)"
           />
@@ -398,7 +434,10 @@ export function PhotoViewer({
         <div className="flex justify-end items-center space-x-2 pt-2.5 pr-1 text-xs text-muted font-mono">
           <button
             type="button"
-            onClick={openWindowFullscreen}
+            onClick={(e) => {
+              e.stopPropagation();
+              openWindowFullscreen();
+            }}
             className="hover:text-accent transition-colors cursor-pointer"
             title="Full screen within browser window (Shortcut: W)"
           >
@@ -407,7 +446,10 @@ export function PhotoViewer({
           <span className="text-gray-700">/</span>
           <button
             type="button"
-            onClick={toggleMonitorFullscreen}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMonitorFullscreen();
+            }}
             className="hover:text-accent transition-colors cursor-pointer"
             title="Extend to full monitor screen (Shortcut: F)"
           >
@@ -424,22 +466,29 @@ export function PhotoViewer({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
           onClick={handleOverlayClick}
-          className={`fixed inset-0 top-0 left-0 w-screen h-screen h-[100dvh] z-[99999] bg-black flex items-center justify-center select-none photo-theater ${
-            showControls && !isPhoneOnlyPicture ? "cursor-default" : "cursor-none"
+          style={{ touchAction: "none" }}
+          className={`fixed inset-0 top-0 left-0 w-screen h-screen h-[100dvh] z-[99999] bg-black flex items-center justify-center select-none photo-theater cursor-pointer ${
+            showControls && !isPhoneOnlyPicture ? "md:cursor-default" : "cursor-pointer"
           }`}
         >
           {/* Main Fullscreen Photograph */}
           <div
-            className={`relative w-full h-full flex items-center justify-center ${
+            className={`relative w-full h-full flex items-center justify-center pointer-events-none ${
               isPhoneOnlyPicture ? "p-0" : "p-2 sm:p-4"
             }`}
           >
             <img
               src={photo.imageDesktop}
               alt={photo.title}
-              onClick={handleOverlayClick}
-              className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 cursor-pointer"
+              className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 pointer-events-auto cursor-pointer"
+              style={{
+                touchAction: "none",
+                WebkitTouchCallout: "none",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+              }}
             />
           </div>
 
