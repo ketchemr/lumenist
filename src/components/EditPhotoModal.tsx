@@ -21,8 +21,6 @@ import { Photo } from "@/types/photo";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import {
   parseCoordinates,
-  isValidLatitude,
-  isValidLongitude,
   formatDMS,
 } from "@/lib/coordinates";
 
@@ -68,9 +66,7 @@ export function EditPhotoModal({
   // Coordinates
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [latInput, setLatInput] = useState("");
-  const [lonInput, setLonInput] = useState("");
-  const [quickCoordInput, setQuickCoordInput] = useState("");
+  const [coordInput, setCoordInput] = useState("");
   const [coordError, setCoordError] = useState("");
   const [coordFeedback, setCoordFeedback] = useState("");
 
@@ -106,15 +102,11 @@ export function EditPhotoModal({
     if (p.location && typeof p.location.latitude === "number" && typeof p.location.longitude === "number") {
       setLatitude(p.location.latitude);
       setLongitude(p.location.longitude);
-      setLatInput(String(p.location.latitude));
-      setLonInput(String(p.location.longitude));
-      setQuickCoordInput(`${p.location.latitude}, ${p.location.longitude}`);
+      setCoordInput(`${p.location.latitude}, ${p.location.longitude}`);
     } else {
       setLatitude(null);
       setLongitude(null);
-      setLatInput("");
-      setLonInput("");
-      setQuickCoordInput("");
+      setCoordInput("");
     }
   };
 
@@ -161,25 +153,44 @@ export function EditPhotoModal({
   const handleMapCoordinatesChange = (lat: number, lon: number) => {
     setLatitude(lat);
     setLongitude(lon);
-    setLatInput(String(lat));
-    setLonInput(String(lon));
-    setQuickCoordInput(`${lat}, ${lon}`);
+    setCoordInput(`${lat}, ${lon}`);
     setCoordError("");
     setCoordFeedback("Pin position selected from interactive map");
   };
 
-  const handleApplyQuickCoordinates = () => {
-    if (!quickCoordInput.trim()) {
-      setCoordError("Please enter or paste coordinates first.");
+  const handleCoordInputChange = (val: string) => {
+    setCoordInput(val);
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setLatitude(null);
+      setLongitude(null);
+      setCoordError("");
+      setCoordFeedback("");
       return;
     }
-    const parsed = parseCoordinates(quickCoordInput);
+    const parsed = parseCoordinates(val);
     if (parsed) {
       setLatitude(parsed.latitude);
       setLongitude(parsed.longitude);
-      setLatInput(String(parsed.latitude));
-      setLonInput(String(parsed.longitude));
-      setQuickCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
+      setCoordError("");
+      setCoordFeedback(`Coordinates applied: ${parsed.latitude}, ${parsed.longitude}`);
+    }
+  };
+
+  const handleApplyCoordinates = () => {
+    const trimmed = coordInput.trim();
+    if (!trimmed) {
+      setLatitude(null);
+      setLongitude(null);
+      setCoordError("");
+      setCoordFeedback("");
+      return;
+    }
+    const parsed = parseCoordinates(coordInput);
+    if (parsed) {
+      setLatitude(parsed.latitude);
+      setLongitude(parsed.longitude);
+      setCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
       setCoordError("");
       setCoordFeedback(`Coordinates applied: ${parsed.latitude}, ${parsed.longitude}`);
     } else {
@@ -187,112 +198,27 @@ export function EditPhotoModal({
     }
   };
 
-  const handleLatInputChange = (val: string) => {
-    const parsed = parseCoordinates(val);
+  const handleCoordInputBlur = () => {
+    const trimmed = coordInput.trim();
+    if (!trimmed) {
+      setCoordError("");
+      return;
+    }
+    const parsed = parseCoordinates(coordInput);
     if (parsed) {
       setLatitude(parsed.latitude);
       setLongitude(parsed.longitude);
-      setLatInput(String(parsed.latitude));
-      setLonInput(String(parsed.longitude));
-      setQuickCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
+      setCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
       setCoordError("");
-      setCoordFeedback(`Coordinates parsed: ${parsed.latitude}, ${parsed.longitude}`);
-      return;
-    }
-
-    setLatInput(val);
-    const trimmed = val.trim();
-    if (!trimmed) {
-      if (!lonInput.trim()) {
-        setLatitude(null);
-        setLongitude(null);
-        setQuickCoordInput("");
-      } else {
-        setLatitude(null);
-      }
-      setCoordError("");
-      setCoordFeedback("");
-      return;
-    }
-
-    const latNum = parseFloat(trimmed);
-    if (isNaN(latNum)) {
-      setCoordError("Latitude must be a valid number.");
-      return;
-    }
-    if (!isValidLatitude(latNum)) {
-      setCoordError("Latitude must be between -90 and 90 degrees.");
-      return;
-    }
-
-    setCoordError("");
-    const lonNum = parseFloat(lonInput.trim());
-    if (!isNaN(lonNum) && isValidLongitude(lonNum)) {
-      setLatitude(parseFloat(latNum.toFixed(6)));
-      setLongitude(parseFloat(lonNum.toFixed(6)));
-      setQuickCoordInput(`${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
-      setCoordFeedback(`Coordinates updated: ${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
     } else {
-      setLatitude(parseFloat(latNum.toFixed(6)));
-    }
-  };
-
-  const handleLonInputChange = (val: string) => {
-    const parsed = parseCoordinates(val);
-    if (parsed) {
-      setLatitude(parsed.latitude);
-      setLongitude(parsed.longitude);
-      setLatInput(String(parsed.latitude));
-      setLonInput(String(parsed.longitude));
-      setQuickCoordInput(`${parsed.latitude}, ${parsed.longitude}`);
-      setCoordError("");
-      setCoordFeedback(`Coordinates parsed: ${parsed.latitude}, ${parsed.longitude}`);
-      return;
-    }
-
-    setLonInput(val);
-    const trimmed = val.trim();
-    if (!trimmed) {
-      if (!latInput.trim()) {
-        setLatitude(null);
-        setLongitude(null);
-        setQuickCoordInput("");
-      } else {
-        setLongitude(null);
-      }
-      setCoordError("");
-      setCoordFeedback("");
-      return;
-    }
-
-    const lonNum = parseFloat(trimmed);
-    if (isNaN(lonNum)) {
-      setCoordError("Longitude must be a valid number.");
-      return;
-    }
-    if (!isValidLongitude(lonNum)) {
-      setCoordError("Longitude must be between -180 and 180 degrees.");
-      return;
-    }
-
-    setCoordError("");
-    const latNum = parseFloat(latInput.trim());
-    if (!isNaN(latNum) && isValidLatitude(latNum)) {
-      setLatitude(parseFloat(latNum.toFixed(6)));
-      setLongitude(parseFloat(lonNum.toFixed(6)));
-      setQuickCoordInput(`${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
-      setCoordFeedback(`Coordinates updated: ${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`);
-    } else {
-      setLongitude(parseFloat(lonNum.toFixed(6)));
+      setCoordError("Unrecognized format. Enter as 'lat, lon' (e.g. 35.799292, -82.954774), DMS, or map URL.");
     }
   };
 
   const handleClearCoordinates = () => {
     setLatitude(null);
     setLongitude(null);
-    setLatInput("");
-    setLonInput("");
-    setQuickCoordInput("");
+    setCoordInput("");
     setCoordError("");
     setCoordFeedback("");
   };
@@ -529,80 +455,36 @@ export function EditPhotoModal({
               )}
             </div>
 
-            {/* Quick Paste / Combined Coordinates Input */}
+            {/* Unified Coordinates Input */}
             <div className="space-y-1.5">
               <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
-                Paste / Search Coordinates (e.g. 35.799292, -82.954774 or 35°47&apos;57&quot;N 82°57&apos;17&quot;W)
+                Coordinates (e.g. 35.799292, -82.954774 or 35°47&apos;57&quot;N 82°57&apos;17&quot;W)
               </label>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Compass className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
-                    value={quickCoordInput}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setQuickCoordInput(val);
-                      const parsed = parseCoordinates(val);
-                      if (parsed) {
-                        setLatitude(parsed.latitude);
-                        setLongitude(parsed.longitude);
-                        setLatInput(String(parsed.latitude));
-                        setLonInput(String(parsed.longitude));
-                        setCoordError("");
-                        setCoordFeedback(`Coordinates applied: ${parsed.latitude}, ${parsed.longitude}`);
-                      } else if (!val.trim()) {
-                        setCoordError("");
-                      }
-                    }}
+                    value={coordInput}
+                    onChange={(e) => handleCoordInputChange(e.target.value)}
+                    onBlur={handleCoordInputBlur}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        handleApplyQuickCoordinates();
+                        handleApplyCoordinates();
                       }
                     }}
-                    placeholder="Paste coordinates (lat, lon, DMS, or Google Maps URL)..."
-                    className="w-full pl-9 pr-3 py-2 bg-surface border border-surface-border rounded text-xs text-foreground placeholder-muted focus:outline-none focus:border-accent"
+                    placeholder="Enter or paste coordinates (lat, lon, DMS, or Google Maps URL)..."
+                    className="w-full pl-9 pr-3 py-2 bg-surface border border-surface-border rounded text-xs font-mono text-foreground placeholder-muted focus:outline-none focus:border-accent"
                   />
                 </div>
                 <button
                   type="button"
-                  onClick={handleApplyQuickCoordinates}
+                  onClick={handleApplyCoordinates}
                   className="px-3.5 py-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent text-foreground text-xs rounded font-medium transition-colors flex-shrink-0 cursor-pointer"
                 >
                   Apply
                 </button>
-              </div>
-            </div>
-
-            {/* Individual Latitude and Longitude Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
-                  Latitude (-90° to 90°)
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={latInput}
-                  onChange={(e) => handleLatInputChange(e.target.value)}
-                  placeholder="e.g. 35.799292"
-                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-foreground placeholder-muted focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
-                  Longitude (-180° to 180°)
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={lonInput}
-                  onChange={(e) => handleLonInputChange(e.target.value)}
-                  placeholder="e.g. -82.954774"
-                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-foreground placeholder-muted focus:outline-none focus:border-accent"
-                />
               </div>
             </div>
 
