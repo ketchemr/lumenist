@@ -8,46 +8,119 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
 
 ---
 
-## Key Features
+## Public Exhibition Features
 
-### 🖼️ Exhibition-Grade Aesthetic & Dynamic Color Engine
-- **Dark Exhibition Backgrounds**: Pre-configured with Pure OLED Black (`#000000`), Deep Obsidian, Midnight Slate, Warm Espresso, and Charcoal to maximize human eye dynamic range and eliminate ambient glare.
-- **Studio Light Themes**: Built-in Clean Studio White, Warm Gallery Parchment, and Soft Silver modes.
-- **Dynamic Contrast Intelligence**: Automatic contrast inversion ensures buttons, badges, navigation headers, and metadata cards remain razor-sharp regardless of background or accent color selections.
-- **6 Accent Presets + Custom Hex Picker**: Amber Gold, Pure Silver, Pacific Cyan, Cascade Emerald, Alpine Crimson, and Amethyst Violet.
+### 🏠 Curated Homepage (`/`)
+- **Randomized Hero Slideshow**: Dynamically cycles through your archive with timed transitions, custom interval settings, previous/next slide navigation with history tracking, pause/resume controls, and direct links to full technical exhibition details.
+- **Unified Galleries Grid**: Displays all curated collections in a clean, responsive card layout. The **"All"** archive is prominently featured as the first gallery (displaying the total collection size), followed by thematic albums (biomes, seasons, subjects). Each card presents a representative, randomly refreshed photograph with dynamic aspect framing and photo title overlays on hover.
 
-### 🎞️ Craft-First Photographic Metadata
-Native, first-class display for details that matter to serious photographers:
-- **Film Stock vs. Digital**: Distinguishes analog film transparencies (Velvia 50, Provia 100F, Tri-X) from modern digital sensor captures.
-- **Optical Exposure Pyramid**: Camera body, lens model, exact focal length, shutter speed, aperture, ISO, and exposure compensation.
-- **Color & White Balance**: Kelvin temperature and color tint (e.g. `5400K +6`), tone compensation, and color spaces.
-- **Support Gear**: Dedicated tracking for tripods, ball heads, and leveling bases.
-- **Zero Cumulative Layout Shift (CLS)**: Precise aspect ratio reservation ensures completely flicker-free page loads.
+### 🖼️ Galleries & Albums (`/galleries/[category]`)
+- **Flicker-Free Layouts (Zero CLS)**: Pre-calculated aspect ratios preserve exact bounding containers before images download, completely eliminating Cumulative Layout Shift.
+- **Deep Navigation Trail**: Hierarchical breadcrumb navigation (`Home > [Gallery Name]`) with smart fallback back-buttons for rapid browsing.
+- **Exhibition Grid & Pagination**: Responsive thumbnail grids with configurable page sizing (25, 50, 100, or All) and smooth scroll-to-top page navigation.
+- **Instant Clean Routing**: Direct navigation to `/galleries` automatically redirects to the homepage `/`.
 
-### ⚡ On-Demand Thumbnail & Image Pipeline
-- **Next.js Thumbnail API (`/api/thumbnail`)**: Generates optimized WebP images on the fly with Lanczos3 resampling via Sharp.
-- **Persistent Disk Caching**: Thumbnails are stored in `.thumbnails/` for millisecond subsequent delivery.
-- **Batch Pre-caching**: Built-in CLI command to pre-generate all thumbnails ahead of exhibition launches.
+### 🔍 Instant Explore & Archive Search (`/explore`)
+- **Real-Time Client & Server Search**: Instant multi-field search across titles, captions, stories, locations, camera gear, lenses, and film emulsions.
+- **Multi-Category Pills**: Filter by one or more galleries with one click.
+- **Chronological Timeline Range**: Dual-handle year slider to explore works captured across specific decades or field seasons.
 
-### 🗺️ Interactive World Photography Map
-- **Global & Per-Photo Mapping**: Clustered world map showing shooting locations across continents, alongside individual photo pinpoint maps.
-- **3 Basemap Layers**:
-  - Custom tuned dark mode vector tiles (OpenStreetMap, no API keys or third-party watermarks required).
-  - Esri World Topographic relief (mountain elevation & contour).
-  - Esri Aerial World Imagery (high-resolution satellite).
+### 🗺️ Interactive World Photography Map (`/map`)
+- **Global Clustered Pin Map**: Interactive Leaflet map aggregating shooting locations worldwide with auto-clustering for dense field locations.
+- **3 Switchable Cartographic Layers**:
+  - *Dark Vector Tiles*: High-contrast, distraction-free street and terrain vectors (OpenStreetMap-based, zero watermarks or API keys).
+  - *Esri World Topographic*: Mountain elevations, contour lines, and physical geography.
+  - *Esri World Satellite Imagery*: High-resolution aerial satellite orthophotos.
+- **Exhibition Quick-Cards**: Clicking any map pin reveals a thumbnail card with photo title, camera, date, and a direct link to the exhibition view.
 
-### 🎛️ Integrated Web Admin Suite (`/admin`)
-- **Drag-and-Drop Uploader**: Direct web publishing with client-side EXIF auto-detection via `exifr` (camera, lens, focal length, aperture, shutter, ISO, date, GPS).
-- **Visual Location Picker**: Interactive Leaflet map picker—click or drag a pin to assign geographic coordinates without manual typing.
-- **Catalog Management**: Full searchable archive table with album filtering, pagination (25/50/100/All), and single photo editing/deletion.
-- **Batch Operations**: Bulk add/remove albums, bulk assign/remove tags, and bulk delete selected works.
-- **Live Studio Customizer**: Change theme accents, backgrounds, studio identity (Artist Name, Site Title, Tagline), slideshow timing, and admin passphrase directly through the web UI.
+### 🔍 Deep Technical Photo Viewer (`/photo/[id]`)
+- **Adaptive Framing & Lightbox**: Pure OLED black or custom exhibition matting that fits horizontal, vertical, and panoramic orientations without clipping.
+- **Keyboard & Touch Gestures**: Full keyboard navigation (Left/Right arrows for adjacent works, `F` for fullscreen, `Esc` to close) and mobile swipe gestures.
+- **Discreet Copyright & Watermark Badge**: Configurable semi-transparent copyright overlay with an optional frosted shield in the corner of master previews.
+- **Exposure Pyramid & Technical Drawer**: First-class display of:
+  - **Exposure**: Shutter speed, aperture (f-number), ISO sensitivity, and exposure compensation (EV).
+  - **Optics**: Camera body, lens model, and exact focal length in mm.
+  - **Color & Film**: White balance Kelvin temperature and tint (e.g. `5200K +4`), film emulsion (e.g. *Fuji Velvia 50*, *Kodak Tri-X 400*) vs. digital capture.
+  - **Support Gear**: Tripod body, ball head, and leveling base used in the field.
+  - **Geospatial Pinpoint**: Dedicated mini-map illustrating the exact location of capture.
+  - **Print Availability**: Edition and fine-art print ordering status.
+
+### 📖 About & Artist Statement (`/about`)
+- Biography, photographic philosophy, list of field cameras/optics, exhibitions, and direct contact options.
+
+---
+
+## Integrated Web Admin Suite (`/admin`)
+
+Lumenist includes a comprehensive, browser-based administrative suite accessed at `/admin` (or `/admin/upload`). Protected by cryptographically hashed credentials and signed HTTP cookies, it allows complete catalog management without touching code or database files.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  LUMENIST ADMIN SUITE                                                  │
+├─────────────┬──────────────────────────┬───────────────┬───────────────┤
+│  📁 UPLOAD  │  🖼️  MANAGE & BATCH      │  📚  ALBUMS   │  ⚙️  SETTINGS  │
+└─────────────┴──────────────────────────┴───────────────┴───────────────┘
+```
+
+### 1. 📁 Upload (`?tab=upload`)
+- **Drag-and-Drop Publishing**: Upload high-resolution TIFF, JPEG, or WebP photographs directly into the live site.
+- **Automated Client-Side EXIF Extraction**: Automatically extracts camera make/model, lens, focal length, aperture, shutter speed, ISO, exposure compensation, Kelvin white balance, capture timestamp, and GPS coordinates before upload.
+- **Smart ID Generation**: Creates standardized photo IDs (`dYYYYMMDDHHMMSS`) derived from original shutter timestamps.
+- **Album Assignment**: Check existing albums or create new categories on the fly.
+- **Interactive GPS Pin Picker**: Click or drag a pin on a built-in Leaflet map to set or fine-tune coordinates, or click *Clear Location* to remove GPS data.
+- **Support Gear & Film Selectors**: Quick-pick dropdowns for tripod setups and film emulsions.
+
+### 2. 🖼️ Manage & Batch Operations (`?tab=manage`)
+- **Full Catalog Archive Table**: Search and sort hundreds or thousands of photos with live search across titles, IDs, categories, and cameras.
+- **Curation Filter**: Filter by individual album or select **"Only in All"** to isolate works that are not yet assigned to any curated gallery.
+- **Configurable Page Density**: View 25, 50, 100, or All works per page.
+- **Single Photo Editing**: Dedicated modal to edit any metadata field (title, story description, categories, tags, technical exposure, gear, and location coordinates).
+- **Single Photo Deletion**: Delete an image with confirmation and automatic thumbnail cleanup.
+- **Bulk Batch Operations**: Multi-select any combination of works (or select all matching filtered results) to perform:
+  - **Bulk Add to Album**: Assign multiple photos to one or more existing or newly created albums.
+  - **Bulk Remove from Album**: Remove multiple photos from a specific album in one step.
+  - **Bulk Add Tags**: Add tags/keywords across selected works.
+  - **Bulk Remove Tags**: Remove tags across selected works.
+  - **Bulk Delete**: Delete selected photos with options to preserve or delete master files from the server disk.
+
+### 3. 📚 Albums & Collection Management (`?tab=albums`)
+- **Album Grid Overview**: Visual gallery cards for every curated album showing the assigned cover photo, total count of contained works, and quick action buttons.
+- **"All Photographs" Master Card**: High-level overview of the entire archive.
+- **"Only in All" Quick Curation Card**: Surfaces the number of photographs that exist in the archive but have no curated album assignment. Clicking the card immediately opens the Manage tab pre-filtered to those images for quick curation.
+- **Create New Album**: Add new curated galleries to the portfolio with a single click.
+- **Rename Album**: Renames an album across every photograph in the catalog atomically, instantly updating all public URLs, gallery views, and photo metadata.
+- **Safe Album Deletion**: Deleting an album removes the album category label from all member photos while **safely preserving the photos themselves** in the archive ("All").
+
+### 4. ⚙️ Studio Settings & Dynamic Theming (`?tab=settings`)
+- **Studio Identity**: Update Artist Name, Site Title, Tagline, Bio, and copyright notices live from the browser without server restarts.
+- **Watermark & Protection Engine**: Toggle the public copyright overlay badge on or off, configure custom copyright strings, and enable/disable the frosted glass shield backing.
+- **Exhibition Theme Presets**: Choose between Pure OLED Black (`#000000`), Midnight Slate, Charcoal, Warm Espresso, Studio White, Gallery Parchment, or Soft Silver.
+- **Accent Color Engine**: 6 hand-tuned presets (Amber Gold, Pure Silver, Pacific Cyan, Cascade Emerald, Alpine Crimson, Amethyst Violet) plus a custom hex picker. Includes automatic contrast calculation to guarantee WCAG-compliant legibility across all backgrounds.
+- **Slideshow Timing**: Adjust the auto-advance dwell time (seconds) for the homepage hero carousel.
+- **Passphrase Management**: Securely update the administrative passphrase with instant bcrypt re-hashing.
+
+---
+
+## Technical Architecture & Pipeline
+
+### ⚡ On-Demand WebP Image Pipeline (`/api/thumbnail`)
+- Powered by high-speed **Sharp** native C++ image bindings with Lanczos3 resampling.
+- Dynamic query parameters: `/api/thumbnail?src=/photos/2026/image.jpg&w=1200&fmt=webp&q=85`.
+- **Two-Tier Caching**:
+  1. Processed WebP images are cached to `.thumbnails/` on disk for sub-5ms subsequent delivery.
+  2. Public HTTP responses include `Cache-Control: public, max-age=2592000, immutable` headers.
+- **Batch Pre-caching CLI**: Pre-render all exhibition thumbnails before launching major portfolios using `npm run thumbnails:precache`.
+
+### 🔒 Security & Persistence
+- **Zero Database Lock-in**: All portfolio metadata is maintained in transparent, versionable JSON files in `data/` (`photos.json`, `settings.json`, `auth.json`).
+- **Stateless Session Tokens**: Admin authentication utilizes HMAC-SHA256 / AES session cookies signed with `ADMIN_SECRET`.
+- **CSRF & Route Protection**: Administrative REST APIs validate session authenticity before executing mutations.
 
 ---
 
 ## Server Installation & Setup Guide
 
-This guide covers installing and deploying Lumenist on an Ubuntu/Debian Linux server (e.g. Oracle Cloud, DigitalOcean, Hetzner, AWS, or home lab server).
+This guide covers installing and deploying Lumenist on an Ubuntu/Debian Linux server (e.g. Oracle Cloud, DigitalOcean, Hetzner, AWS, or a dedicated home lab server).
 
 ### Prerequisites
 - **Ubuntu 22.04 / 24.04 LTS** (or Debian 12)
@@ -68,8 +141,6 @@ sudo npm install -g pm2
 ---
 
 ### Step 1: Clone the Repository
-
-Clone Lumenist to your web directory (e.g. `/var/www/lumenist`):
 
 ```bash
 sudo mkdir -p /var/www/lumenist
@@ -205,94 +276,27 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 ---
 
-## Managing Your Site via Web Admin
+## REST API Reference
 
-Once your server is running, manage your entire portfolio from any web browser:
+Lumenist exposes clean, typed Next.js App Router API endpoints:
 
-1. Navigate to:
-   ```
-   https://your-domain.com/admin
-   ```
-2. Enter your `ADMIN_PASSWORD` (from `.env.local`).
-3. Use the integrated control tabs:
-   - **Upload**: Publish new photographs with automated EXIF extraction and interactive visual map pinning.
-   - **Manage**: Search, edit metadata, delete, or perform bulk batch updates (add/remove albums, tag/untag, batch delete) across your entire catalog.
-   - **Settings**: Customize your studio identity (Artist Name, Site Title, Tagline), slideshow timing, default catalog sort order, background/accent color schemes, or update your passphrase.
-
----
-
-## Public Gallery Features
-
-- **Home (`/`)**: Dynamic randomized hero slideshow with smooth crossfades and previous/next slide history, followed by curated gallery cards.
-- **Galleries (`/galleries`)**: Curated collections and albums. Each gallery displays a representative photo framed full-size.
-- **Explore (`/explore`)**: Instant live search by title, location, camera, or keyword, alongside category pills and year timeline filters.
-- **Map (`/map`)**: Global interactive map with dark mode, topographic, and satellite views.
-- **Photo Viewer (`/photo/[id]`)**: Fullscreen-capable display with dark matting, deep exposure technical drawer, and companion shooting location map.
-- **About (`/about`)**: Artist statement, biography, and camera/film gear list.
-
----
-
-## Local Development (Optional)
-
-If you wish to test or develop Lumenist locally on your personal machine before deploying to your server:
-
-```bash
-# Clone and install dependencies
-git clone https://github.com/ketchemr/lumenist.git
-cd lumenist
-npm install
-
-# Setup local credentials
-cp .env.example .env.local
-
-# Link sample photos and import
-ln -s /path/to/photos public/photos
-npm run import:all
-
-# Run local dev server with hot reloading
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) for the public site, and [http://localhost:3000/admin](http://localhost:3000/admin) for the admin dashboard.
-
----
-
-## Project Structure
-
-```
-lumenist/
-├── data/                      # Persistent catalog (git-ignored)
-│   ├── photos.json            # Unified photo metadata archive
-│   ├── settings.json          # Studio and theme settings
-│   └── auth.json              # Hashed admin credentials
-├── public/
-│   ├── photos/                # Symlink or folder for full-res master photos
-│   └── favicon.ico            # Site favicon
-├── scripts/
-│   ├── import-photos.ts       # CLI ingestion for images and .txt metadata
-│   ├── precache-thumbnails.js # Pre-caches WebP thumbnails across widths
-│   └── test-parser.ts         # Test suite for metadata companion parser
-├── src/
-│   ├── app/                   # Next.js 15 App Router
-│   │   ├── admin/             # Web Admin suite (/admin, /admin/upload)
-│   │   ├── api/               # API routes (auth, metadata, upload, thumbnails)
-│   │   ├── galleries/         # Gallery and category exhibition views
-│   │   ├── photo/[id]/        # Individual photo showcase & technical drawer
-│   │   ├── explore/           # Search, tag filters, and year timeline
-│   │   ├── map/               # Global photography map
-│   │   └── about/             # Artist statement & bio
-│   ├── components/            # Reusable UI components (Leaflet maps, Hero, etc.)
-│   ├── config/                # Site defaults and navigation configuration
-│   ├── lib/                   # Photos parser, auth helpers, settings engine
-│   └── types/                 # TypeScript interfaces (Photo, Settings, EXIF)
-└── tailwind.config.ts         # Tailwind design system with semantic CSS variables
-```
+| Endpoint | Method | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/thumbnail` | `GET` | Public | Generates and serves cached, optimized WebP thumbnails. |
+| `/api/admin/auth` | `POST` / `DELETE` | Public / Cookie | Verifies admin passphrase, creates session cookie, or logs out. |
+| `/api/admin/upload` | `POST` | Admin | Receives image binary and metadata payload, writes to disk and catalog. |
+| `/api/admin/photos` | `GET` | Admin | Retrieves paginated and filtered catalog records for admin table. |
+| `/api/admin/photo/[id]` | `PUT` / `DELETE` | Admin | Updates or deletes an individual photo record. |
+| `/api/admin/photos/bulk` | `POST` | Admin | Executes bulk actions (`addAlbums`, `removeAlbums`, `addTags`, `removeTags`, `delete`). |
+| `/api/admin/albums` | `POST` / `PUT` / `DELETE` | Admin | Creates, renames, or deletes albums while preserving photos. |
+| `/api/admin/settings` | `GET` / `PUT` | Public / Admin | Reads public studio settings or updates configuration/theme. |
+| `/api/admin/metadata` | `GET` | Admin | Returns distinct lists of existing categories, tags, lenses, and cameras for auto-completion. |
 
 ---
 
 ## Photo Metadata Specification
 
-Every photograph in Lumenist adheres to a strict, typed schema. Lumenist automatically parses **EXIF, XMP, GPS, and image headers** during ingestion and web upload, merging technical camera data with your curated narratives.
+Every photograph in Lumenist adheres to a strict, typed TypeScript schema (`src/types/photo.ts`):
 
 ```typescript
 export interface Photo {
@@ -323,7 +327,7 @@ export interface Photo {
 
   // Physical Craft & Support (Curated / Companion Metadata)
   film: string;                 // "Digital" (auto-detected from EXIF) or film stock ("Fuji Velvia 50", "Kodak Tri-X")
-  tripod: string;               // e.g. "Manfrotto 055 Carbon Fiber, Arca-Swiss Monoball" (Not recorded in EXIF)
+  tripod: string;               // e.g. "Gitzo GT3543LS Systematic, Really Right Stuff BH-55"
 
   // Geospatial Coordinates (Derived from EXIF GPS or picked via Admin Map)
   latitude: number | null;      // Decimal latitude (e.g. 35.5312)
@@ -341,24 +345,40 @@ export interface Photo {
 }
 ```
 
-### EXIF-Derived vs. Curated Breakdown
+---
 
-| Field | Source | Details |
-| :--- | :--- | :--- |
-| **Camera** | **EXIF** | Read from `Make` and `Model` tags, normalized (e.g., removing redundant vendor prefixes). |
-| **Lens** | **EXIF** | Read from `LensModel` or `Lens` EXIF/XMP tags. |
-| **Focal Length** | **EXIF** | Read from `FocalLength` tag in millimeters. |
-| **Shutter Speed** | **EXIF** | Read from `ExposureTime`, formatted as fractional seconds (e.g. `1/125 s`) or whole seconds (e.g. `2.5 s`). |
-| **Aperture** | **EXIF** | Read from `FNumber` tag (e.g. `f/8`, `f/11`). |
-| **ISO** | **EXIF** | Read from `ISO` or `PhotographicSensitivity`. |
-| **Exposure Bias** | **EXIF** | Read from `ExposureCompensation` (e.g. `0 EV`, `+0.7 EV`, `-1.0 EV`). |
-| **White Balance** | **EXIF / XMP** | Kelvin color temperature and tint (e.g. `5200K +4`) when present in camera maker-notes/XMP, falling back to standard EXIF white balance setting (`Auto` / `Daylight`). |
-| **Date & Time** | **EXIF** | Extracted from `DateTimeOriginal` or `CreateDate`. Also used to automatically generate the photo ID (`dYYYYMMDDHHMMSS`) if no manual ID is specified. |
-| **GPS Coordinates**| **EXIF / Map** | Read from GPS IFD tags (`GPSLatitude`, `GPSLongitude`). Can also be assigned or refined using the visual map pin picker in `/admin`. |
-| **Geometry** | **Image Headers** | Exact pixel width, height, aspect ratio, and orientation calculated directly from the image file to reserve layout space and prevent Cumulative Layout Shift (CLS). |
-| **Capture Medium** | **EXIF / Curated** | Defaulted to `"Digital"` when digital camera EXIF is detected. For analog film scans, can be set to the specific film emulsion (e.g. `Fuji Velvia 50`, `Kodak Tri-X 400`, `Provia 100F`). |
-| **Tripod & Support**| **Curated** | Camera EXIF does not record support gear. Configured via `.txt` companion files or selected from the quick-pick gear dropdown in `/admin`. |
-| **Narrative & Title**| **Curated** | Title, multi-paragraph story, gallery categories, keywords/tags, and order availability are managed via companion `.txt` metadata files or the `/admin` editor. |
+## Project Structure
+
+```
+lumenist/
+├── data/                      # Persistent JSON catalog (git-ignored)
+│   ├── photos.json            # Unified photo metadata archive
+│   ├── settings.json          # Studio and theme settings
+│   └── auth.json              # Hashed admin credentials
+├── public/
+│   ├── photos/                # Symlink or folder for full-res master photos
+│   └── favicon.ico            # Site favicon
+├── scripts/
+│   ├── import-photos.ts       # CLI ingestion for images and .txt metadata
+│   ├── precache-thumbnails.js # Pre-caches WebP thumbnails across widths
+│   └── test-parser.ts         # Test suite for metadata companion parser
+├── src/
+│   ├── app/                   # Next.js 15 App Router
+│   │   ├── layout.tsx         # Root layout with dynamic theme CSS variables
+│   │   ├── page.tsx           # Home page: Hero slideshow + Curated galleries
+│   │   ├── admin/             # Web Admin suite (/admin, /admin/upload)
+│   │   ├── api/               # API routes (auth, albums, metadata, photos, bulk, thumbnails)
+│   │   ├── galleries/         # Curated gallery exhibition views ([category]/page.tsx)
+│   │   ├── photo/[id]/        # Individual photo showcase, lightroom, & technical drawer
+│   │   ├── explore/           # Search, multi-category pills, and year timeline
+│   │   ├── map/               # Global photography map with multi-layer raster/vector tiles
+│   │   └── about/             # Artist statement & bio
+│   ├── components/            # Reusable UI components (Leaflet maps, Hero, Lightbox, etc.)
+│   ├── config/                # Site defaults and navigation configuration
+│   ├── lib/                   # Photos parser, auth helpers, settings engine, EXIF utilities
+│   └── types/                 # TypeScript interfaces (Photo, Settings, EXIF)
+└── tailwind.config.ts         # Tailwind design system with semantic CSS variables
+```
 
 ---
 
