@@ -52,7 +52,7 @@ export function getPhotosByCategory(category: string): Photo[] {
   }
   decoded = decoded.toLowerCase();
   
-  if (decoded === "all") {
+  if (decoded === "all" || decoded === "all photographs") {
     return photos;
   }
 
@@ -118,12 +118,13 @@ export function getAllCategories(): CategorySummary[] {
 
   const categoryList: CategorySummary[] = [
     {
-      name: "All Photographs",
+      name: "All",
       slug: "All",
       count: photos.length,
       coverPhoto: allCover,
     },
     ...Array.from(catMap.entries())
+      .filter(([name]) => name.trim().toLowerCase() !== "all")
       .map(([name, catPhotos]) => ({
         name,
         slug: encodeURIComponent(name),

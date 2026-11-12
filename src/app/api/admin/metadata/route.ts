@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAllPhotos } from "@/lib/photos";
+import { getCustomAlbums } from "@/lib/adminCatalog";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,9 @@ export async function GET() {
 
   // Aggregate alphabetical albums / categories
   const categorySet = new Set<string>();
+  getCustomAlbums().forEach((a) => {
+    if (a && a.toLowerCase() !== "all") categorySet.add(a.trim());
+  });
   const tagCounts: Record<string, number> = {};
   const tripodSet = new Set<string>();
 

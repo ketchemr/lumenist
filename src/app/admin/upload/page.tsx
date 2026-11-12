@@ -137,6 +137,9 @@ export default function AdminUploadPage() {
     count: number;
   } | null>(null);
   const [isDeletingAlbum, setIsDeletingAlbum] = useState(false);
+  const [isCreateAlbumOpen, setIsCreateAlbumOpen] = useState(false);
+  const [newAlbumName, setNewAlbumName] = useState("");
+  const [isCreatingAlbum, setIsCreatingAlbum] = useState(false);
 
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -385,6 +388,46 @@ export default function AdminUploadPage() {
     }
   };
 
+  const handleCreateAlbum = async () => {
+    if (!newAlbumName.trim()) return;
+
+    setIsCreatingAlbum(true);
+    setAlbumActionMsg(null);
+    try {
+      const res = await fetch("/api/admin/albums", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          name: newAlbumName.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create album");
+      }
+      setAlbumActionMsg({
+        type: "success",
+        text:
+          data.message ||
+          `Album "${newAlbumName.trim()}" created successfully.`,
+      });
+      setNewAlbumName("");
+      setIsCreateAlbumOpen(false);
+      await Promise.all([
+        loadAlbums(),
+        loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize),
+      ]);
+    } catch (err: any) {
+      setAlbumActionMsg({
+        type: "error",
+        text: err.message || "An error occurred while creating the album.",
+      });
+    } finally {
+      setIsCreatingAlbum(false);
+    }
+  };
+
   useEffect(() => {
     if ((activeTab === "manage" || activeTab === "albums") && isAuthenticated) {
       loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
@@ -459,8 +502,8 @@ export default function AdminUploadPage() {
       };
 
       if (activeBulkModal === "addAlbum") {
-        const finalAlbum = bulkCustomAlbum.trim() || bulkAlbumChoice.trim();
-        if (!finalAlbum) throw new Error("Please specify an album name");
+        const finalAlbum = bulkAlbumChoice.trim() || availableAlbums[0];
+        if (!finalAlbum) throw new Error("Please select an album");
         body.album = finalAlbum;
       } else if (activeBulkModal === "removeAlbum") {
         if (!bulkAlbumChoice.trim()) {
@@ -1859,8 +1902,8 @@ export default function AdminUploadPage() {
               >
                 <option value="all">All Albums ({catalogTotal})</option>
                 {unassignedPhotoCount > 0 && (
-                  <option value="__unassigned__">
-                    Unassigned / No Album ({unassignedPhotoCount})
+                  <option value="__only_all__">
+                    Only in &quot;All&quot; ({unassignedPhotoCount})
                   </option>
                 )}
                 {availableAlbums.map((alb) => (
@@ -2344,7 +2387,6 @@ export default function AdminUploadPage() {
                       value={bulkAlbumChoice}
                       onChange={(e) => {
                         setBulkAlbumChoice(e.target.value);
-                        setBulkCustomAlbum("");
                       }}
                       className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent cursor-pointer"
                     >
@@ -2354,19 +2396,9 @@ export default function AdminUploadPage() {
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-foreground font-medium mb-1.5">
-                      Or Create New Album Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Blue Ridge Parkway"
-                      value={bulkCustomAlbum}
-                      onChange={(e) => setBulkCustomAlbum(e.target.value)}
-                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent"
-                    />
+                    <p className="text-[11px] text-muted mt-1.5">
+                      To create a new album, use the Create Album action on the Albums tab.
+                    </p>
                   </div>
                 </div>
 
@@ -2778,10 +2810,12 @@ export default function AdminUploadPage() {
           {editingPhotoID && (
             <EditPhotoModal
               photoID={editingPhotoID}
+              availableAlbums={availableAlbums}
               isOpen={!!editingPhotoID}
               onClose={() => setEditingPhotoID(null)}
               onSaved={() => {
                 loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
+                loadAlbums();
               }}
             />
           )}
@@ -2818,6 +2852,31 @@ export default function AdminUploadPage() {
               </button>
             </div>
           )}
+
+          {/* Header Action Bar: Title + Create Album Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface border border-surface-border p-4 rounded-sm">
+            <div>
+              <h2 className="text-sm font-medium text-foreground tracking-tight flex items-center space-x-2">
+                <Folder className="w-4 h-4 text-accent" />
+                <span>Albums &amp; Curated Collections</span>
+              </h2>
+              <p className="text-xs text-muted mt-0.5">
+                Create new albums, rename existing labels, or delete album categories.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setNewAlbumName("");
+                setIsCreateAlbumOpen(true);
+              }}
+              className="px-3.5 py-1.5 bg-accent text-accent-contrast font-medium rounded text-xs hover:bg-accent-light flex items-center space-x-1.5 cursor-pointer shadow-sm self-start sm:self-auto transition-colors"
+              title="Create a new album"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create New Album</span>
+            </button>
+          </div>
 
           {/* Album Overview Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2865,18 +2924,18 @@ export default function AdminUploadPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setCatalogAlbumFilter("__unassigned__");
+                  setCatalogAlbumFilter("__only_all__");
                   setCatalogPage(1);
                   setActiveTab("manage");
                 }}
-                className="bg-surface hover:bg-surface-hover border border-amber-500/40 hover:border-amber-400 p-4 rounded-sm text-left transition-all group cursor-pointer shadow-sm flex flex-col justify-between"
-                title="Click to open Manage & Delete Photographs with unassigned images shown"
+                className="bg-surface hover:bg-surface-hover border border-amber-500/50 hover:border-amber-400 p-4 rounded-sm text-left transition-all group cursor-pointer shadow-sm flex flex-col justify-between"
+                title="Click to view photographs only in 'All' in Manage & Delete Photographs"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-amber-400 font-medium uppercase tracking-wider flex items-center space-x-1.5">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Unassigned Works</span>
+                      <span>Only in &quot;All&quot;</span>
                     </span>
                     <span className="text-xs text-accent group-hover:translate-x-0.5 transition-transform flex items-center space-x-1 font-medium">
                       <span>Manage &rarr;</span>
@@ -2887,21 +2946,21 @@ export default function AdminUploadPage() {
                   </div>
                 </div>
                 <p className="text-[11px] text-muted group-hover:text-foreground/80 mt-1 transition-colors">
-                  Click to open Manage &amp; Delete filtered to unassigned photos
+                  Click to open Manage filtered to photos only in &quot;All&quot;
                 </p>
               </button>
             ) : (
               <div className="bg-surface border border-surface-border p-4 rounded-sm flex flex-col justify-between">
                 <div>
                   <div className="text-xs text-muted uppercase tracking-wider">
-                    Unassigned Works
+                    Only in &quot;All&quot;
                   </div>
                   <div className="text-2xl font-light text-foreground mt-1">
                     0
                   </div>
                 </div>
                 <p className="text-[11px] text-muted mt-1">
-                  All photographs are currently assigned to albums
+                  All photographs are currently assigned to curated albums
                 </p>
               </div>
             )}
@@ -3163,6 +3222,78 @@ export default function AdminUploadPage() {
                     className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded text-xs disabled:opacity-50 cursor-pointer"
                   >
                     {isDeletingAlbum ? "Deleting Album..." : "Delete Album"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create Album Modal */}
+          {isCreateAlbumOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-surface border border-surface-border max-w-md w-full p-6 rounded-sm space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-surface-border pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Plus className="w-4 h-4 text-accent" />
+                    <h3 className="text-sm font-medium text-foreground">
+                      Create New Album
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isCreatingAlbum) setIsCreateAlbumOpen(false);
+                    }}
+                    className="text-muted hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted block">
+                      Album Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={newAlbumName}
+                      onChange={(e) => setNewAlbumName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          !isCreatingAlbum &&
+                          newAlbumName.trim()
+                        ) {
+                          handleCreateAlbum();
+                        }
+                      }}
+                      autoFocus
+                      placeholder="e.g. Wildlife, Forests, Reflections..."
+                      className="w-full px-3 py-2 bg-surface-hover border border-surface-border rounded text-xs text-foreground focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted">
+                    This creates an album in your catalog. You can then assign photographs to it when uploading or editing photographs.
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-surface-border">
+                  <button
+                    type="button"
+                    disabled={isCreatingAlbum}
+                    onClick={() => setIsCreateAlbumOpen(false)}
+                    className="px-3 py-1.5 bg-surface-hover text-muted hover:text-foreground rounded text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isCreatingAlbum || !newAlbumName.trim()}
+                    onClick={handleCreateAlbum}
+                    className="px-4 py-1.5 bg-accent text-accent-contrast font-medium rounded text-xs hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isCreatingAlbum ? "Creating..." : "Create Album"}
                   </button>
                 </div>
               </div>

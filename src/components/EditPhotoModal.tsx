@@ -27,6 +27,7 @@ import {
 interface EditPhotoModalProps {
   photoID: string;
   initialPhoto?: Photo | null;
+  availableAlbums?: string[];
   isOpen: boolean;
   onClose: () => void;
   onSaved?: (updatedPhoto: Photo) => void;
@@ -35,6 +36,7 @@ interface EditPhotoModalProps {
 export function EditPhotoModal({
   photoID,
   initialPhoto,
+  availableAlbums,
   isOpen,
   onClose,
   onSaved,
@@ -48,7 +50,10 @@ export function EditPhotoModal({
   // Form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [albumsInput, setAlbumsInput] = useState("");
+  const [selectedAlbums, setSelectedAlbums] = useState<string[]>([]);
+  const [existingAlbums, setExistingAlbums] = useState<string[]>(
+    availableAlbums || []
+  );
   const [tagsInput, setTagsInput] = useState("");
   const [tripod, setTripod] = useState("");
   const [availability, setAvailability] = useState("Available for Order");
@@ -85,7 +90,11 @@ export function EditPhotoModal({
     setPhoto(p);
     setTitle(p.title || "");
     setDescription(p.description || "");
-    setAlbumsInput((p.categories || []).join(", "));
+    setSelectedAlbums(
+      (p.categories || []).filter(
+        (c) => c && c.trim() && c.trim().toLowerCase() !== "all"
+      )
+    );
     setTagsInput((p.keywords || []).join(", "));
     setTripod(p.tripod || "None");
     setAvailability(p.availability || "Available for Order");
@@ -117,6 +126,19 @@ export function EditPhotoModal({
     setSuccessMessage("");
     setReplacementFile(null);
     setReplacementPreview(null);
+
+    if (availableAlbums && availableAlbums.length > 0) {
+      setExistingAlbums(availableAlbums);
+    } else {
+      fetch("/api/admin/metadata")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.albums) {
+            setExistingAlbums(data.albums);
+          }
+        })
+        .catch(() => {});
+    }
 
     if (initialPhoto && initialPhoto.photoID === photoID) {
       populateFields(initialPhoto);
@@ -234,7 +256,7 @@ export function EditPhotoModal({
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
-      formData.append("albums", albumsInput);
+      formData.append("albums", selectedAlbums.join(", "));
       formData.append("tags", tagsInput);
       formData.append("tripod", tripod);
       formData.append("availability", availability);
@@ -541,18 +563,69 @@ export function EditPhotoModal({
           </div>
 
           {/* Section: Albums & Tags */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface border border-surface-border p-4 rounded-sm">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-foreground">
-                Albums / Categories (comma-separated)
-              </label>
-              <input
-                type="text"
-                value={albumsInput}
-                onChange={(e) => setAlbumsInput(e.target.value)}
-                placeholder="e.g. Mountains, Fall Color, Trails"
-                className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
-              />
+          <div className="space-y-4 bg-surface border border-surface-border p-4 rounded-sm">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-foreground">
+                  Curated Albums ({selectedAlbums.length} selected)
+                </label>
+                <span className="text-[11px] text-muted">
+                  Select from existing albums
+                </span>
+              </div>
+
+              {/* Existing albums pill grid */}
+              <div className="p-3 bg-surface-hover/50 border border-surface-border rounded max-h-44 overflow-y-auto">
+                {existingAlbums.length === 0 ? (
+                  <p className="text-xs text-muted">Loading albums...</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {existingAlbums.map((alb) => {
+                      const isSelected = selectedAlbums.some(
+                        (a) => a.toLowerCase() === alb.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={alb}
+                          type="button"
+                          onClick={() => {
+                            setSelectedAlbums((prev) =>
+                              prev.some((a) => a.toLowerCase() === alb.toLowerCase())
+                                ? prev.filter((a) => a.toLowerCase() !== alb.toLowerCase())
+                                : [...prev, alb]
+                            );
+                          }}
+                          className={`px-2.5 py-1 rounded text-xs transition-all flex items-center space-x-1.5 cursor-pointer border ${
+                            isSelected
+                              ? "bg-accent text-accent-contrast border-accent font-medium shadow-sm"
+                              : "bg-surface text-muted hover:text-foreground border-surface-border hover:border-accent/40"
+                          }`}
+                        >
+                          <Folder className="w-3 h-3 flex-shrink-0" />
+                          <span>{alb}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {selectedAlbums.length === 0 ? (
+                <p className="text-[11px] text-muted italic">
+                  ℹ No curated album selected. This photograph will only appear in <strong>All Photographs</strong>.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1 items-center text-[11px] text-muted">
+                  <span>Assigned:</span>
+                  {selectedAlbums
+                    .map((a) => (
+                      <span key={a} className="text-foreground font-medium">
+                        {a}
+                      </span>
+                    ))
+                    .reduce((prev, curr) => [prev, ", ", curr] as any)}
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">

@@ -126,3 +126,45 @@ export function updateTxtFileMetadata(
     return false;
   }
 }
+
+export function isPhotoOnlyInAll(photo: { categories?: string[] }): boolean {
+  if (!photo.categories || photo.categories.length === 0) return true;
+  const nonAll = photo.categories.filter(
+    (c) => c && c.trim() && c.trim().toLowerCase() !== "all"
+  );
+  return nonAll.length === 0;
+}
+
+export function getCustomAlbums(): string[] {
+  const albumsFile = path.join(process.cwd(), "data", "albums.json");
+  if (!fs.existsSync(albumsFile)) return [];
+  try {
+    const list = JSON.parse(fs.readFileSync(albumsFile, "utf-8"));
+    if (Array.isArray(list)) {
+      return list.filter(
+        (a) =>
+          typeof a === "string" &&
+          a.trim() &&
+          a.trim().toLowerCase() !== "all"
+      );
+    }
+  } catch {}
+  return [];
+}
+
+export function saveCustomAlbums(albums: string[]): void {
+  const albumsFile = path.join(process.cwd(), "data", "albums.json");
+  const unique = Array.from(
+    new Set(
+      albums
+        .map((a) => (typeof a === "string" ? a.trim() : ""))
+        .filter((a) => a && a.toLowerCase() !== "all")
+    )
+  );
+  unique.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  const dir = path.dirname(albumsFile);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(albumsFile, JSON.stringify(unique, null, 2), "utf-8");
+}

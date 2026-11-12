@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllPhotos } from "@/lib/photos";
 import { isAuthenticatedAdmin } from "@/lib/auth";
+import { isPhotoOnlyInAll, getCustomAlbums } from "@/lib/adminCatalog";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +21,25 @@ export async function GET(req: NextRequest) {
 
   const allPhotos = getAllPhotos();
 
-  // Extract all unique albums across all photos for filtering dropdown
+  // Extract all unique albums across all photos + custom albums
   const albumSet = new Set<string>();
-  let unassignedCount = 0;
+  getCustomAlbums().forEach((a) => {
+    if (a && a.toLowerCase() !== "all") albumSet.add(a.trim());
+  });
+
+  let onlyInAllCount = 0;
   allPhotos.forEach((p) => {
-    const cats = (p.categories || []).filter((c) => c && c.trim());
-    if (cats.length === 0) {
-      unassignedCount++;
+    if (isPhotoOnlyInAll(p)) {
+      onlyInAllCount++;
     } else {
-      cats.forEach((c) => albumSet.add(c.trim()));
+      (p.categories || []).forEach((c) => {
+        if (c && c.trim() && c.trim().toLowerCase() !== "all") {
+          albumSet.add(c.trim());
+        }
+      });
     }
   });
+
   const allAlbums = Array.from(albumSet).sort((a, b) =>
     a.localeCompare(b, undefined, { sensitivity: "base" })
   );
@@ -39,8 +48,8 @@ export async function GET(req: NextRequest) {
 
   // Filter by album if specified
   if (albumFilter && albumFilter !== "all") {
-    if (albumFilter === "__unassigned__") {
-      results = results.filter((p) => !p.categories || p.categories.length === 0);
+    if (albumFilter === "__unassigned__" || albumFilter === "__only_all__") {
+      results = results.filter((p) => isPhotoOnlyInAll(p));
     } else {
       results = results.filter((p) =>
         p.categories?.some((c) => c.toLowerCase() === albumFilter)
@@ -85,6 +94,7 @@ export async function GET(req: NextRequest) {
     totalPages,
     photos,
     allAlbums,
-    unassignedCount,
+    unassignedCount: onlyInAllCount,
+    onlyInAllCount,
   });
 }

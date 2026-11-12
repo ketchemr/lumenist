@@ -7,6 +7,9 @@ import {
   resolvePhotosDir,
   findTxtPath,
   updateTxtFileMetadata,
+  isPhotoOnlyInAll,
+  getCustomAlbums,
+  saveCustomAlbums,
 } from "@/lib/adminCatalog";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +26,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         albums: [],
         unassignedCount: 0,
+        onlyInAllCount: 0,
         totalPhotos: 0,
       });
     }
@@ -34,14 +38,28 @@ export async function GET(req: NextRequest) {
       catalog = [];
     }
 
+    const customAlbums = getCustomAlbums();
     const albumMap = new Map<string, { count: number; photos: Photo[] }>();
-    let unassignedCount = 0;
+
+    // Seed any explicitly created custom albums even before photos are assigned
+    for (const alb of customAlbums) {
+      const trimmed = alb.trim();
+      if (trimmed && trimmed.toLowerCase() !== "all") {
+        if (!albumMap.has(trimmed)) {
+          albumMap.set(trimmed, { count: 0, photos: [] });
+        }
+      }
+    }
+
+    let onlyInAllCount = 0;
 
     for (const photo of catalog) {
-      const cats = (photo.categories || []).filter((c) => c && c.trim());
-      if (cats.length === 0) {
-        unassignedCount++;
+      if (isPhotoOnlyInAll(photo)) {
+        onlyInAllCount++;
       } else {
+        const cats = (photo.categories || []).filter(
+          (c) => c && c.trim() && c.trim().toLowerCase() !== "all"
+        );
         for (const cat of cats) {
           const trimmed = cat.trim();
           if (!albumMap.has(trimmed)) {
@@ -58,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     const albums = Array.from(albumMap.entries())
       .map(([name, data]) => {
-        // Pick a nice cover photo
+        // Pick a nice cover photo if available
         const cover = data.photos[0];
         return {
           name,
@@ -78,7 +96,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       albums,
-      unassignedCount,
+      unassignedCount: onlyInAllCount,
+      onlyInAllCount,
       totalPhotos: catalog.length,
     });
   } catch (err: any) {
@@ -112,6 +131,48 @@ export async function POST(req: NextRequest) {
     }
 
     const photosRoot = resolvePhotosDir();
+
+    // 0. CREATE ALBUM
+    if (action === "create") {
+      const name = (body.name || "").trim();
+      if (!name) {
+        return NextResponse.json(
+          { error: "Album name is required" },
+          { status: 400 }
+        );
+      }
+      if (name.toLowerCase() === "all") {
+        return NextResponse.json(
+          { error: "Cannot use reserved collection name 'All'" },
+          { status: 400 }
+        );
+      }
+
+      // Check existing albums in catalog and custom albums
+      const customAlbums = getCustomAlbums();
+      const existingInCatalog = catalog.some((p) =>
+        (p.categories || []).some((c) => c.toLowerCase() === name.toLowerCase())
+      );
+      const existingInCustom = customAlbums.some(
+        (a) => a.toLowerCase() === name.toLowerCase()
+      );
+
+      if (existingInCatalog || existingInCustom) {
+        return NextResponse.json(
+          { error: `Album "${name}" already exists` },
+          { status: 400 }
+        );
+      }
+
+      saveCustomAlbums([...customAlbums, name]);
+
+      return NextResponse.json({
+        success: true,
+        action: "create",
+        name,
+        message: `Album "${name}" created successfully. You can now assign photographs to it.`,
+      });
+    }
 
     // 1. RENAME ALBUM
     if (action === "rename") {
@@ -181,6 +242,13 @@ export async function POST(req: NextRequest) {
 
       fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
 
+      // Update in custom albums
+      const customAlbums = getCustomAlbums();
+      const updatedCustom = customAlbums.map((a) =>
+        a.toLowerCase() === lowerOld ? newName : a
+      );
+      saveCustomAlbums(updatedCustom);
+
       return NextResponse.json({
         success: true,
         action: "rename",
@@ -233,6 +301,13 @@ export async function POST(req: NextRequest) {
       }
 
       fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
+
+      // Remove from custom albums
+      const customAlbums = getCustomAlbums();
+      const updatedCustom = customAlbums.filter(
+        (a) => a.toLowerCase() !== lowerName
+      );
+      saveCustomAlbums(updatedCustom);
 
       return NextResponse.json({
         success: true,
