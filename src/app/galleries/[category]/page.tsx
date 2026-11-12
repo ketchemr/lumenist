@@ -95,11 +95,11 @@ export default async function CategoryPage({
         <div className="flex items-center justify-between">
           <Breadcrumbs
             items={[
-              { label: "Galleries", href: "/galleries" },
+              { label: "Home", href: "/" },
               { label: title },
             ]}
           />
-          <BackButton fallback="/galleries" label="Back" />
+          <BackButton fallback="/" label="Back" />
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>

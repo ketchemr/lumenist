@@ -36,12 +36,19 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
       {/* Top Navigation & Breadcrumb Trail */}
       <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
         <div className="flex items-center space-x-3">
-          <BackButton fallback="/galleries" label="Back to Gallery" />
+          <BackButton
+            fallback={
+              photo.categories[0]
+                ? `/galleries/${encodeURIComponent(photo.categories[0])}`
+                : "/"
+            }
+            label="Back to Gallery"
+          />
           <span className="text-gray-700 hidden sm:inline">|</span>
           <div className="hidden sm:block">
             <Breadcrumbs
               items={[
-                { label: "Galleries", href: "/galleries" },
+                { label: "Home", href: "/" },
                 ...(photo.categories[0]
                   ? [
                       {

@@ -10,7 +10,7 @@ interface BackButtonProps {
 }
 
 export function BackButton({
-  fallback = "/galleries",
+  fallback = "/",
   label = "Back",
   className = "",
 }: BackButtonProps) {

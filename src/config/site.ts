@@ -11,7 +11,7 @@ export const siteConfig: SiteConfig = {
     accentColor: "#9999FF",
   },
   navigation: [
-    { label: "Galleries", href: "/galleries" },
+    { label: "Home", href: "/" },
     { label: "Explore", href: "/explore" },
     { label: "Map", href: "/map" },
     { label: "About", href: "/about" },
