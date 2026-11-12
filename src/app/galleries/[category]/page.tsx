@@ -8,6 +8,8 @@ import { Folder, Images } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BackButton } from "@/components/BackButton";
 
+export const dynamic = "force-dynamic";
+
 interface CategoryPageProps {
   params: Promise<{
     category: string;

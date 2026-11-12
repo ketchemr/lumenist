@@ -9,6 +9,8 @@ import { PhotoViewer } from "@/components/PhotoViewer";
 import { AdminPhotoControls } from "@/components/AdminPhotoControls";
 import { ChevronLeft, ChevronRight, Tag, Folder } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 interface PhotoPageProps {
   params: Promise<{
     id: string;
