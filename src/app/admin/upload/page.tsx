@@ -2833,43 +2833,78 @@ export default function AdminUploadPage() {
               </p>
             </div>
 
-            <div className="bg-surface border border-surface-border p-4 rounded-sm">
-              <div className="text-xs text-muted uppercase tracking-wider">
-                All Cataloged Works
+            <button
+              type="button"
+              onClick={() => {
+                setCatalogAlbumFilter("all");
+                setCatalogPage(1);
+                setActiveTab("manage");
+              }}
+              className="bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 p-4 rounded-sm text-left transition-all group cursor-pointer flex flex-col justify-between"
+              title="Click to view all photographs in Manage & Delete Photographs"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted uppercase tracking-wider">
+                    All Cataloged Works
+                  </span>
+                  <span className="text-xs text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all">
+                    &rarr;
+                  </span>
+                </div>
+                <div className="text-2xl font-light text-foreground mt-1">
+                  {catalogTotal > 0 ? catalogTotal : "—"}
+                </div>
               </div>
-              <div className="text-2xl font-light text-foreground mt-1">
-                {catalogTotal > 0 ? catalogTotal : "—"}
-              </div>
-              <p className="text-[11px] text-muted mt-1">
+              <p className="text-[11px] text-muted mt-1 group-hover:text-foreground/80 transition-colors">
                 Total fine art photographs in archive
               </p>
-            </div>
+            </button>
 
-            <div className="bg-surface border border-surface-border p-4 rounded-sm">
-              <div className="text-xs text-muted uppercase tracking-wider">
-                Unassigned Works
+            {unassignedPhotoCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCatalogAlbumFilter("__unassigned__");
+                  setCatalogPage(1);
+                  setActiveTab("manage");
+                }}
+                className="bg-surface hover:bg-surface-hover border border-amber-500/40 hover:border-amber-400 p-4 rounded-sm text-left transition-all group cursor-pointer shadow-sm flex flex-col justify-between"
+                title="Click to open Manage & Delete Photographs with unassigned images shown"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-amber-400 font-medium uppercase tracking-wider flex items-center space-x-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Unassigned Works</span>
+                    </span>
+                    <span className="text-xs text-accent group-hover:translate-x-0.5 transition-transform flex items-center space-x-1 font-medium">
+                      <span>Manage &rarr;</span>
+                    </span>
+                  </div>
+                  <div className="text-2xl font-light text-foreground mt-1">
+                    {unassignedPhotoCount}
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted group-hover:text-foreground/80 mt-1 transition-colors">
+                  Click to open Manage &amp; Delete filtered to unassigned photos
+                </p>
+              </button>
+            ) : (
+              <div className="bg-surface border border-surface-border p-4 rounded-sm flex flex-col justify-between">
+                <div>
+                  <div className="text-xs text-muted uppercase tracking-wider">
+                    Unassigned Works
+                  </div>
+                  <div className="text-2xl font-light text-foreground mt-1">
+                    0
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted mt-1">
+                  All photographs are currently assigned to albums
+                </p>
               </div>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="text-2xl font-light text-foreground">
-                  {unassignedPhotoCount}
-                </span>
-                {unassignedPhotoCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogAlbumFilter("__unassigned__");
-                      setActiveTab("manage");
-                    }}
-                    className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
-                  >
-                    <span>Filter in Manage &rarr;</span>
-                  </button>
-                )}
-              </div>
-              <p className="text-[11px] text-muted mt-1">
-                Photographs with no album label (viewable in All)
-              </p>
-            </div>
+            )}
           </div>
 
           {/* Explanation Banner */}
