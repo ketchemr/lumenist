@@ -2885,7 +2885,7 @@ export default function AdminUploadPage() {
                 Curated Albums
               </div>
               <div className="text-2xl font-light text-foreground mt-1">
-                {adminAlbums.length}
+                {adminAlbums.filter((a) => a.name.toLowerCase() !== "all").length}
               </div>
               <p className="text-[11px] text-muted mt-1">
                 Public gallery groupings
@@ -3022,11 +3022,20 @@ export default function AdminUploadPage() {
                   {/* Body & Actions */}
                   <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
                     <div>
-                      <h3 className="text-sm font-medium text-foreground tracking-tight line-clamp-1">
-                        {album.name}
-                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <h3 className="text-sm font-medium text-foreground tracking-tight line-clamp-1">
+                          {album.name}
+                        </h3>
+                        {album.name.toLowerCase() === "all" && (
+                          <span className="text-[10px] bg-accent/20 text-accent border border-accent/30 px-1.5 py-0.5 rounded font-normal">
+                            Complete Archive
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted mt-0.5">
-                        {album.count} photograph{album.count === 1 ? "" : "s"} assigned
+                        {album.name.toLowerCase() === "all"
+                          ? `Complete collection of all ${album.count} works`
+                          : `${album.count} photograph${album.count === 1 ? "" : "s"} assigned`}
                       </p>
                     </div>
 
@@ -3043,34 +3052,40 @@ export default function AdminUploadPage() {
                         <span>View</span>
                       </Link>
 
-                      <div className="flex items-center space-x-1.5">
-                        {/* Rename */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRenamingAlbum(album.name);
-                            setRenameNewName(album.name);
-                          }}
-                          className="px-2.5 py-1 bg-surface-hover hover:bg-surface-border text-foreground rounded text-[11px] flex items-center space-x-1 cursor-pointer transition-colors"
-                          title={`Rename album "${album.name}"`}
-                        >
-                          <Pencil className="w-3 h-3 text-muted" />
-                          <span>Rename</span>
-                        </button>
+                      {album.name.toLowerCase() === "all" ? (
+                        <span className="text-[11px] text-muted italic">
+                          Permanent Collection
+                        </span>
+                      ) : (
+                        <div className="flex items-center space-x-1.5">
+                          {/* Rename */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRenamingAlbum(album.name);
+                              setRenameNewName(album.name);
+                            }}
+                            className="px-2.5 py-1 bg-surface-hover hover:bg-surface-border text-foreground rounded text-[11px] flex items-center space-x-1 cursor-pointer transition-colors"
+                            title={`Rename album "${album.name}"`}
+                          >
+                            <Pencil className="w-3 h-3 text-muted" />
+                            <span>Rename</span>
+                          </button>
 
-                        {/* Delete */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeletingAlbum({ name: album.name, count: album.count });
-                          }}
-                          className="px-2.5 py-1 bg-surface-hover hover:bg-red-950/40 text-muted hover:text-red-400 hover:border-red-800/50 border border-transparent rounded text-[11px] flex items-center space-x-1 cursor-pointer transition-colors"
-                          title={`Delete album "${album.name}" (photos are preserved)`}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeletingAlbum({ name: album.name, count: album.count });
+                            }}
+                            className="px-2.5 py-1 bg-surface-hover hover:bg-red-950/40 text-muted hover:text-red-400 hover:border-red-800/50 border border-transparent rounded text-[11px] flex items-center space-x-1 cursor-pointer transition-colors"
+                            title={`Delete album "${album.name}" (photos are preserved)`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

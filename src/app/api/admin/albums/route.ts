@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const albums = Array.from(albumMap.entries())
+    const curatedAlbums = Array.from(albumMap.entries())
       .map(([name, data]) => {
         // Pick a nice cover photo if available
         const cover = data.photos[0];
@@ -93,6 +93,29 @@ export async function GET(req: NextRequest) {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+
+    // Pick a random cover photo for "All"
+    const randomAllPhoto =
+      catalog.length > 0
+        ? catalog[Math.floor(Math.random() * catalog.length)]
+        : undefined;
+
+    const allAlbum = {
+      name: "All",
+      slug: "All",
+      count: catalog.length,
+      isSystemArchive: true,
+      coverPhoto: randomAllPhoto
+        ? {
+            photoID: randomAllPhoto.photoID,
+            title: randomAllPhoto.title,
+            imageDesktop: randomAllPhoto.imageDesktop,
+            size: randomAllPhoto.size,
+          }
+        : undefined,
+    };
+
+    const albums = [allAlbum, ...curatedAlbums];
 
     return NextResponse.json({
       albums,
