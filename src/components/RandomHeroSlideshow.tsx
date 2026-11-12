@@ -11,10 +11,13 @@ import {
   Play,
   Camera,
 } from "lucide-react";
+import { WatermarkBadge } from "@/components/WatermarkBadge";
 
 interface RandomHeroSlideshowProps {
   photos: Photo[];
   intervalSeconds?: number;
+  showWatermark?: boolean;
+  copyrightNotice?: string;
 }
 
 interface SlideshowState {
@@ -25,6 +28,8 @@ interface SlideshowState {
 export function RandomHeroSlideshow({
   photos,
   intervalSeconds = 10,
+  showWatermark = false,
+  copyrightNotice = "© Randal R. Ketchem",
 }: RandomHeroSlideshowProps) {
   // Slideshow History: stores the exact chronological order of random slides shown
   const [state, setState] = useState<SlideshowState>({
@@ -190,25 +195,39 @@ export function RandomHeroSlideshow({
         <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center">
           <Link
             href={`/photo/${current.photoID}`}
-            className="w-full h-full flex items-center justify-center p-2"
+            className="w-full h-full flex items-center justify-center p-2 relative"
+            onContextMenu={(e) => e.preventDefault()}
           >
-            <img
-              src={current.imageDesktop}
-              alt={current.title}
-              key={current.photoID}
-              className={`max-w-full max-h-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 photo-frame ${
-                isTransitioning
-                  ? "opacity-20 scale-[0.99]"
-                  : "opacity-100 scale-100"
-              }`}
-            />
+            <div className="relative inline-flex items-center justify-center max-w-full max-h-full">
+              <img
+                src={current.imageDesktop}
+                alt={current.title}
+                key={current.photoID}
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                className={`max-h-[304px] sm:max-h-[404px] lg:max-h-[454px] max-w-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 photo-frame select-none pointer-events-none ${
+                  isTransitioning
+                    ? "opacity-20 scale-[0.99]"
+                    : "opacity-100 scale-100"
+                }`}
+              />
+              {/* Protection shield & Watermark overlay (Toggleable via Admin Settings) */}
+              <WatermarkBadge
+                show={showWatermark}
+                notice={copyrightNotice}
+                size="md"
+                withShield={true}
+              />
+            </div>
           </Link>
 
           {/* Navigation Controls: Prev/Next in slideshow history */}
-          <div className="absolute inset-y-0 left-0 flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 if (canGoPrev) advanceToPrev();
               }}
               disabled={!canGoPrev}
@@ -218,7 +237,7 @@ export function RandomHeroSlideshow({
                   ? "Previous photo you just saw"
                   : "At the start of slideshow history"
               }
-              className={`p-2 rounded-full border border-white/10 backdrop-blur-sm transition-all ${
+              className={`p-2 rounded-full border border-white/10 backdrop-blur-sm transition-all pointer-events-auto ${
                 canGoPrev
                   ? "bg-black/60 hover:bg-black/90 text-white cursor-pointer"
                   : "bg-black/30 text-white/30 cursor-not-allowed opacity-40"
@@ -228,15 +247,17 @@ export function RandomHeroSlideshow({
             </button>
           </div>
 
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-y-0 right-0 z-30 flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 advanceToNext();
               }}
               aria-label="Next random photo"
               title="Next photo"
-              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer"
+              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer pointer-events-auto"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

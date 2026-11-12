@@ -3,11 +3,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Photo } from "@/types/photo";
+import { WatermarkBadge } from "@/components/WatermarkBadge";
 
 interface JustifiedGalleryProps {
   photos: Photo[];
   targetRowHeight?: number;
   gap?: number;
+  showWatermark?: boolean;
+  copyrightNotice?: string;
 }
 
 interface CalculatedPhoto {
@@ -25,6 +28,8 @@ export function JustifiedGallery({
   photos,
   targetRowHeight = 210,
   gap = 8,
+  showWatermark = false,
+  copyrightNotice = "© Randal R. Ketchem",
 }: JustifiedGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Default to 1200px for SSR so initial HTML pre-renders real justified images
@@ -165,8 +170,9 @@ export function JustifiedGallery({
                   width: `${width}px`,
                   height: `${height}px`,
                 }}
-                className="relative block overflow-hidden group bg-black shrink-0 transition-transform duration-200 hover:z-10"
+                className="relative block overflow-hidden group bg-black shrink-0 transition-transform duration-200 hover:z-10 select-none"
                 title={`${photo.title} (${photo.dateTaken.year || ""})`}
+                onContextMenu={(e) => e.preventDefault()}
               >
                 {/* Full uncropped thumbnail served via Lanczos3 anti-aliasing thumbnailer in WebP with prioritized above-the-fold loading */}
                 <img
@@ -175,7 +181,17 @@ export function JustifiedGallery({
                   loading={rowIdx < 2 ? "eager" : "lazy"}
                   fetchPriority={rowIdx === 0 && photoIdx < 4 ? "high" : "auto"}
                   decoding="async"
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] select-none pointer-events-none"
+                />
+
+                {/* Copyright watermark badge & protection shield */}
+                <WatermarkBadge
+                  show={showWatermark}
+                  notice={copyrightNotice}
+                  size="sm"
+                  withShield={true}
                 />
 
                 {/* Subtle hover overlay with title */}

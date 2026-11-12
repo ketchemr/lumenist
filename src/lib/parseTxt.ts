@@ -179,7 +179,7 @@ export function parseTxtMetadata(content: string, fallbackId?: string, imageFile
     size,
 
     // Default paths based on standard structure
-    imageDesktop: `/photos/${year > 0 ? year : "general"}/${photoID}_desktop.jpg`,
+    imageDesktop: `/photos/${year > 0 ? year : "general"}/${photoID}.jpg`,
     rawFields: raw,
   };
 }

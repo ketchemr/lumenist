@@ -31,6 +31,7 @@ public/thumbnails/
 public/uploads/
 public/photos
 storage/
+*.zip
 
 # Logs
 npm-debug.log*
@@ -45,3 +46,4 @@ yarn-error.log*
 .vscode/
 *.swp
 *.swo
+*.log

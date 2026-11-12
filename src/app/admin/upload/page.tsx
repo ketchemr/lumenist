@@ -38,6 +38,7 @@ import {
   FolderPlus,
   Filter,
   Compass,
+  Columns2,
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import { EditPhotoModal } from "@/components/EditPhotoModal";
@@ -2979,6 +2980,58 @@ export default function AdminUploadPage() {
             </div>
           </div>
 
+          {/* Default Gallery & Album Presentation */}
+          <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
+            <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider border-b border-surface-border pb-3">
+              <Columns2 className="w-3.5 h-3.5 text-accent" />
+              <span>Default Album & Gallery Presentation</span>
+            </div>
+            <p className="text-xs text-muted">
+              Choose the initial layout presented to visitors. Visitors can also toggle between views at any time using the gallery toolbar.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                {
+                  id: "large",
+                  label: "Exhibition View (Recommended)",
+                  desc: "Large 2-column masonry layout with generous breathing room and editorial captions, modeled after fine-art landscape exhibitions.",
+                },
+                {
+                  id: "compact",
+                  label: "Grid / Index View",
+                  desc: "Compact justified contact sheet with 3–5 photos per row for rapid catalog scanning.",
+                },
+              ].map((opt) => {
+                const isSelected = (settings.defaultGalleryView || "large") === opt.id;
+                return (
+                  <button
+                    type="button"
+                    key={opt.id}
+                    onClick={() =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        defaultGalleryView: opt.id as any,
+                      }))
+                    }
+                    className={`p-4 rounded border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
+                    }`}
+                  >
+                    <span className="block text-xs font-medium text-foreground">
+                      {opt.label}
+                    </span>
+                    <span className="block text-[11px] text-muted pt-1">
+                      {opt.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Slideshow & Studio Identity */}
           <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
             <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider border-b border-surface-border pb-3">
@@ -3172,6 +3225,57 @@ export default function AdminUploadPage() {
                 <p className="text-[11px] text-muted">
                   Supports the <code className="text-accent">&#123;year&#125;</code> placeholder for current dynamic year.
                 </p>
+              </div>
+
+              {/* Photographic Copyright Overlay (On Images) */}
+              <div className="space-y-3 sm:col-span-2 pt-4 border-t border-surface-border">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5 pr-4">
+                    <label className="block text-xs font-medium text-foreground">
+                      Display Copyright Overlay on Images
+                    </label>
+                    <p className="text-[11px] text-muted">
+                      When enabled, an understated semi-transparent watermark badge appears in the bottom corner of photographs. When disabled, photos are displayed completely clean in fine-art gallery style. (Right-click and drag protection remain active regardless).
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={!!settings.showWatermarkOverlay}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          showWatermarkOverlay: e.target.checked,
+                        }))
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                  </label>
+                </div>
+
+                {settings.showWatermarkOverlay && (
+                  <div className="space-y-1.5 pt-2">
+                    <label className="block text-xs font-medium text-foreground">
+                      Watermark Badge Text
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. © Randal R. Ketchem"
+                      value={settings.copyrightOverlay || ""}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          copyrightOverlay: e.target.value,
+                        }))
+                      }
+                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                    />
+                    <p className="text-[11px] text-muted">
+                      Text displayed in the corner watermark badge.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">

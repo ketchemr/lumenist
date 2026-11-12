@@ -69,13 +69,19 @@ async function main() {
     for (const txtFile of txtFiles) {
       const filePath = path.join(subPath, txtFile);
       const baseName = path.parse(txtFile).name;
-      const imagePath = path.join(subPath, `${baseName}_desktop.jpg`);
+      let imagePath = path.join(subPath, `${baseName}.jpg`);
+      if (!fs.existsSync(imagePath)) {
+        imagePath = path.join(subPath, `${baseName}_desktop.jpg`);
+      }
       try {
         const content = fs.readFileSync(filePath, "utf-8");
         const photo = parseTxtMetadata(content, baseName, imagePath);
 
-        // Adjust desktop image path to preserve folder structure
-        photo.imageDesktop = `/photos/${sub}/${photo.photoID}_desktop.jpg`;
+        // Adjust image path to preserve folder structure
+        const imageFilename = fs.existsSync(path.join(subPath, `${baseName}.jpg`))
+          ? `${photo.photoID}.jpg`
+          : `${photo.photoID}_desktop.jpg`;
+        photo.imageDesktop = `/photos/${sub}/${imageFilename}`;
 
         // Automatically extract technical metadata from JPEG EXIF/XMP (overriding manual txt values)
         if (fs.existsSync(imagePath)) {

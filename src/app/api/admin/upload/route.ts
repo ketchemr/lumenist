@@ -187,8 +187,8 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(targetFolder, { recursive: true });
     }
 
-    // Save Desktop image (resize if > 2400px wide for optimal web delivery)
-    const desktopFilename = `${photoID}_desktop.jpg`;
+    // Save image (resize if > 2400px wide for optimal web delivery)
+    const desktopFilename = `${photoID}.jpg`;
     const targetImagePath = path.join(targetFolder, desktopFilename);
 
     if (width > 2400) {

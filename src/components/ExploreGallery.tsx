@@ -4,12 +4,16 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
+import { ExhibitionGallery } from "@/components/ExhibitionGallery";
 import { Pagination } from "@/components/Pagination";
-import { Search, Film, Tag, X, ChevronDown, ChevronUp } from "lucide-react";
+import { sortPhotos } from "@/lib/photoSort";
+import { Search, Film, Tag, X, ChevronDown, ChevronUp, Columns2, LayoutGrid, ArrowUpDown } from "lucide-react";
 
 interface ExploreGalleryProps {
   initialPhotos: Photo[];
   categories: { name: string; count: number }[];
+  showWatermark?: boolean;
+  copyrightNotice?: string;
 }
 
 function parseTagsFromParams(params: URLSearchParams): string[] {
@@ -29,7 +33,12 @@ function parseTagsFromParams(params: URLSearchParams): string[] {
   return tags;
 }
 
-export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProps) {
+export function ExploreGallery({
+  initialPhotos,
+  categories,
+  showWatermark = false,
+  copyrightNotice = "© Randal R. Ketchem",
+}: ExploreGalleryProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -50,7 +59,38 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
   );
   const [showAllTags, setShowAllTags] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"large" | "compact">("large");
+  const [photoSort, setPhotoSort] = useState<string>("date-desc");
   const pageSize = 48;
+
+  // Load persistent user preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lumenist_gallery_view");
+      if (saved === "compact" || saved === "large") {
+        setViewMode(saved);
+      }
+      const savedSort = localStorage.getItem("lumenist_preferred_sort");
+      if (savedSort) {
+        setPhotoSort(savedSort);
+      }
+    } catch {}
+  }, []);
+
+  const handleViewChange = (mode: "large" | "compact") => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem("lumenist_gallery_view", mode);
+    } catch {}
+  };
+
+  const handleSortChange = (newSort: string) => {
+    setPhotoSort(newSort);
+    setCurrentPage(1);
+    try {
+      localStorage.setItem("lumenist_preferred_sort", newSort);
+    } catch {}
+  };
 
   // Sync state when URL params change (e.g. from clicking photo tags or browser back/forward)
   useEffect(() => {
@@ -182,11 +222,15 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
     });
   }, [initialPhotos, searchQuery, selectedCategory, selectedTags, filmFilter]);
 
-  const totalPages = Math.ceil(filteredPhotos.length / pageSize);
+  const sortedPhotos = useMemo(() => {
+    return sortPhotos(filteredPhotos, photoSort);
+  }, [filteredPhotos, photoSort]);
+
+  const totalPages = Math.ceil(sortedPhotos.length / pageSize);
   const paginatedPhotos = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredPhotos.slice(start, start + pageSize);
-  }, [filteredPhotos, currentPage, pageSize]);
+    return sortedPhotos.slice(start, start + pageSize);
+  }, [sortedPhotos, currentPage, pageSize]);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
@@ -479,8 +523,8 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
         )}
       </div>
 
-      {/* Results Header with Active Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+      {/* Results Header with Active Filters & View Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted border-b border-surface-border/60 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <span>
             Showing <strong className="text-foreground font-medium">{filteredPhotos.length}</strong> photographs
@@ -501,23 +545,93 @@ export function ExploreGallery({ initialPhotos, categories }: ExploreGalleryProp
               </button>
             </span>
           ))}
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="text-accent hover:underline flex items-center space-x-1 ml-2"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear filters</span>
+            </button>
+          )}
         </div>
 
-        {hasActiveFilters && (
-          <button
-            onClick={clearAllFilters}
-            className="text-accent hover:underline flex items-center space-x-1"
+        <div className="flex items-center space-x-3 self-end sm:self-auto">
+          {/* User Sort Order Selector */}
+          <div className="flex items-center space-x-1.5 bg-surface border border-surface-border rounded-md px-2.5 py-1 shadow-xs">
+            <ArrowUpDown className="w-3.5 h-3.5 text-accent shrink-0" />
+            <select
+              value={photoSort}
+              onChange={(e) => handleSortChange(e.target.value)}
+              aria-label="Sort photographs by"
+              className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="date-desc" className="bg-surface text-foreground">Date (Newest First)</option>
+              <option value="date-asc" className="bg-surface text-foreground">Date (Oldest First)</option>
+              <option value="title-asc" className="bg-surface text-foreground">Title (A to Z)</option>
+              <option value="title-desc" className="bg-surface text-foreground">Title (Z to A)</option>
+              <option value="created-desc" className="bg-surface text-foreground">Recently Added</option>
+            </select>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div
+            role="group"
+            aria-label="Gallery display density"
+            className="inline-flex items-center bg-surface border border-surface-border rounded-md p-0.5 shadow-sm"
           >
-            <X className="w-3.5 h-3.5" />
-            <span>Clear all filters</span>
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={() => handleViewChange("large")}
+              aria-pressed={viewMode === "large"}
+              title="Exhibition View (Large 2-column presentation with breathing room)"
+              className={`inline-flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs transition-all cursor-pointer ${
+                viewMode === "large"
+                  ? "bg-surface-hover text-accent font-medium shadow-xs border border-surface-border/80"
+                  : "text-muted hover:text-foreground border border-transparent"
+              }`}
+            >
+              <Columns2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
+              <span className="hidden sm:inline">Exhibition</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleViewChange("compact")}
+              aria-pressed={viewMode === "compact"}
+              title="Grid View (Compact justified contact sheet)"
+              className={`inline-flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs transition-all cursor-pointer ${
+                viewMode === "compact"
+                  ? "bg-surface-hover text-accent font-medium shadow-xs border border-surface-border/80"
+                  : "text-muted hover:text-foreground border border-transparent"
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
+              <span className="hidden sm:inline">Grid</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Justified Flush Gallery */}
+      {/* Gallery Presentation */}
       {paginatedPhotos.length > 0 ? (
         <div className="space-y-6">
-          <JustifiedGallery photos={paginatedPhotos} targetRowHeight={210} gap={8} />
+          {viewMode === "large" ? (
+            <ExhibitionGallery
+              photos={paginatedPhotos}
+              gap={32}
+              showWatermark={showWatermark}
+              copyrightNotice={copyrightNotice}
+            />
+          ) : (
+            <JustifiedGallery
+              photos={paginatedPhotos}
+              targetRowHeight={210}
+              gap={8}
+              showWatermark={showWatermark}
+              copyrightNotice={copyrightNotice}
+            />
+          )}
 
           <Pagination
             currentPage={currentPage}

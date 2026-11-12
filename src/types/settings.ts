@@ -7,6 +7,7 @@ export interface SiteSettings {
   themeBorder: string; // e.g. "#262626"
   themeTextMode?: "auto" | "light" | "dark"; // auto (dynamic by background), light (dark text), dark (light text)
   defaultSortOrder: "date-desc" | "date-asc" | "created-desc" | "title-asc";
+  defaultGalleryView?: "large" | "compact"; // "large" (Exhibition 2-column) vs "compact" (Justified grid)
   slideshowInterval: number; // in seconds (e.g. 10)
   siteTitle: string;
   siteTagline: string;
@@ -20,6 +21,8 @@ export interface SiteSettings {
   gearList?: string[];
   supportGearList?: string[];
   copyrightText?: string;
+  copyrightOverlay?: string;
+  showWatermarkOverlay?: boolean;
 }
 
 export const THEME_PRESETS = [
@@ -154,6 +157,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   themeBorder: "#262626",
   themeTextMode: "auto",
   defaultSortOrder: "date-desc",
+  defaultGalleryView: "large",
   slideshowInterval: 10,
   siteTitle: "Fine Art Photography",
   siteTagline: "Landscape, Nature, and Fine Art Photography",
@@ -167,6 +171,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   gearList: [],
   supportGearList: [],
   copyrightText: "",
+  copyrightOverlay: "© Randal R. Ketchem",
+  showWatermarkOverlay: false,
 };
 
 export function isLightBackground(hex?: string): boolean {

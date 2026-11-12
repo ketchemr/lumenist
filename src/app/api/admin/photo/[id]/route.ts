@@ -132,7 +132,7 @@ export async function PUT(
       const aspectRatio = parseFloat((width / height).toFixed(3));
       updatedSize = { width, height, aspectRatio, orientation };
 
-      const desktopFilename = `${id}_desktop.jpg`;
+      const desktopFilename = `${id}.jpg`;
       const targetImagePath = path.join(targetFolder, desktopFilename);
 
       if (width > 2400) {

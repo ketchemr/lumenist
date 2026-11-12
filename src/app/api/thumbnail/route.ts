@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const src = searchParams.get("src");
   const widthStr = searchParams.get("w") || "600";
-  const width = Math.min(1200, Math.max(100, parseInt(widthStr, 10) || 600));
+  const width = Math.min(1600, Math.max(100, parseInt(widthStr, 10) || 600));
 
   if (!src) {
     return new NextResponse("Missing src parameter", { status: 400 });

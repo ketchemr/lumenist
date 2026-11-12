@@ -1,10 +1,17 @@
 import { Suspense } from "react";
 import { getAllPhotos, getAllCategories } from "@/lib/photos";
+import { getSettings } from "@/lib/settings";
 import { ExploreGallery } from "@/components/ExploreGallery";
+
+export const dynamic = "force-dynamic";
 
 export default function ExplorePage() {
   const photos = getAllPhotos();
   const categories = getAllCategories();
+  const settings = getSettings();
+  const copyrightNotice =
+    settings.copyrightOverlay ||
+    (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
 
   return (
     <div className="space-y-6">
@@ -24,7 +31,12 @@ export default function ExplorePage() {
           </div>
         }
       >
-        <ExploreGallery initialPhotos={photos} categories={categories} />
+        <ExploreGallery
+          initialPhotos={photos}
+          categories={categories}
+          showWatermark={settings.showWatermarkOverlay ?? false}
+          copyrightNotice={copyrightNotice}
+        />
       </Suspense>
     </div>
   );

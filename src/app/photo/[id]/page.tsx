@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPhotoById, getAdjacentPhotos } from "@/lib/photos";
+import { getSettings } from "@/lib/settings";
 import { TechnicalDetails } from "@/components/TechnicalDetails";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BackButton } from "@/components/BackButton";
@@ -23,6 +24,10 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
   }
 
   const { prev, next } = getAdjacentPhotos(photo.photoID);
+  const settings = getSettings();
+  const copyrightNotice =
+    settings.copyrightOverlay ||
+    (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto">
@@ -93,6 +98,8 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
         photo={photo}
         prevPhoto={prev || null}
         nextPhoto={next || null}
+        copyrightNotice={copyrightNotice}
+        showWatermark={settings.showWatermarkOverlay ?? false}
       />
 
       {/* Story & Narrative */}

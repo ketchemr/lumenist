@@ -269,3 +269,15 @@ html:has(.photo-theater) nav {
 .animate-progress-bar {
   animation: progressLinear linear forwards;
 }
+
+/* Photographic Protection Layer & Anti-Theft Guard */
+img, .photo-frame, .photo-frame img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

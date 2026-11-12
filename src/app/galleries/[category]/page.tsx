@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPhotosByCategory } from "@/lib/photos";
+import { getPhotosByCategory, sortPhotos } from "@/lib/photos";
+import { getSettings } from "@/lib/settings";
 import { PaginatedGallery } from "@/components/PaginatedGallery";
 import { Folder, Images } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -13,6 +14,7 @@ interface CategoryPageProps {
   }>;
   searchParams: Promise<{
     page?: string;
+    sort?: string;
   }>;
 }
 
@@ -55,15 +57,19 @@ export default async function CategoryPage({
   searchParams,
 }: CategoryPageProps) {
   const { category } = await params;
-  const { page } = await searchParams;
+  const { page, sort } = await searchParams;
 
   const decodedCategory = cleanCategoryString(category);
   const isAll = decodedCategory.toLowerCase() === "all";
-  const allCategoryPhotos = getPhotosByCategory(decodedCategory);
+  const rawPhotos = getPhotosByCategory(decodedCategory);
+  const settings = getSettings();
 
-  if (allCategoryPhotos.length === 0) {
+  if (rawPhotos.length === 0) {
     notFound();
   }
+
+  const activeSort = sort || settings.defaultSortOrder || "date-desc";
+  const allCategoryPhotos = sortPhotos(rawPhotos, activeSort);
 
   const title = isAll ? "All Photographs" : decodedCategory;
   const description = isAll
@@ -118,6 +124,13 @@ export default async function CategoryPage({
         totalPages={totalPages}
         totalItems={allCategoryPhotos.length}
         pageSize={pageSize}
+        defaultView={settings.defaultGalleryView || "large"}
+        currentSort={activeSort}
+        showWatermark={settings.showWatermarkOverlay ?? false}
+        copyrightNotice={
+          settings.copyrightOverlay ||
+          (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem")
+        }
         baseUrl={
           isAll
             ? "/galleries/All"
