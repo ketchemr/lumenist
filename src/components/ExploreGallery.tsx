@@ -7,7 +7,7 @@ import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { ExhibitionGallery } from "@/components/ExhibitionGallery";
 import { Pagination } from "@/components/Pagination";
 import { sortPhotos } from "@/lib/photoSort";
-import { Search, Film, Tag, X, ChevronDown, ChevronUp, Columns2, LayoutGrid, ArrowUpDown } from "lucide-react";
+import { Search, Film, Tag, Folder, X, ChevronDown, ChevronUp, Columns2, LayoutGrid, ArrowUpDown } from "lucide-react";
 
 interface ExploreGalleryProps {
   initialPhotos: Photo[];
@@ -54,9 +54,7 @@ export function ExploreGallery({
   const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">("All");
   const [tagSort, setTagSort] = useState<"alpha" | "count">("alpha");
   const [tagSearch, setTagSearch] = useState("");
-  const [showTagCloud, setShowTagCloud] = useState(() =>
-    parseTagsFromParams(searchParams).length > 0
-  );
+  const [showTagCloud, setShowTagCloud] = useState(true);
   const [showAllTags, setShowAllTags] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"large" | "compact">("large");
@@ -369,34 +367,73 @@ export function ExploreGallery({
           </div>
         </div>
 
-        {/* Category Pills (Sorted Alphabetically, All first) */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
-          <button
-            onClick={() => handleCategoryChange("All")}
-            className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors cursor-pointer ${
-              selectedCategory === "All"
-                ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
-                : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground hover:border-accent/40"
-            }`}
-          >
-            All Categories ({initialPhotos.length})
-          </button>
-          {categories
-            .filter((c) => c.name !== "All Photographs" && c.name !== "All")
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => handleCategoryChange(cat.name)}
-                className={`whitespace-nowrap px-3 py-1 rounded-full border transition-colors cursor-pointer ${
-                  selectedCategory === cat.name
-                    ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
-                    : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground hover:border-accent/40"
+        {/* Album Pills (Rendered as tags, wrapped, no horizontal scroll) */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center space-x-1.5 text-xs text-muted">
+            <Folder className="w-3.5 h-3.5 text-accent" />
+            <span className="uppercase tracking-wider font-semibold text-foreground">
+              Albums
+            </span>
+            {selectedCategory !== "All" && (
+              <span className="text-accent flex items-center gap-1.5 ml-1">
+                &bull; 1 active
+                <button
+                  onClick={() => handleCategoryChange("All")}
+                  className="text-xs text-accent hover:underline cursor-pointer ml-1"
+                >
+                  Reset to All
+                </button>
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            <button
+              onClick={() => handleCategoryChange("All")}
+              className={`text-xs px-2.5 py-1 rounded border transition-all cursor-pointer ${
+                selectedCategory === "All"
+                  ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
+                  : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
+              }`}
+            >
+              <span>All Albums</span>
+              <span
+                className={`ml-1.5 text-[10px] ${
+                  selectedCategory === "All" ? "text-accent-contrast/80" : "text-muted"
                 }`}
               >
-                {cat.name} ({cat.count})
-              </button>
-            ))}
+                {initialPhotos.length}
+              </span>
+            </button>
+
+            {categories
+              .filter((c) => c.name !== "All Photographs" && c.name !== "All")
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((cat) => {
+                const isSelected =
+                  selectedCategory.toLowerCase() === cat.name.toLowerCase();
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => handleCategoryChange(cat.name)}
+                    className={`text-xs px-2.5 py-1 rounded border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
+                        : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
+                    }`}
+                  >
+                    <span>{cat.name}</span>
+                    <span
+                      className={`ml-1.5 text-[10px] ${
+                        isSelected ? "text-accent-contrast/80" : "text-muted"
+                      }`}
+                    >
+                      {cat.count}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
         </div>
 
         {/* Tag Cloud Section */}
