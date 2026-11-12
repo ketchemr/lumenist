@@ -2910,7 +2910,9 @@ export default function AdminUploadPage() {
                   <div className="relative aspect-[16/10] bg-surface-hover overflow-hidden flex items-center justify-center">
                     {album.coverPhoto?.imageDesktop ? (
                       <img
-                        src={`/photos/${album.coverPhoto.imageDesktop}`}
+                        src={`/api/thumbnail?src=${encodeURIComponent(
+                          album.coverPhoto.imageDesktop
+                        )}&w=600&fmt=webp`}
                         alt={album.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
