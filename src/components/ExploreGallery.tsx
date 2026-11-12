@@ -387,7 +387,7 @@ export function ExploreGallery({
             )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5 text-xs">
+          <div className="flex flex-wrap gap-1.5 max-h-80 overflow-y-auto pr-1 text-xs">
             <button
               onClick={() => handleCategoryChange("All")}
               className={`text-xs px-2.5 py-1 rounded border transition-all cursor-pointer ${
