@@ -26,6 +26,7 @@ import {
   Clock,
   Save,
   Plus,
+  Pencil,
   X,
   History,
   Trash2,
@@ -67,9 +68,9 @@ export default function AdminUploadPage() {
   const router = useRouter();
 
   // Navigation tab
-  const [activeTab, setActiveTab] = useState<"upload" | "manage" | "settings">(
-    "upload"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "upload" | "manage" | "albums" | "settings"
+  >("upload");
 
   // Manage / Catalog state
   const [catalogPhotos, setCatalogPhotos] = useState<any[]>([]);
@@ -107,6 +108,35 @@ export default function AdminUploadPage() {
   const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState("");
   const [editingPhotoID, setEditingPhotoID] = useState<string | null>(null);
+
+  // Album Management states
+  const [adminAlbums, setAdminAlbums] = useState<
+    {
+      name: string;
+      slug: string;
+      count: number;
+      coverPhoto?: {
+        photoID: string;
+        title: string;
+        imageDesktop: string;
+        size: string;
+      };
+    }[]
+  >([]);
+  const [isLoadingAlbums, setIsLoadingAlbums] = useState(false);
+  const [albumActionMsg, setAlbumActionMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [unassignedPhotoCount, setUnassignedPhotoCount] = useState<number>(0);
+  const [renamingAlbum, setRenamingAlbum] = useState<string | null>(null);
+  const [renameNewName, setRenameNewName] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [deletingAlbum, setDeletingAlbum] = useState<{
+    name: string;
+    count: number;
+  } | null>(null);
+  const [isDeletingAlbum, setIsDeletingAlbum] = useState(false);
 
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -240,6 +270,9 @@ export default function AdminUploadPage() {
         if (data.allAlbums) {
           setAvailableAlbums(data.allAlbums);
         }
+        if (typeof data.unassignedCount === "number") {
+          setUnassignedPhotoCount(data.unassignedCount);
+        }
       }
     } catch {
       console.warn("Failed to load catalog");
@@ -248,9 +281,114 @@ export default function AdminUploadPage() {
     }
   };
 
+  const loadAlbums = async () => {
+    setIsLoadingAlbums(true);
+    try {
+      const res = await fetch("/api/admin/albums");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.albums) {
+          setAdminAlbums(data.albums);
+        }
+        if (typeof data.unassignedCount === "number") {
+          setUnassignedPhotoCount(data.unassignedCount);
+        }
+      }
+    } catch {
+      console.warn("Failed to load albums");
+    } finally {
+      setIsLoadingAlbums(false);
+    }
+  };
+
+  const handleRenameAlbum = async () => {
+    if (!renamingAlbum || !renameNewName.trim()) return;
+    if (renamingAlbum.trim() === renameNewName.trim()) {
+      setRenamingAlbum(null);
+      return;
+    }
+
+    setIsRenaming(true);
+    setAlbumActionMsg(null);
+    try {
+      const res = await fetch("/api/admin/albums", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "rename",
+          oldName: renamingAlbum,
+          newName: renameNewName.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to rename album");
+      }
+      setAlbumActionMsg({
+        type: "success",
+        text:
+          data.message ||
+          `Album "${renamingAlbum}" renamed to "${renameNewName.trim()}".`,
+      });
+      setRenamingAlbum(null);
+      setRenameNewName("");
+      await Promise.all([
+        loadAlbums(),
+        loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize),
+      ]);
+    } catch (err: any) {
+      setAlbumActionMsg({
+        type: "error",
+        text: err.message || "An error occurred while renaming the album.",
+      });
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const handleDeleteAlbum = async () => {
+    if (!deletingAlbum) return;
+
+    setIsDeletingAlbum(true);
+    setAlbumActionMsg(null);
+    try {
+      const res = await fetch("/api/admin/albums", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          name: deletingAlbum.name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete album");
+      }
+      setAlbumActionMsg({
+        type: "success",
+        text:
+          data.message ||
+          `Album "${deletingAlbum.name}" deleted. Photographs remain in All Photographs.`,
+      });
+      setDeletingAlbum(null);
+      await Promise.all([
+        loadAlbums(),
+        loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize),
+      ]);
+    } catch (err: any) {
+      setAlbumActionMsg({
+        type: "error",
+        text: err.message || "An error occurred while deleting the album.",
+      });
+    } finally {
+      setIsDeletingAlbum(false);
+    }
+  };
+
   useEffect(() => {
-    if (activeTab === "manage" && isAuthenticated) {
+    if ((activeTab === "manage" || activeTab === "albums") && isAuthenticated) {
       loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
+      loadAlbums();
     }
   }, [activeTab, isAuthenticated, catalogPage, catalogAlbumFilter, catalogPageSize]);
 
@@ -971,6 +1109,8 @@ export default function AdminUploadPage() {
                     ? "Upload Photo"
                     : activeTab === "manage"
                     ? "Manage Catalog"
+                    : activeTab === "albums"
+                    ? "Albums & Collections"
                     : "Site Settings",
               },
             ]}
@@ -980,6 +1120,8 @@ export default function AdminUploadPage() {
               ? "Publish Fine Art Photograph"
               : activeTab === "manage"
               ? "Manage & Delete Photographs"
+              : activeTab === "albums"
+              ? "Manage Albums & Collections"
               : "Studio & Site Settings"}
           </h1>
         </div>
@@ -1008,6 +1150,17 @@ export default function AdminUploadPage() {
             >
               <ImageIcon className="w-3.5 h-3.5" />
               <span>Manage ({catalogTotal > 0 ? catalogTotal : "Catalog"})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("albums")}
+              className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
+                activeTab === "albums"
+                  ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <Folder className="w-3.5 h-3.5" />
+              <span>Albums ({adminAlbums.length > 0 ? adminAlbums.length : "Albums"})</span>
             </button>
             <button
               onClick={() => setActiveTab("settings")}
@@ -1705,6 +1858,11 @@ export default function AdminUploadPage() {
                 className="bg-surface border border-surface-border text-xs rounded px-2.5 py-2 text-foreground focus:outline-none focus:border-accent max-w-[200px] truncate cursor-pointer"
               >
                 <option value="all">All Albums ({catalogTotal})</option>
+                {unassignedPhotoCount > 0 && (
+                  <option value="__unassigned__">
+                    Unassigned / No Album ({unassignedPhotoCount})
+                  </option>
+                )}
                 {availableAlbums.map((alb) => (
                   <option key={alb} value={alb}>
                     {alb}
@@ -2626,6 +2784,352 @@ export default function AdminUploadPage() {
                 loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
               }}
             />
+          )}
+        </div>
+      )}
+
+      {/* TAB: ALBUM & COLLECTION MANAGEMENT */}
+      {activeTab === "albums" && (
+        <div className="space-y-6">
+          {/* Action notification banner */}
+          {albumActionMsg && (
+            <div
+              className={`p-4 border rounded-sm text-xs flex items-center justify-between space-x-2 animate-in fade-in ${
+                albumActionMsg.type === "success"
+                  ? "bg-emerald-950/40 border-emerald-700 text-emerald-300"
+                  : "bg-red-950/40 border-red-700 text-red-300"
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                {albumActionMsg.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                )}
+                <span>{albumActionMsg.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAlbumActionMsg(null)}
+                className="text-muted hover:text-foreground p-1 cursor-pointer"
+                title="Dismiss message"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Album Overview Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-surface border border-surface-border p-4 rounded-sm">
+              <div className="text-xs text-muted uppercase tracking-wider">
+                Curated Albums
+              </div>
+              <div className="text-2xl font-light text-foreground mt-1">
+                {adminAlbums.length}
+              </div>
+              <p className="text-[11px] text-muted mt-1">
+                Public gallery groupings
+              </p>
+            </div>
+
+            <div className="bg-surface border border-surface-border p-4 rounded-sm">
+              <div className="text-xs text-muted uppercase tracking-wider">
+                All Cataloged Works
+              </div>
+              <div className="text-2xl font-light text-foreground mt-1">
+                {catalogTotal > 0 ? catalogTotal : "—"}
+              </div>
+              <p className="text-[11px] text-muted mt-1">
+                Total fine art photographs in archive
+              </p>
+            </div>
+
+            <div className="bg-surface border border-surface-border p-4 rounded-sm">
+              <div className="text-xs text-muted uppercase tracking-wider">
+                Unassigned Works
+              </div>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-2xl font-light text-foreground">
+                  {unassignedPhotoCount}
+                </span>
+                {unassignedPhotoCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogAlbumFilter("__unassigned__");
+                      setActiveTab("manage");
+                    }}
+                    className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    <span>Filter in Manage &rarr;</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-muted mt-1">
+                Photographs with no album label (viewable in All)
+              </p>
+            </div>
+          </div>
+
+          {/* Explanation Banner */}
+          <div className="p-4 bg-surface border border-surface-border rounded-sm flex items-start space-x-3 text-xs text-muted">
+            <Folder className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="text-foreground font-medium">
+                Album Deletion and Safety Policy
+              </p>
+              <p>
+                Deleting an album removes the category label from its photos and syncs the metadata.{" "}
+                <strong className="text-foreground">
+                  Photographs are never deleted when an album is removed.
+                </strong>{" "}
+                They remain safely stored in your archive and remain fully viewable in the public{" "}
+                <em>All Photographs</em> collection and the admin catalog.
+              </p>
+            </div>
+          </div>
+
+          {/* Albums Grid */}
+          {isLoadingAlbums ? (
+            <div className="text-center py-16 text-muted text-xs">
+              Loading albums...
+            </div>
+          ) : adminAlbums.length === 0 ? (
+            <div className="text-center py-16 text-muted text-xs bg-surface border border-surface-border rounded-sm">
+              No albums currently found in the catalog.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {adminAlbums.map((album) => (
+                <div
+                  key={album.name}
+                  className="bg-surface border border-surface-border rounded-sm overflow-hidden flex flex-col group hover:border-accent/40 transition-colors"
+                >
+                  {/* Thumbnail / Cover */}
+                  <div className="relative aspect-[16/10] bg-surface-hover overflow-hidden flex items-center justify-center">
+                    {album.coverPhoto?.imageDesktop ? (
+                      <img
+                        src={`/photos/${album.coverPhoto.imageDesktop}`}
+                        alt={album.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-muted/40" />
+                    )}
+                    <span className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-sm text-[10px] text-zinc-300 px-2 py-0.5 rounded border border-white/10">
+                      {album.count} {album.count === 1 ? "photo" : "photos"}
+                    </span>
+                  </div>
+
+                  {/* Body & Actions */}
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground tracking-tight line-clamp-1">
+                        {album.name}
+                      </h3>
+                      <p className="text-[11px] text-muted mt-0.5">
+                        {album.count} photograph{album.count === 1 ? "" : "s"} assigned
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-surface-border flex items-center justify-between text-xs">
+                      {/* View public gallery */}
+                      <Link
+                        href={`/galleries/${album.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted hover:text-accent flex items-center space-x-1"
+                        title="Open public gallery page"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View</span>
+                      </Link>
+
+                      <div className="flex items-center space-x-1.5">
+                        {/* Rename */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRenamingAlbum(album.name);
+                            setRenameNewName(album.name);
+                          }}
+                          className="px-2.5 py-1 bg-surface-hover hover:bg-surface-border text-foreground rounded text-[11px] flex items-center space-x-1 cursor-pointer transition-colors"
+                          title={`Rename album "${album.name}"`}
+                        >
+                          <Pencil className="w-3 h-3 text-muted" />
+                          <span>Rename</span>
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeletingAlbum({ name: album.name, count: album.count });
+                          }}
+                          className="px-2.5 py-1 bg-surface-hover hover:bg-red-950/40 text-muted hover:text-red-400 hover:border-red-800/50 border border-transparent rounded text-[11px] flex items-center space-x-1 cursor-pointer transition-colors"
+                          title={`Delete album "${album.name}" (photos are preserved)`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Rename Modal */}
+          {renamingAlbum && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-surface border border-surface-border max-w-md w-full p-6 rounded-sm space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-surface-border pb-3">
+                  <div className="flex items-center space-x-2">
+                    <Pencil className="w-4 h-4 text-accent" />
+                    <h3 className="text-sm font-medium text-foreground">
+                      Rename Album
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isRenaming) setRenamingAlbum(null);
+                    }}
+                    className="text-muted hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="text-xs text-muted">
+                    Current Name:{" "}
+                    <strong className="text-foreground font-medium">
+                      {renamingAlbum}
+                    </strong>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted block">
+                      New Album Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={renameNewName}
+                      onChange={(e) => setRenameNewName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          !isRenaming &&
+                          renameNewName.trim() &&
+                          renameNewName.trim() !== renamingAlbum
+                        ) {
+                          handleRenameAlbum();
+                        }
+                      }}
+                      autoFocus
+                      placeholder="Enter new album name..."
+                      className="w-full px-3 py-2 bg-surface-hover border border-surface-border rounded text-xs text-foreground focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted">
+                    This updates the album label across all photographs assigned to it and updates their .txt metadata files.
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-surface-border">
+                  <button
+                    type="button"
+                    disabled={isRenaming}
+                    onClick={() => setRenamingAlbum(null)}
+                    className="px-3 py-1.5 bg-surface-hover text-muted hover:text-foreground rounded text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      isRenaming ||
+                      !renameNewName.trim() ||
+                      renameNewName.trim() === renamingAlbum
+                    }
+                    onClick={handleRenameAlbum}
+                    className="px-4 py-1.5 bg-accent text-accent-contrast font-medium rounded text-xs hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isRenaming ? "Renaming..." : "Save New Name"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {deletingAlbum && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-surface border border-surface-border max-w-md w-full p-6 rounded-sm space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-surface-border pb-3">
+                  <div className="flex items-center space-x-2 text-red-400">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <h3 className="text-sm font-medium text-foreground">
+                      Delete Album &ldquo;{deletingAlbum.name}&rdquo;?
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isDeletingAlbum) setDeletingAlbum(null);
+                    }}
+                    className="text-muted hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <p className="text-foreground">
+                    Are you sure you want to delete the album label{" "}
+                    <strong className="text-white">
+                      &ldquo;{deletingAlbum.name}&rdquo;
+                    </strong>?
+                  </p>
+                  <div className="p-3 bg-emerald-950/30 border border-emerald-800/50 rounded text-emerald-200 text-[11px] space-y-1">
+                    <p className="font-medium text-emerald-300 flex items-center space-x-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Photos are NEVER deleted</span>
+                    </p>
+                    <p>
+                      This action will remove the album label from all{" "}
+                      <strong>
+                        {deletingAlbum.count} photograph
+                        {deletingAlbum.count === 1 ? "" : "s"}
+                      </strong>. The photographs will remain completely intact in your library and will still be viewable in{" "}
+                      <strong>All Photographs</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-surface-border">
+                  <button
+                    type="button"
+                    disabled={isDeletingAlbum}
+                    onClick={() => setDeletingAlbum(null)}
+                    className="px-3 py-1.5 bg-surface-hover text-muted hover:text-foreground rounded text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingAlbum}
+                    onClick={handleDeleteAlbum}
+                    className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded text-xs disabled:opacity-50 cursor-pointer"
+                  >
+                    {isDeletingAlbum ? "Deleting Album..." : "Delete Album"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}

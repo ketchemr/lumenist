@@ -22,10 +22,14 @@ export async function GET(req: NextRequest) {
 
   // Extract all unique albums across all photos for filtering dropdown
   const albumSet = new Set<string>();
+  let unassignedCount = 0;
   allPhotos.forEach((p) => {
-    (p.categories || []).forEach((c) => {
-      if (c && c.trim()) albumSet.add(c.trim());
-    });
+    const cats = (p.categories || []).filter((c) => c && c.trim());
+    if (cats.length === 0) {
+      unassignedCount++;
+    } else {
+      cats.forEach((c) => albumSet.add(c.trim()));
+    }
   });
   const allAlbums = Array.from(albumSet).sort((a, b) =>
     a.localeCompare(b, undefined, { sensitivity: "base" })
@@ -35,9 +39,13 @@ export async function GET(req: NextRequest) {
 
   // Filter by album if specified
   if (albumFilter && albumFilter !== "all") {
-    results = results.filter((p) =>
-      p.categories?.some((c) => c.toLowerCase() === albumFilter)
-    );
+    if (albumFilter === "__unassigned__") {
+      results = results.filter((p) => !p.categories || p.categories.length === 0);
+    } else {
+      results = results.filter((p) =>
+        p.categories?.some((c) => c.toLowerCase() === albumFilter)
+      );
+    }
   }
 
   // Filter by search query across multiple fields
@@ -77,5 +85,6 @@ export async function GET(req: NextRequest) {
     totalPages,
     photos,
     allAlbums,
+    unassignedCount,
   });
 }
