@@ -168,6 +168,107 @@ export default function AdminUploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [captureDate, setCaptureDate] = useState("");
+
+  // Creation Date states (year, month, day, hour, minute, second)
+  const getInitialCreationDate = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const y = String(now.getFullYear());
+    const m = pad(now.getMonth() + 1);
+    const d = pad(now.getDate());
+    const h = pad(now.getHours());
+    const min = pad(now.getMinutes());
+    const s = pad(now.getSeconds());
+    return {
+      year: y,
+      month: m,
+      day: d,
+      hour: h,
+      minute: min,
+      second: s,
+      iso: `${y}-${m}-${d}T${h}:${min}:${s}`,
+    };
+  };
+
+  const [createdDate, setCreatedDate] = useState(() => getInitialCreationDate().iso);
+  const [createdYear, setCreatedYear] = useState(() => getInitialCreationDate().year);
+  const [createdMonth, setCreatedMonth] = useState(() => getInitialCreationDate().month);
+  const [createdDay, setCreatedDay] = useState(() => getInitialCreationDate().day);
+  const [createdHour, setCreatedHour] = useState(() => getInitialCreationDate().hour);
+  const [createdMinute, setCreatedMinute] = useState(() => getInitialCreationDate().minute);
+  const [createdSecond, setCreatedSecond] = useState(() => getInitialCreationDate().second);
+
+  const handleCreatedDateChange = (isoVal: string) => {
+    setCreatedDate(isoVal);
+    if (isoVal) {
+      const d = new Date(isoVal);
+      if (!isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setCreatedYear(String(d.getFullYear()));
+        setCreatedMonth(pad(d.getMonth() + 1));
+        setCreatedDay(pad(d.getDate()));
+        setCreatedHour(pad(d.getHours()));
+        setCreatedMinute(pad(d.getMinutes()));
+        setCreatedSecond(pad(d.getSeconds()));
+      }
+    }
+  };
+
+  const updateCreationParts = (
+    y: string,
+    m: string,
+    d: string,
+    h: string,
+    min: string,
+    s: string
+  ) => {
+    setCreatedYear(y);
+    setCreatedMonth(m);
+    setCreatedDay(d);
+    setCreatedHour(h);
+    setCreatedMinute(min);
+    setCreatedSecond(s);
+    const pad = (v: string) => v.padStart(2, "0");
+    const numY = parseInt(y, 10);
+    const numM = parseInt(m, 10);
+    const numD = parseInt(d, 10);
+    if (!isNaN(numY) && numY > 1900 && !isNaN(numM) && !isNaN(numD)) {
+      setCreatedDate(
+        `${String(numY).padStart(4, "0")}-${pad(m)}-${pad(d)}T${pad(h || "00")}:${pad(min || "00")}:${pad(s || "00")}`
+      );
+    }
+  };
+
+  const setCreationToNow = () => {
+    const fresh = getInitialCreationDate();
+    setCreatedYear(fresh.year);
+    setCreatedMonth(fresh.month);
+    setCreatedDay(fresh.day);
+    setCreatedHour(fresh.hour);
+    setCreatedMinute(fresh.minute);
+    setCreatedSecond(fresh.second);
+    setCreatedDate(fresh.iso);
+  };
+
+  const setCreationToCapture = () => {
+    if (!captureDate) return;
+    const d = new Date(captureDate);
+    if (isNaN(d.getTime())) return;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const y = String(d.getFullYear());
+    const m = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const h = pad(d.getHours());
+    const min = pad(d.getMinutes());
+    const s = pad(d.getSeconds());
+    setCreatedYear(y);
+    setCreatedMonth(m);
+    setCreatedDay(day);
+    setCreatedHour(h);
+    setCreatedMinute(min);
+    setCreatedSecond(s);
+    setCreatedDate(`${y}-${m}-${day}T${h}:${min}:${s}`);
+  };
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [coordInput, setCoordInput] = useState<string>("");
@@ -816,6 +917,25 @@ export default function AdminUploadPage() {
         formData.append("second", String(d.getSeconds()));
       }
     }
+
+    // Append creation date info (year, month, day, hour, minute, second)
+    const padVal = (v: string | number) => String(v).padStart(2, "0");
+    const safeCYear = createdYear.trim() || String(new Date().getFullYear());
+    const safeCMonth = padVal(createdMonth.trim() || 1);
+    const safeCDay = padVal(createdDay.trim() || 1);
+    const safeCHour = padVal(createdHour.trim() || 0);
+    const safeCMin = padVal(createdMinute.trim() || 0);
+    const safeCSec = padVal(createdSecond.trim() || 0);
+    const formattedCreatedTimestamp = `${safeCYear}${safeCMonth}${safeCDay}${safeCHour}${safeCMin}${safeCSec}`;
+
+    formData.append("createdTimestamp", formattedCreatedTimestamp);
+    formData.append("createdYear", safeCYear);
+    formData.append("createdMonth", safeCMonth);
+    formData.append("createdDay", safeCDay);
+    formData.append("createdHour", safeCHour);
+    formData.append("createdMinute", safeCMin);
+    formData.append("createdSecond", safeCSec);
+    formData.append("creationDate", createdDate);
 
     if (latitude !== null && longitude !== null) {
       formData.append("latitude", String(latitude));
@@ -1477,10 +1597,220 @@ export default function AdminUploadPage() {
                     </label>
                     <input
                       type="datetime-local"
+                      step="1"
                       value={captureDate}
                       onChange={(e) => setCaptureDate(e.target.value)}
                       className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
                     />
+                  </div>
+                </div>
+
+                {/* Creation Date & Time (Year, Month, Day, Hour, Minute, Second) */}
+                <div className="space-y-3 pt-3 border-t border-surface-border">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center space-x-1.5">
+                        <Clock className="w-3.5 h-3.5 text-accent" />
+                        <label className="text-xs font-medium text-foreground">
+                          Creation Date & Time
+                        </label>
+                        <span className="text-[11px] text-muted font-normal">
+                          (Determines &ldquo;Recently Added&rdquo; sort order)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted mt-0.5">
+                        Set creation date by year, month, day, hour, minute, and second.
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={setCreationToNow}
+                        className="px-2.5 py-1 text-[11px] bg-surface-hover hover:bg-surface-border text-foreground rounded border border-surface-border cursor-pointer transition-colors"
+                        title="Reset creation date to current date and time"
+                      >
+                        Now
+                      </button>
+                      {captureDate && (
+                        <button
+                          type="button"
+                          onClick={setCreationToCapture}
+                          className="px-2.5 py-1 text-[11px] bg-surface-hover hover:bg-surface-border text-muted hover:text-foreground rounded border border-surface-border cursor-pointer transition-colors"
+                          title="Copy from Capture Date & Time"
+                        >
+                          Use Capture Time
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 6 Individual inputs: Year, Month, Day, Hour, Minute, Second */}
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                        Year
+                      </label>
+                      <input
+                        type="number"
+                        min="1970"
+                        max="2100"
+                        value={createdYear}
+                        onChange={(e) =>
+                          updateCreationParts(
+                            e.target.value,
+                            createdMonth,
+                            createdDay,
+                            createdHour,
+                            createdMinute,
+                            createdSecond
+                          )
+                        }
+                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        placeholder="YYYY"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                        Month (1-12)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={createdMonth}
+                        onChange={(e) =>
+                          updateCreationParts(
+                            createdYear,
+                            e.target.value,
+                            createdDay,
+                            createdHour,
+                            createdMinute,
+                            createdSecond
+                          )
+                        }
+                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        placeholder="MM"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                        Day (1-31)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={createdDay}
+                        onChange={(e) =>
+                          updateCreationParts(
+                            createdYear,
+                            createdMonth,
+                            e.target.value,
+                            createdHour,
+                            createdMinute,
+                            createdSecond
+                          )
+                        }
+                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        placeholder="DD"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                        Hour (0-23)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={createdHour}
+                        onChange={(e) =>
+                          updateCreationParts(
+                            createdYear,
+                            createdMonth,
+                            createdDay,
+                            e.target.value,
+                            createdMinute,
+                            createdSecond
+                          )
+                        }
+                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        placeholder="HH"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                        Minute (0-59)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={createdMinute}
+                        onChange={(e) =>
+                          updateCreationParts(
+                            createdYear,
+                            createdMonth,
+                            createdDay,
+                            createdHour,
+                            e.target.value,
+                            createdSecond
+                          )
+                        }
+                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        placeholder="MM"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                        Second (0-59)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={createdSecond}
+                        onChange={(e) =>
+                          updateCreationParts(
+                            createdYear,
+                            createdMonth,
+                            createdDay,
+                            createdHour,
+                            createdMinute,
+                            e.target.value
+                          )
+                        }
+                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        placeholder="SS"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Datetime picker fallback + formatted YYYYMMDDHHMMSS indicator */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="datetime-local"
+                        step="1"
+                        value={createdDate}
+                        onChange={(e) => handleCreatedDateChange(e.target.value)}
+                        className="bg-surface border border-surface-border rounded px-2.5 py-1 text-xs text-foreground focus:outline-none focus:border-accent cursor-pointer"
+                      />
+                      <span className="text-[11px] text-muted hidden sm:inline">
+                        Calendar picker
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-muted font-mono">
+                      Timestamp:{" "}
+                      <span className="text-accent font-semibold">
+                        {createdYear}
+                        {createdMonth.padStart(2, "0")}
+                        {createdDay.padStart(2, "0")}
+                        {createdHour.padStart(2, "0")}
+                        {createdMinute.padStart(2, "0")}
+                        {createdSecond.padStart(2, "0")}
+                      </span>
+                    </span>
                   </div>
                 </div>
               </div>

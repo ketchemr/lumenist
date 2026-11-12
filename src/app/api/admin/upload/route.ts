@@ -202,8 +202,32 @@ export async function POST(req: NextRequest) {
     }
 
     // Formatted created timestamp for upload sorting (YYYYMMDDHHMMSS)
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const createdTimestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const pad = (n: number | string) => String(n).padStart(2, "0");
+    let createdTimestamp = (formData.get("createdTimestamp") as string)?.trim();
+    if (!createdTimestamp) {
+      const cYear = parseInt(formData.get("createdYear") as string, 10);
+      const cMonth = parseInt(formData.get("createdMonth") as string, 10);
+      const cDay = parseInt(formData.get("createdDay") as string, 10);
+      const cHour = parseInt(formData.get("createdHour") as string, 10);
+      const cMinute = parseInt(formData.get("createdMinute") as string, 10);
+      const cSecond = parseInt(formData.get("createdSecond") as string, 10);
+
+      if (!isNaN(cYear) && cYear > 1900 && !isNaN(cMonth) && !isNaN(cDay)) {
+        createdTimestamp = `${cYear}${pad(cMonth)}${pad(cDay)}${pad(isNaN(cHour) ? 0 : cHour)}${pad(isNaN(cMinute) ? 0 : cMinute)}${pad(isNaN(cSecond) ? 0 : cSecond)}`;
+      } else {
+        const cDateRaw = (formData.get("creationDate") as string)?.trim();
+        if (cDateRaw) {
+          const cd = new Date(cDateRaw);
+          if (!isNaN(cd.getTime())) {
+            createdTimestamp = `${cd.getFullYear()}${pad(cd.getMonth() + 1)}${pad(cd.getDate())}${pad(cd.getHours())}${pad(cd.getMinutes())}${pad(cd.getSeconds())}`;
+          }
+        }
+      }
+    }
+
+    if (!createdTimestamp || !/^\d{14}$/.test(createdTimestamp)) {
+      createdTimestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    }
 
     // Write companion .txt file
     const txtFilename = `${photoID}.txt`;
