@@ -170,9 +170,11 @@ export function ExploreGallery({
       // Search term match
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
+        const matchesId = p.photoID.toLowerCase().includes(query);
         const matchesTitle = p.title.toLowerCase().includes(query);
         const matchesDesc = p.description.toLowerCase().includes(query);
         const matchesCamera = p.camera.toLowerCase().includes(query);
+        const matchesLens = p.lens ? p.lens.toLowerCase().includes(query) : false;
         const matchesKeywords = p.keywords.some((k) =>
           k.toLowerCase().includes(query)
         );
@@ -181,9 +183,11 @@ export function ExploreGallery({
         );
 
         if (
+          !matchesId &&
           !matchesTitle &&
           !matchesDesc &&
           !matchesCamera &&
+          !matchesLens &&
           !matchesKeywords &&
           !matchesCategory
         ) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
 import { isAuthenticatedAdmin } from "@/lib/auth";
@@ -85,6 +86,10 @@ export async function POST(req: NextRequest) {
         "utf-8"
       );
 
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
+
       return NextResponse.json({
         success: true,
         action: "delete",
@@ -129,6 +134,10 @@ export async function POST(req: NextRequest) {
 
       fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
 
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
+
       return NextResponse.json({
         success: true,
         action: "addAlbum",
@@ -166,6 +175,10 @@ export async function POST(req: NextRequest) {
       }
 
       fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
+
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
 
       return NextResponse.json({
         success: true,
@@ -217,6 +230,10 @@ export async function POST(req: NextRequest) {
 
       fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
 
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
+
       return NextResponse.json({
         success: true,
         action: "addTags",
@@ -254,6 +271,10 @@ export async function POST(req: NextRequest) {
       }
 
       fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
+
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
 
       return NextResponse.json({
         success: true,

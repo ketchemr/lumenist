@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
 import { isAuthenticatedAdmin } from "@/lib/auth";
@@ -189,6 +190,10 @@ export async function POST(req: NextRequest) {
 
       saveCustomAlbums([...customAlbums, name]);
 
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
+
       return NextResponse.json({
         success: true,
         action: "create",
@@ -272,6 +277,10 @@ export async function POST(req: NextRequest) {
       );
       saveCustomAlbums(updatedCustom);
 
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
+
       return NextResponse.json({
         success: true,
         action: "rename",
@@ -331,6 +340,10 @@ export async function POST(req: NextRequest) {
         (a) => a.toLowerCase() !== lowerName
       );
       saveCustomAlbums(updatedCustom);
+
+      try {
+        revalidatePath("/", "layout");
+      } catch {}
 
       return NextResponse.json({
         success: true,

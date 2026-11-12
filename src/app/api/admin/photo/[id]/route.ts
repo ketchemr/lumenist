@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
@@ -236,9 +237,11 @@ export async function PUT(
     const txtFilename = `${id}.txt`;
     const targetTxtPath = path.join(targetFolder, txtFilename);
 
+    const createdVal = photo.createdTimestamp || photo.rawFields?.created;
     const txtLines = [
       `photoID:${id}`,
       `title:${title}`,
+      createdVal ? `created:${createdVal}` : "",
       description ? `description:${description}` : "",
       newLocation ? `location:${newLocation.latitude.toFixed(6)},${newLocation.longitude.toFixed(6)}` : "",
       categories.length > 0 ? `albums:${categories.join(",")}` : "",
@@ -281,6 +284,10 @@ export async function PUT(
 
     catalog[photoIndex] = updatedPhoto;
     fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
+
+    try {
+      revalidatePath("/", "layout");
+    } catch {}
 
     return NextResponse.json({
       success: true,
@@ -358,6 +365,10 @@ export async function DELETE(
     // Remove photo from catalog and write back atomically
     catalog.splice(photoIndex, 1);
     fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
+
+    try {
+      revalidatePath("/", "layout");
+    } catch {}
 
     return NextResponse.json({
       success: true,

@@ -863,6 +863,21 @@ export default function AdminUploadPage() {
       }
 
       setPublishedResult(data);
+
+      // Immediately refresh catalog, albums, and metadata so counts and selectors update without full reload
+      try {
+        await Promise.all([
+          loadAlbums(),
+          loadCatalog(1, "", "all", catalogPageSize),
+          fetch("/api/admin/metadata")
+            .then((res) => res.json())
+            .then((d: MetadataResponse) => setMetadata(d))
+            .catch(() => {}),
+        ]);
+        router.refresh();
+      } catch (refreshErr) {
+        console.warn("Post-upload refresh error:", refreshErr);
+      }
     } catch (err: any) {
       setSubmitError(err.message || "Failed to upload photo");
     } finally {

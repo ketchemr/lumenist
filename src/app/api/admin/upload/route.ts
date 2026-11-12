@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
@@ -200,6 +201,10 @@ export async function POST(req: NextRequest) {
       fs.writeFileSync(targetImagePath, buffer);
     }
 
+    // Formatted created timestamp for upload sorting (YYYYMMDDHHMMSS)
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const createdTimestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
     // Write companion .txt file
     const txtFilename = `${photoID}.txt`;
     const targetTxtPath = path.join(targetFolder, txtFilename);
@@ -207,6 +212,7 @@ export async function POST(req: NextRequest) {
     const txtLines = [
       `photoID:${photoID}`,
       `title:${title}`,
+      `created:${createdTimestamp}`,
       description ? `description:${description}` : "",
       latitude !== null && longitude !== null ? `location:${latitude.toFixed(6)},${longitude.toFixed(6)}` : "",
       categories.length > 0 ? `albums:${categories.join(",")}` : "",
@@ -222,6 +228,7 @@ export async function POST(req: NextRequest) {
     const newPhoto: Photo = {
       photoID,
       title,
+      createdTimestamp,
       description,
       categories: categories.length > 0 ? categories : ["All"],
       keywords,
@@ -276,6 +283,12 @@ export async function POST(req: NextRequest) {
     }
 
     fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2), "utf-8");
+
+    try {
+      revalidatePath("/", "layout");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return NextResponse.json({
       success: true,
