@@ -363,7 +363,7 @@ export function EditPhotoModal({
               Photograph Image File
             </label>
             <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="relative w-32 h-24 bg-black border border-surface-border rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <div className="relative w-32 h-24 bg-surface-hover/50 dark:bg-black border border-surface-border rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
                 {replacementPreview ? (
                   <img
                     src={replacementPreview}

@@ -232,11 +232,11 @@ export function RandomHeroSlideshow({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
         {/* Photo Column: Photo Frame with Controls Living Directly Under the Image */}
         <div className="lg:col-span-8 flex flex-col justify-between h-[360px] sm:h-[440px] lg:h-[470px]">
-          {/* Photo Display: Constant Width & Constant Height Frame with dark matting (Zero overlay clutter) */}
+          {/* Photo Display: Constant Width & Constant Height Frame with clean gallery matting (Zero overlay clutter) */}
           <div
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            className="flex-1 w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center touch-pan-y"
+            className="flex-1 w-full overflow-hidden rounded-sm bg-background dark:bg-black/95 border border-surface-border relative flex items-center justify-center touch-pan-y"
           >
             <Link
               href={`/photo/${current.photoID}`}

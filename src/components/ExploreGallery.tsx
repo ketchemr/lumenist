@@ -307,7 +307,7 @@ export function ExploreGallery({
               placeholder="Search by subject, location, camera, or keyword..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-black border border-surface-border rounded-sm text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent"
+              className="w-full pl-10 pr-4 py-2.5 bg-background border border-surface-border rounded-sm text-sm text-foreground placeholder-muted focus:outline-none focus:border-accent"
             />
           </div>
 
@@ -579,7 +579,7 @@ export function ExploreGallery({
               <span>{tag}</span>
               <button
                 onClick={() => handleRemoveTag(tag)}
-                className="hover:text-white cursor-pointer ml-0.5"
+                className="hover:text-foreground cursor-pointer ml-0.5"
                 title={`Remove ${tag} filter`}
               >
                 <X className="w-3 h-3" />

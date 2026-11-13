@@ -123,7 +123,7 @@ export function ExhibitionGallery({
                   >
                     {/* Uncropped Photograph Frame with Inset Keyline */}
                     <div
-                      className="relative w-full overflow-hidden bg-black/80 rounded-[2px] photo-frame select-none"
+                      className="relative w-full overflow-hidden bg-surface dark:bg-black/80 rounded-[2px] photo-frame select-none"
                       style={{ aspectRatio: ar }}
                     >
                       <img

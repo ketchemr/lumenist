@@ -170,7 +170,7 @@ export function JustifiedGallery({
                   width: `${width}px`,
                   height: `${height}px`,
                 }}
-                className="relative block overflow-hidden group bg-black shrink-0 transition-transform duration-200 hover:z-10 select-none"
+                className="relative block overflow-hidden group bg-surface dark:bg-black shrink-0 transition-transform duration-200 hover:z-10 select-none"
                 title={`${photo.title} (${photo.dateTaken.year || ""})`}
                 onContextMenu={(e) => e.preventDefault()}
               >

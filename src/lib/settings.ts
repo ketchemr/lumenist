@@ -122,10 +122,20 @@ export function getThemeCssVariables(settings: SiteSettings): string {
   let accentLight = settings.themeAccentLight;
   let accentDark = settings.themeAccentDark;
 
-  if (isLight && isLightBackground(accent)) {
-    accent = "#0f172a";
-    accentLight = "#334155";
-    accentDark = "#000000";
+  if (isLight) {
+    const cleanAccent = accent.replace("#", "").trim();
+    const num = parseInt(cleanAccent, 16);
+    if (!isNaN(num)) {
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      if (brightness > 205) {
+        accent = "#0f172a";
+        accentLight = "#334155";
+        accentDark = "#000000";
+      }
+    }
   }
 
   // Calculate contrast text color for buttons using accent

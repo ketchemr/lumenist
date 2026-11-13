@@ -421,7 +421,7 @@ export function PhotoViewer({
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
-      <div className="relative bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none">
+      <div className="relative bg-surface dark:bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none">
         <div className="flex justify-center items-center">
           <div className="relative inline-flex items-center justify-center max-w-full">
             <img
@@ -489,7 +489,7 @@ export function PhotoViewer({
           onTouchCancel={handleTouchCancel}
           onClick={handleOverlayClick}
           style={{ touchAction: "none" }}
-          className={`fixed inset-0 top-0 left-0 w-screen h-screen h-[100dvh] z-[99999] bg-black flex items-center justify-center select-none photo-theater cursor-pointer ${
+          className={`fixed inset-0 top-0 left-0 w-screen h-screen h-[100dvh] z-[99999] bg-background dark:bg-black flex items-center justify-center select-none photo-theater cursor-pointer ${
             showControls && !isPhoneOnlyPicture ? "md:cursor-default" : "cursor-pointer"
           }`}
         >
@@ -530,22 +530,22 @@ export function PhotoViewer({
           {/* Top Control Bar (Hidden when on a phone or in Extend to Monitor mode) */}
           {!isPhoneOnlyPicture && (
             <div
-              className={`fixed top-0 inset-x-0 z-[10000] p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex items-center justify-between transition-opacity duration-300 hidden md:flex ${
+              className={`fixed top-0 inset-x-0 z-[10000] p-4 bg-gradient-to-b from-background/90 via-background/50 to-transparent dark:from-black/80 dark:via-black/40 dark:to-transparent flex items-center justify-between transition-opacity duration-300 hidden md:flex ${
                 showControls ? "opacity-100" : "opacity-0 pointer-events-none"
               }`}
             >
               {/* Title & Date Caption */}
               <div className="space-y-0.5 max-w-md truncate">
-                <h2 className="text-white text-sm sm:text-base font-medium truncate drop-shadow-md">
+                <h2 className="text-foreground dark:text-white text-sm sm:text-base font-medium truncate drop-shadow-sm dark:drop-shadow-md">
                   {photo.title}
                 </h2>
-                <p className="text-xs text-gray-400 font-mono">
+                <p className="text-xs text-muted dark:text-gray-400 font-mono">
                   {photo.dateTaken.year}-{String(photo.dateTaken.month).padStart(2, "0")}-{String(photo.dateTaken.day).padStart(2, "0")} · {photo.camera}
                 </p>
               </div>
 
               {/* Controls */}
-              <div className="flex items-center space-x-2 bg-black/70 backdrop-blur-md border border-white/10 rounded-sm p-1">
+              <div className="flex items-center space-x-2 bg-surface/90 dark:bg-black/70 backdrop-blur-md border border-surface-border dark:border-white/10 rounded-sm p-1 shadow-md">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -553,14 +553,16 @@ export function PhotoViewer({
                     setShowInfo((prev) => !prev);
                   }}
                   className={`p-1.5 rounded transition-colors ${
-                    showInfo ? "bg-accent text-black" : "text-gray-300 hover:text-white hover:bg-white/10"
+                    showInfo
+                      ? "bg-accent text-accent-contrast font-medium"
+                      : "text-muted hover:text-foreground dark:text-gray-300 dark:hover:text-white hover:bg-surface-hover dark:hover:bg-white/10"
                   }`}
                   title="Toggle Photo Details"
                 >
                   <Info className="w-4 h-4" />
                 </button>
 
-                <span className="text-gray-700">|</span>
+                <span className="text-surface-border dark:text-gray-700">|</span>
 
                 {/* Monitor Fullscreen Toggle Button */}
                 <button
@@ -569,7 +571,7 @@ export function PhotoViewer({
                     e.stopPropagation();
                     toggleMonitorFullscreen();
                   }}
-                  className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-gray-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                  className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-muted hover:text-foreground dark:text-gray-300 dark:hover:text-white hover:bg-surface-hover dark:hover:bg-white/10 rounded transition-colors cursor-pointer"
                   title={
                     isMonitorFullscreen
                       ? "Exit Monitor Fullscreen (Return to window)"
@@ -589,7 +591,7 @@ export function PhotoViewer({
                   )}
                 </button>
 
-                <span className="text-gray-700">|</span>
+                <span className="text-surface-border dark:text-gray-700">|</span>
 
                 {/* Close Button */}
                 <button
@@ -598,7 +600,7 @@ export function PhotoViewer({
                     e.stopPropagation();
                     closeWindowFullscreen();
                   }}
-                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                  className="p-1.5 text-muted hover:text-foreground dark:text-gray-400 dark:hover:text-white hover:bg-surface-hover dark:hover:bg-white/10 rounded transition-colors cursor-pointer"
                   title="Exit Fullscreen (Esc)"
                 >
                   <X className="w-4 h-4" />
@@ -615,7 +617,7 @@ export function PhotoViewer({
                 e.stopPropagation();
                 goToPrev();
               }}
-              className={`fixed left-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-black/60 hover:bg-black/90 border border-white/15 hover:border-accent text-white/80 hover:text-white transition-all backdrop-blur-sm shadow-2xl hidden md:block ${
+              className={`fixed left-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-surface/90 hover:bg-surface dark:bg-black/60 dark:hover:bg-black/90 border border-surface-border dark:border-white/15 hover:border-accent dark:hover:border-accent text-foreground/80 hover:text-foreground dark:text-white/80 dark:hover:text-white transition-all backdrop-blur-sm shadow-2xl hidden md:block cursor-pointer ${
                 showControls ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
               }`}
               title={`Previous: ${prevPhoto.title} (← Left Arrow)`}
@@ -632,7 +634,7 @@ export function PhotoViewer({
                 e.stopPropagation();
                 goToNext();
               }}
-              className={`fixed right-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-black/60 hover:bg-black/90 border border-white/15 hover:border-accent text-white/80 hover:text-white transition-all backdrop-blur-sm shadow-2xl hidden md:block ${
+              className={`fixed right-4 top-1/2 -translate-y-1/2 z-[10000] p-3 rounded-full bg-surface/90 hover:bg-surface dark:bg-black/60 dark:hover:bg-black/90 border border-surface-border dark:border-white/15 hover:border-accent dark:hover:border-accent text-foreground/80 hover:text-foreground dark:text-white/80 dark:hover:text-white transition-all backdrop-blur-sm shadow-2xl hidden md:block cursor-pointer ${
                 showControls ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
               }`}
               title={`Next: ${nextPhoto.title} (→ Right Arrow)`}
@@ -643,15 +645,15 @@ export function PhotoViewer({
 
           {/* Optional Info Drawer Overlay */}
           {!isPhoneOnlyPicture && showInfo && (
-            <div className="fixed bottom-6 left-6 z-[10000] bg-black/90 backdrop-blur-md border border-surface-border rounded-sm p-4 max-w-md text-xs text-gray-300 space-y-2 shadow-2xl hidden md:block">
+            <div className="fixed bottom-6 left-6 z-[10000] bg-surface/95 dark:bg-black/90 backdrop-blur-md border border-surface-border rounded-sm p-4 max-w-md text-xs text-foreground dark:text-gray-300 space-y-2 shadow-2xl hidden md:block">
               <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
-                <span className="font-semibold text-white">{photo.title}</span>
-                <span className="text-gray-500 font-mono">{photo.photoID}</span>
+                <span className="font-semibold text-foreground dark:text-white">{photo.title}</span>
+                <span className="text-muted font-mono">{photo.photoID}</span>
               </div>
               {photo.description && (
-                <p className="text-gray-300 leading-relaxed font-light">{photo.description}</p>
+                <p className="text-foreground/90 dark:text-gray-300 leading-relaxed font-light">{photo.description}</p>
               )}
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-400 font-mono pt-1">
+              <div className="grid grid-cols-2 gap-2 text-[11px] text-muted dark:text-gray-400 font-mono pt-1">
                 <div>Camera: {photo.camera}</div>
                 <div>Lens: {photo.lens}</div>
                 <div>Shutter: {photo.shutterspeed || (photo as any).shutterSpeed}</div>
@@ -665,7 +667,7 @@ export function PhotoViewer({
           {/* Bottom subtle keyboard shortcuts hint */}
           {!isPhoneOnlyPicture && (
             <div
-              className={`fixed bottom-3 inset-x-0 z-[10000] text-center text-[11px] text-gray-500 font-mono pointer-events-none transition-opacity duration-300 hidden md:block ${
+              className={`fixed bottom-3 inset-x-0 z-[10000] text-center text-[11px] text-muted dark:text-gray-500 font-mono pointer-events-none transition-opacity duration-300 hidden md:block ${
                 showControls ? "opacity-70" : "opacity-0"
               }`}
             >

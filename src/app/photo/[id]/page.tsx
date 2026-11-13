@@ -44,7 +44,7 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
             }
             label="Back to Gallery"
           />
-          <span className="text-gray-700 hidden sm:inline">|</span>
+          <span className="text-surface-border hidden sm:inline">|</span>
           <div className="hidden sm:block">
             <Breadcrumbs
               items={[
@@ -80,7 +80,7 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
             </span>
           )}
 
-          <span className="text-gray-600">|</span>
+          <span className="text-surface-border">|</span>
 
           {next ? (
             <Link
@@ -148,10 +148,10 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
               <Link
                 key={kw}
                 href={`/explore?tag=${encodeURIComponent(kw)}`}
-                className="inline-flex items-center space-x-1 text-xs text-gray-400 hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
+                className="inline-flex items-center space-x-1 text-xs text-muted hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
                 title={`Explore other photographs tagged "${kw}"`}
               >
-                <Tag className="w-2.5 h-2.5 text-gray-500 group-hover:text-accent transition-colors" />
+                <Tag className="w-2.5 h-2.5 text-muted/70 group-hover:text-accent transition-colors" />
                 <span>{kw}</span>
               </Link>
             ))}

@@ -16,7 +16,7 @@ export default function ExplorePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-light text-white tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
           Explore the Archive
         </h1>
         <p className="text-sm text-muted pt-1">

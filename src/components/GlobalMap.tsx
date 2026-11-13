@@ -249,18 +249,18 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       if (cluster.photos.length === 1) {
         const photo = cluster.photos[0];
         popupHtml = `
-          <div style="color: #fff; background: #111; padding: 2px; font-family: inherit; width: 200px;">
+          <div style="padding: 2px; font-family: inherit; width: 200px; color: inherit;">
             <a href="/photo/${photo.photoID}" style="display: block; text-decoration: none; color: inherit;">
-              <div style="width: 100%; height: 110px; overflow: hidden; border-radius: 2px; margin-bottom: 6px; background: #000;">
+              <div style="width: 100%; height: 110px; overflow: hidden; border-radius: 2px; margin-bottom: 6px; background: rgba(0,0,0,0.1);">
                 <img src="/api/thumbnail?src=${encodeURIComponent(photo.imageDesktop)}&w=400" style="width: 100%; height: 100%; object-fit: cover;" />
               </div>
-              <div style="font-weight: 600; font-size: 13px; line-height: 1.2; margin-bottom: 4px; color: #fff;">
+              <div style="font-weight: 600; font-size: 13px; line-height: 1.2; margin-bottom: 4px; color: inherit;">
                 ${photo.title}
               </div>
-              <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">
+              <div style="font-size: 11px; opacity: 0.75; margin-bottom: 4px;">
                 ${photo.dateTaken.year}-${String(photo.dateTaken.month).padStart(2, "0")}-${String(photo.dateTaken.day).padStart(2, "0")}
               </div>
-              <div style="color: #9999ff; font-size: 11px; font-weight: 500;">
+              <div style="color: var(--accent, #f59e0b); font-size: 11px; font-weight: 500;">
                 View Photograph →
               </div>
             </a>
@@ -268,8 +268,8 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
         `;
       } else {
         popupHtml = `
-          <div style="color: #fff; background: #111; padding: 4px; font-family: inherit; width: 230px;">
-            <div style="font-weight: 600; font-size: 12px; color: #f59e0b; margin-bottom: 6px;">
+          <div style="padding: 4px; font-family: inherit; width: 230px; color: inherit;">
+            <div style="font-weight: 600; font-size: 12px; color: var(--accent, #f59e0b); margin-bottom: 6px;">
               📍 ${cluster.photos.length} Photographs at this site
             </div>
             <div style="display: grid; grid-template-columns: repeat(${Math.min(cluster.photos.length, 3)}, 1fr); gap: 4px; margin-bottom: 6px;">
@@ -277,20 +277,20 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                 .slice(0, 3)
                 .map(
                   (p) => `
-                <a href="/photo/${p.photoID}" style="display: block; height: 52px; border-radius: 2px; overflow: hidden; background: #000; border: 1px solid #333;">
+                <a href="/photo/${p.photoID}" style="display: block; height: 52px; border-radius: 2px; overflow: hidden; background: rgba(0,0,0,0.1); border: 1px solid var(--surface-border, #333);">
                   <img src="/api/thumbnail?src=${encodeURIComponent(p.imageDesktop)}&w=150" style="width: 100%; height: 100%; object-fit: cover;" title="${p.title}" />
                 </a>
               `
                 )
                 .join("")}
             </div>
-            <div style="font-size: 12px; color: #fff; font-weight: 500; truncate;">
+            <div style="font-size: 12px; font-weight: 500; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               ${cluster.photos[0].title}
             </div>
-            <div style="font-size: 11px; color: #9ca3af;">
+            <div style="font-size: 11px; opacity: 0.75;">
               and ${cluster.photos.length - 1} more in this location
             </div>
-            <div style="font-size: 11px; color: #9999ff; margin-top: 6px; font-weight: 500;">
+            <div style="font-size: 11px; color: var(--accent, #f59e0b); margin-top: 6px; font-weight: 500;">
               Click pin to browse collection below ↓
             </div>
           </div>
@@ -376,28 +376,29 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       </div>
 
       {/* Map View */}
-      <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black h-[72vh] min-h-[480px]">
+      <div className="relative rounded-sm overflow-hidden border border-surface-border bg-surface dark:bg-black h-[72vh] min-h-[480px]">
         {/* Basemap Switcher Controls */}
-        <div className="photo-overlay absolute top-3 right-3 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
+        <div className="absolute top-3 right-3 z-[1000] flex items-center bg-surface/90 dark:bg-black/85 backdrop-blur-md border border-surface-border dark:border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
           <button
             type="button"
             onClick={() => switchLayer("dark")}
             className={`px-3 py-1.5 transition-colors cursor-pointer ${
               activeLayer === "dark"
                 ? "bg-accent text-accent-contrast font-semibold"
-                : "text-white/80 hover:text-white"
+                : "text-muted hover:text-foreground dark:text-white/80 dark:hover:text-white"
             }`}
-            title="OpenStreetMap Dark Mode (No watermarks)"
+            title="OpenStreetMap Standard / Dark Mode"
           >
-            Dark
+            <span className="dark:inline hidden">Dark</span>
+            <span className="dark:hidden inline">Map</span>
           </button>
           <button
             type="button"
             onClick={() => switchLayer("topo")}
-            className={`px-3 py-1.5 border-l border-white/10 transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 border-l border-surface-border dark:border-white/10 transition-colors cursor-pointer ${
               activeLayer === "topo"
                 ? "bg-accent text-accent-contrast font-semibold"
-                : "text-white/80 hover:text-white"
+                : "text-muted hover:text-foreground dark:text-white/80 dark:hover:text-white"
             }`}
             title="Esri Topographic & Mountain Relief"
           >
@@ -406,10 +407,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
           <button
             type="button"
             onClick={() => switchLayer("satellite")}
-            className={`px-3 py-1.5 border-l border-white/10 transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 border-l border-surface-border dark:border-white/10 transition-colors cursor-pointer ${
               activeLayer === "satellite"
                 ? "bg-accent text-accent-contrast font-semibold"
-                : "text-white/80 hover:text-white"
+                : "text-muted hover:text-foreground dark:text-white/80 dark:hover:text-white"
             }`}
             title="Esri Aerial Satellite Imagery"
           >
@@ -421,12 +422,12 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
         {/* Selected Location / Multi-Photo Showcase Card */}
         {selectedCluster && (
-          <div className="photo-overlay absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-xl z-[1000] bg-black/95 backdrop-blur-md border border-white/20 rounded-sm p-4 shadow-2xl space-y-3">
+          <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-xl z-[1000] bg-surface/95 dark:bg-black/95 backdrop-blur-md border border-surface-border dark:border-white/20 rounded-sm p-4 shadow-2xl space-y-3 text-foreground">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
               <div className="flex items-center space-x-2 text-xs">
                 <MapPin className="w-3.5 h-3.5 text-accent" />
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-foreground">
                   {selectedCluster.photos.length === 1
                     ? "Site Photograph"
                     : `Site Collection (${selectedCluster.photos.length} Photographs)`}
@@ -435,7 +436,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
               <div className="flex items-center space-x-3 text-xs">
                 {selectedCluster.photos.length > 1 && (
-                  <div className="flex items-center space-x-1.5 text-gray-400 font-mono text-[11px]">
+                  <div className="flex items-center space-x-1.5 text-muted font-mono text-[11px]">
                     <span>
                       {activePhotoIndex + 1} of {selectedCluster.photos.length}
                     </span>
@@ -448,7 +449,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                             selectedCluster.photos.length
                         )
                       }
-                      className="p-1 hover:bg-surface rounded text-white transition-colors cursor-pointer"
+                      className="p-1 hover:bg-surface-hover rounded text-foreground transition-colors cursor-pointer"
                       title="Previous photo at this site"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
@@ -460,7 +461,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                           (prev) => (prev + 1) % selectedCluster.photos.length
                         )
                       }
-                      className="p-1 hover:bg-surface rounded text-white transition-colors cursor-pointer"
+                      className="p-1 hover:bg-surface-hover rounded text-foreground transition-colors cursor-pointer"
                       title="Next photo at this site"
                     >
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -470,7 +471,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
                 <button
                   onClick={() => setSelectedCluster(null)}
-                  className="text-muted hover:text-gray-200 p-0.5 cursor-pointer"
+                  className="text-muted hover:text-foreground p-0.5 cursor-pointer"
                   title="Close panel"
                 >
                   <X className="w-4 h-4" />
@@ -500,7 +501,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                     </Link>
 
                     <div className="min-w-0 flex-1 space-y-1">
-                      <h4 className="text-sm font-medium text-white truncate">
+                      <h4 className="text-sm font-medium text-foreground truncate">
                         {currentPhoto.title}
                       </h4>
                       <p className="text-xs text-muted font-mono">
@@ -510,7 +511,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                         {currentPhoto.camera}
                       </p>
                       {currentPhoto.description && (
-                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-muted line-clamp-2 leading-relaxed">
                           {currentPhoto.description}
                         </p>
                       )}
@@ -529,7 +530,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                   {/* Thumbnail ribbon for multi-photo sites */}
                   {selectedCluster.photos.length > 1 && (
                     <div className="pt-2 border-t border-surface-border/40">
-                      <div className="text-[11px] text-gray-400 mb-1.5 font-medium">
+                      <div className="text-[11px] text-muted mb-1.5 font-medium">
                         All photos at this location ({selectedCluster.photos.length}):
                       </div>
                       <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">

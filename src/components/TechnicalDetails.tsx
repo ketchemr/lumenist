@@ -56,7 +56,7 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
             )}
             <div>
               <span className="text-muted text-xs">Capture Medium:</span>{" "}
-              <span className={isAnalogFilm ? "text-amber-300 font-medium" : ""}>
+              <span className={isAnalogFilm ? "text-amber-600 dark:text-amber-300 font-medium" : ""}>
                 {photo.film}
               </span>
             </div>
@@ -66,10 +66,10 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
         {/* Exposure Settings */}
         <div className="space-y-2">
           <h4 className="text-xs uppercase tracking-wider text-muted font-semibold flex items-center space-x-1.5">
-            <Crosshair className="w-3.5 h-3.5 text-gray-400" />
+            <Crosshair className="w-3.5 h-3.5 text-muted" />
             <span>Exposure Pyramid</span>
           </h4>
-          <div className="space-y-1 text-gray-200">
+          <div className="space-y-1 text-foreground">
             <div className="flex items-center space-x-4">
               {photo.focalLength && <span><span className="text-muted text-xs">Focal:</span> {photo.focalLength}</span>}
               {photo.aperture && <span><span className="text-muted text-xs">Aperture:</span> {photo.aperture}</span>}
@@ -90,10 +90,10 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
         {/* Capture Date & Dimensions */}
         <div className="space-y-2">
           <h4 className="text-xs uppercase tracking-wider text-muted font-semibold flex items-center space-x-1.5">
-            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+            <Calendar className="w-3.5 h-3.5 text-muted" />
             <span>Dimensions & Date</span>
           </h4>
-          <div className="space-y-1 text-gray-200">
+          <div className="space-y-1 text-foreground">
             <div>
               <span className="text-muted text-xs">Date:</span>{" "}
               {photo.dateTaken.year}-{String(photo.dateTaken.month).padStart(2, "0")}-{String(photo.dateTaken.day).padStart(2, "0")}
@@ -101,7 +101,7 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
             {width && height && (
               <div>
                 <span className="text-muted text-xs">Resolution:</span> {width} × {height}
-                {megapixels && <span className="text-gray-400 text-xs"> ({megapixels} MP)</span>}
+                {megapixels && <span className="text-muted text-xs"> ({megapixels} MP)</span>}
               </div>
             )}
             {photo.availability && (
@@ -118,10 +118,10 @@ export function TechnicalDetails({ photo }: TechnicalDetailsProps) {
       {photo.location && (
         <div className="border-t border-surface-border pt-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center space-x-2 text-gray-300">
+            <div className="flex items-center space-x-2 text-foreground">
               <MapPin className="w-4 h-4 text-accent" />
               <span>Coordinates:</span>
-              <span className="font-mono text-gray-400">
+              <span className="font-mono text-muted">
                 {photo.location.latitude.toFixed(5)}, {photo.location.longitude.toFixed(5)}
               </span>
             </div>

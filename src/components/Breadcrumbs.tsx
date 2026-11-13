@@ -25,7 +25,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
         const isLast = idx === items.length - 1;
         return (
           <div key={idx} className="flex items-center space-x-1.5">
-            <ChevronRight className="w-3 h-3 text-gray-600 flex-shrink-0" />
+            <ChevronRight className="w-3 h-3 text-muted/60 flex-shrink-0" />
             {item.href && !isLast ? (
               <Link
                 href={item.href}
@@ -34,7 +34,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
                 {item.label}
               </Link>
             ) : (
-              <span className="text-gray-300 font-medium truncate max-w-[200px] sm:max-w-none">
+              <span className="text-foreground font-medium truncate max-w-[200px] sm:max-w-none">
                 {item.label}
               </span>
             )}

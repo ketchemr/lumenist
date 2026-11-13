@@ -86,12 +86,12 @@ export function Pagination({
             href={getPageUrl(1)}
             onClick={(e) => handleClick(e, 1)}
             aria-label="First page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 hover:text-white transition-colors"
+            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
           >
             <ChevronsLeft className="w-3.5 h-3.5" />
           </Link>
         ) : (
-          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-gray-600 cursor-not-allowed">
+          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronsLeft className="w-3.5 h-3.5" />
           </span>
         )}
@@ -102,12 +102,12 @@ export function Pagination({
             href={getPageUrl(currentPage - 1)}
             onClick={(e) => handleClick(e, currentPage - 1)}
             aria-label="Previous page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 hover:text-white transition-colors"
+            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </Link>
         ) : (
-          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-gray-600 cursor-not-allowed">
+          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronLeft className="w-3.5 h-3.5" />
           </span>
         )}
@@ -119,7 +119,7 @@ export function Pagination({
               return (
                 <span
                   key={`ellipsis-${idx}`}
-                  className="px-2 py-1 text-gray-500 font-mono tracking-widest"
+                  className="px-2 py-1 text-muted font-mono tracking-widest"
                 >
                   ...
                 </span>
@@ -135,8 +135,8 @@ export function Pagination({
                 aria-current={isCurrent ? "page" : undefined}
                 className={`min-w-[32px] h-8 flex items-center justify-center rounded px-2.5 font-medium transition-all ${
                   isCurrent
-                    ? "bg-accent text-white font-semibold shadow-sm"
-                    : "bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 hover:text-white"
+                    ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                    : "bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground"
                 }`}
               >
                 {p}
@@ -151,12 +151,12 @@ export function Pagination({
             href={getPageUrl(currentPage + 1)}
             onClick={(e) => handleClick(e, currentPage + 1)}
             aria-label="Next page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 hover:text-white transition-colors"
+            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         ) : (
-          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-gray-600 cursor-not-allowed">
+          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronRight className="w-3.5 h-3.5" />
           </span>
         )}
@@ -167,12 +167,12 @@ export function Pagination({
             href={getPageUrl(totalPages)}
             onClick={(e) => handleClick(e, totalPages)}
             aria-label="Last page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 hover:text-white transition-colors"
+            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
           >
             <ChevronsRight className="w-3.5 h-3.5" />
           </Link>
         ) : (
-          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-gray-600 cursor-not-allowed">
+          <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronsRight className="w-3.5 h-3.5" />
           </span>
         )}
@@ -181,8 +181,8 @@ export function Pagination({
       {/* Item Range Text */}
       {totalItems && (
         <p className="text-[11px] text-muted">
-          Showing <span className="text-gray-300">{startItem}–{endItem}</span> of{" "}
-          <span className="text-gray-300">{totalItems}</span> photographs (Page {currentPage} of {totalPages})
+          Showing <span className="text-foreground font-medium">{startItem}–{endItem}</span> of{" "}
+          <span className="text-foreground font-medium">{totalItems}</span> photographs (Page {currentPage} of {totalPages})
         </p>
       )}
     </div>

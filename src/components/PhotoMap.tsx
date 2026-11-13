@@ -124,23 +124,23 @@ export function PhotoMap({
       );
 
       const popupHtml = `
-        <div style="color: #fff; background: #111; padding: 4px; font-family: inherit;">
+        <div style="padding: 4px; font-family: inherit; color: inherit;">
           ${
             thumbnailUrl
-              ? `<div style="margin-bottom: 6px; border-radius: 2px; overflow: hidden; max-height: 80px; background: #000;">
+              ? `<div style="margin-bottom: 6px; border-radius: 2px; overflow: hidden; max-height: 80px; background: rgba(0,0,0,0.1);">
                    <img src="${thumbnailUrl}" style="width: 100%; height: 80px; object-fit: cover;" />
                  </div>`
               : ""
           }
-          <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px; color: #fff;">${title}</div>
-          <div style="font-size: 11px; color: #9ca3af; font-family: monospace;">
+          <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px; color: inherit;">${title}</div>
+          <div style="font-size: 11px; opacity: 0.75; font-family: monospace;">
             ${latitude.toFixed(5)}, ${longitude.toFixed(5)}
           </div>
           <div style="margin-top: 6px;">
             <a href="https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}"
                target="_blank"
                rel="noopener noreferrer"
-               style="color: #9999ff; font-size: 11px; text-decoration: underline;">
+               style="color: var(--accent, #f59e0b); font-size: 11px; text-decoration: underline;">
                Open in Google Maps ↗
             </a>
           </div>
@@ -190,28 +190,29 @@ export function PhotoMap({
   };
 
   return (
-    <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black">
+    <div className="relative rounded-sm overflow-hidden border border-surface-border bg-surface dark:bg-black">
       {/* Basemap Switcher Controls */}
-      <div className="photo-overlay absolute top-2.5 right-2.5 z-[1000] flex items-center bg-black/85 backdrop-blur-md border border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
+      <div className="absolute top-2.5 right-2.5 z-[1000] flex items-center bg-surface/90 dark:bg-black/85 backdrop-blur-md border border-surface-border dark:border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
         <button
           type="button"
           onClick={() => switchLayer("dark")}
           className={`px-2.5 py-1 transition-colors cursor-pointer ${
             activeLayer === "dark"
               ? "bg-accent text-accent-contrast font-semibold"
-              : "text-white/80 hover:text-white"
+              : "text-muted hover:text-foreground dark:text-white/80 dark:hover:text-white"
           }`}
-          title="OpenStreetMap Dark Mode (No watermarks)"
+          title="OpenStreetMap Standard / Dark Mode"
         >
-          Dark
+          <span className="dark:inline hidden">Dark</span>
+          <span className="dark:hidden inline">Map</span>
         </button>
         <button
           type="button"
           onClick={() => switchLayer("topo")}
-          className={`px-2.5 py-1 border-l border-white/10 transition-colors cursor-pointer ${
+          className={`px-2.5 py-1 border-l border-surface-border dark:border-white/10 transition-colors cursor-pointer ${
             activeLayer === "topo"
               ? "bg-accent text-accent-contrast font-semibold"
-              : "text-white/80 hover:text-white"
+              : "text-muted hover:text-foreground dark:text-white/80 dark:hover:text-white"
           }`}
           title="Esri Topographic & Mountain Relief"
         >
@@ -220,10 +221,10 @@ export function PhotoMap({
         <button
           type="button"
           onClick={() => switchLayer("satellite")}
-          className={`px-2.5 py-1 border-l border-white/10 transition-colors cursor-pointer ${
+          className={`px-2.5 py-1 border-l border-surface-border dark:border-white/10 transition-colors cursor-pointer ${
             activeLayer === "satellite"
               ? "bg-accent text-accent-contrast font-semibold"
-              : "text-white/80 hover:text-white"
+              : "text-muted hover:text-foreground dark:text-white/80 dark:hover:text-white"
           }`}
           title="Esri Aerial Satellite Imagery"
         >
@@ -232,7 +233,7 @@ export function PhotoMap({
       </div>
 
       <div ref={mapContainerRef} style={{ height, width: "100%" }} />
-      <div className="bg-black/90 px-2 py-1 text-[10px] text-gray-500 text-right border-t border-surface-border/40 font-mono">
+      <div className="bg-surface dark:bg-black/90 px-2 py-1 text-[10px] text-muted text-right border-t border-surface-border font-mono">
         Map data &copy; OpenStreetMap &copy; Esri
       </div>
     </div>

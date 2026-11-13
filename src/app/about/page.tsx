@@ -58,7 +58,7 @@ export default function AboutPage() {
 
       {/* Headline Header */}
       <div className="space-y-3">
-        <h1 className="text-3xl sm:text-4xl font-light text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-light text-foreground tracking-tight">
           {aboutTitle}
         </h1>
         <p className="text-accent text-sm tracking-wide">{aboutSubheading}</p>
@@ -66,13 +66,13 @@ export default function AboutPage() {
 
       {/* Main Narrative */}
       {paragraphs.length > 0 && (
-        <div className="space-y-6 text-gray-300 text-sm sm:text-base leading-relaxed">
+        <div className="space-y-6 text-foreground/80 text-sm sm:text-base leading-relaxed">
           {paragraphs.map((p, idx) => (
             <p
               key={idx}
               className={
                 idx === paragraphs.length - 1 && paragraphs.length > 1
-                  ? "italic text-gray-400"
+                  ? "italic text-muted"
                   : ""
               }
             >
@@ -88,13 +88,13 @@ export default function AboutPage() {
           {/* Cameras & Lenses Card */}
           {gearList.length > 0 && (
             <div className="bg-surface border border-surface-border rounded-sm p-6 space-y-4">
-              <div className="flex items-center space-x-2.5 text-white font-medium border-b border-surface-border pb-3">
+              <div className="flex items-center space-x-2.5 text-foreground font-medium border-b border-surface-border pb-3">
                 <Camera className="w-4 h-4 text-accent" />
                 <h2 className="text-sm uppercase tracking-wider font-semibold">
                   Camera Bodies & Lenses
                 </h2>
               </div>
-              <ul className="space-y-2 text-xs sm:text-sm text-gray-300">
+              <ul className="space-y-2 text-xs sm:text-sm text-muted">
                 {gearList.map((item, idx) => (
                   <li key={idx} className="flex items-start space-x-2">
                     <span className="text-accent">•</span>
@@ -110,13 +110,13 @@ export default function AboutPage() {
             <div className="bg-surface border border-surface-border rounded-sm p-6 space-y-4">
               {supportGearList.length > 0 && (
                 <>
-                  <div className="flex items-center space-x-2.5 text-white font-medium border-b border-surface-border pb-3">
+                  <div className="flex items-center space-x-2.5 text-foreground font-medium border-b border-surface-border pb-3">
                     <Sparkles className="w-4 h-4 text-accent" />
                     <h2 className="text-sm uppercase tracking-wider font-semibold">
                       Tripods & Support
                     </h2>
                   </div>
-                  <ul className="space-y-2 text-xs sm:text-sm text-gray-300">
+                  <ul className="space-y-2 text-xs sm:text-sm text-muted">
                     {supportGearList.map((item, idx) => (
                       <li key={idx} className="flex items-start space-x-2">
                         <span className="text-accent">•</span>
@@ -160,13 +160,13 @@ export default function AboutPage() {
 
       {/* Orders & Inquiries Banner */}
       <div className="bg-surface border border-surface-border rounded-sm p-6 sm:p-8 space-y-4">
-        <div className="flex items-center space-x-2.5 text-white font-medium">
+        <div className="flex items-center space-x-2.5 text-foreground font-medium">
           <ShoppingBag className="w-5 h-5 text-accent" />
           <h2 className="text-lg font-light tracking-wide">
             Fine Art Print Orders & Inquiries
           </h2>
         </div>
-        <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-2xl">
+        <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl">
           If you would like to place an order or inquire about licensing, please
           contact via email with the <strong>image ID</strong> and your desired
           print size or usage requirements.

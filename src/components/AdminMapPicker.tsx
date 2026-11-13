@@ -219,9 +219,9 @@ export function AdminMapPicker({
   }, [latitude, longitude]);
 
   return (
-    <div className="relative rounded-sm overflow-hidden border border-surface-border bg-black h-64 sm:h-72 w-full">
+    <div className="relative rounded-sm overflow-hidden border border-surface-border bg-surface dark:bg-black h-64 sm:h-72 w-full">
       <div ref={mapContainerRef} className="w-full h-full" />
-      <div className="absolute top-2 left-2 z-[1000] bg-black/85 backdrop-blur-md px-2.5 py-1 rounded text-[11px] text-gray-300 border border-surface-border shadow-md">
+      <div className="absolute top-2 left-2 z-[1000] bg-surface/90 dark:bg-black/85 backdrop-blur-md px-2.5 py-1 rounded text-[11px] text-foreground border border-surface-border shadow-md">
         {latitude !== null && longitude !== null
           ? `📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
           : "Click on map to drop pin (or enter coordinates above)"}

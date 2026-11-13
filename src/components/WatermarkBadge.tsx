@@ -34,7 +34,7 @@ export function WatermarkBadge({
       )}
       {show && (
         <div
-          className={`absolute z-20 pointer-events-none select-none rounded bg-black/60 backdrop-blur-[2px] border border-white/10 text-white/85 font-sans shadow ${sizeClasses} ${className}`}
+          className={`keep-white absolute z-20 pointer-events-none select-none rounded bg-black/60 backdrop-blur-[2px] border border-white/10 text-white/85 font-sans shadow ${sizeClasses} ${className}`}
           aria-hidden="true"
         >
           {notice}

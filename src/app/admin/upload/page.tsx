@@ -1442,7 +1442,7 @@ export default function AdminUploadPage() {
 
                 {imagePreviewUrl ? (
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                    <div className="w-48 aspect-[3/2] bg-black rounded overflow-hidden border border-surface-border shadow-lg">
+                    <div className="w-48 aspect-[3/2] bg-surface-hover/50 dark:bg-black rounded overflow-hidden border border-surface-border shadow-lg">
                       <img
                         src={imagePreviewUrl}
                         alt="Preview"
@@ -1450,7 +1450,7 @@ export default function AdminUploadPage() {
                       />
                     </div>
                     <div className="text-left space-y-1 text-xs">
-                      <p className="text-white font-medium text-sm">
+                      <p className="text-foreground font-medium text-sm">
                         {selectedFile?.name}
                       </p>
                       <p className="text-muted">
@@ -1469,11 +1469,11 @@ export default function AdminUploadPage() {
                   </div>
                 ) : (
                   <div className="space-y-3 py-6">
-                    <div className="inline-flex p-4 rounded-full bg-black border border-surface-border text-muted">
+                    <div className="inline-flex p-4 rounded-full bg-surface-hover border border-surface-border text-muted">
                       <Upload className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-200 font-medium">
+                      <p className="text-sm text-foreground font-medium">
                         Drag and drop your high-resolution JPEG here, or click to
                         browse
                       </p>
@@ -1494,7 +1494,7 @@ export default function AdminUploadPage() {
                     <Camera className="w-3.5 h-3.5" />
                     <span>Auto-Detected Technical Metadata</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-gray-300">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-foreground">
                     <div>
                       <span className="text-muted block text-[10px]">
                         Camera
@@ -1535,7 +1535,7 @@ export default function AdminUploadPage() {
               {/* Title & Description */}
               <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-gray-200">
+                  <label className="block text-xs font-medium text-foreground">
                     Photograph Title <span className="text-accent">*</span>
                   </label>
                   <input
@@ -2417,7 +2417,7 @@ export default function AdminUploadPage() {
               <button
                 type="button"
                 onClick={toggleSelectAllCurrentPage}
-                className="p-1 text-muted hover:text-white transition-colors"
+                className="p-1 text-muted hover:text-foreground transition-colors"
                 title={
                   isAllCurrentPageSelected
                     ? "Deselect current page"
@@ -2429,12 +2429,12 @@ export default function AdminUploadPage() {
                 ) : selectedPhotoIDs.length > 0 ? (
                   <MinusSquare className="w-4 h-4 text-accent" />
                 ) : (
-                  <Square className="w-4 h-4 text-gray-600" />
+                  <Square className="w-4 h-4 text-muted" />
                 )}
               </button>
               <span>
                 Showing{" "}
-                <strong className="text-white">
+                <strong className="text-foreground">
                   {catalogTotal === 0
                     ? 0
                     : catalogPageSize === "all"
@@ -2448,7 +2448,7 @@ export default function AdminUploadPage() {
                         catalogTotal
                       )}
                 </strong>{" "}
-                of <strong className="text-white">{catalogTotal}</strong>{" "}
+                of <strong className="text-foreground">{catalogTotal}</strong>{" "}
                 photographs
               </span>
             </div>
@@ -2531,7 +2531,7 @@ export default function AdminUploadPage() {
                         {isSelected ? (
                           <CheckSquare className="w-4 h-4 text-accent" />
                         ) : (
-                          <Square className="w-4 h-4 text-gray-500" />
+                          <Square className="w-4 h-4 text-muted" />
                         )}
                       </button>
 
@@ -3359,7 +3359,7 @@ export default function AdminUploadPage() {
                     ) : (
                       <ImageIcon className="w-8 h-8 text-muted/40" />
                     )}
-                    <span className="absolute bottom-2 right-2 bg-black/75 backdrop-blur-sm text-[10px] text-zinc-300 px-2 py-0.5 rounded border border-white/10">
+                    <span className="keep-white absolute bottom-2 right-2 bg-black/75 backdrop-blur-sm text-[10px] text-white/90 px-2 py-0.5 rounded border border-white/10">
                       {album.count} {album.count === 1 ? "photo" : "photos"}
                     </span>
                   </div>
@@ -3546,7 +3546,7 @@ export default function AdminUploadPage() {
                 <div className="space-y-3 text-xs">
                   <p className="text-foreground">
                     Are you sure you want to delete the album label{" "}
-                    <strong className="text-white">
+                    <strong className="text-foreground">
                       &ldquo;{deletingAlbum.name}&rdquo;
                     </strong>?
                   </p>
@@ -3709,8 +3709,8 @@ export default function AdminUploadPage() {
                     }}
                     className={`flex items-center space-x-3 p-3 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent text-foreground"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40 text-foreground"
                     }`}
                   >
                     <span
@@ -3807,8 +3807,8 @@ export default function AdminUploadPage() {
                     }}
                     className={`flex items-center space-x-3 p-3 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent text-foreground"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40 text-foreground"
                     }`}
                   >
                     <div className="flex items-center -space-x-1 flex-shrink-0">
@@ -3931,8 +3931,8 @@ export default function AdminUploadPage() {
                       }
                       className={`p-3 rounded border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
-                          : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
+                          ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent text-foreground"
+                          : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40 text-foreground"
                       }`}
                     >
                       <span className="block text-xs font-medium text-foreground">
@@ -3996,8 +3996,8 @@ export default function AdminUploadPage() {
                     }
                     className={`p-4 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent text-foreground"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40 text-foreground"
                     }`}
                   >
                     <span className="block text-xs font-medium text-foreground">
@@ -4048,8 +4048,8 @@ export default function AdminUploadPage() {
                     }
                     className={`p-4 rounded border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent"
-                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40"
+                        ? "border-accent bg-accent/15 shadow-md ring-1 ring-accent text-foreground"
+                        : "border-surface-border bg-surface hover:bg-surface-hover hover:border-accent/40 text-foreground"
                     }`}
                   >
                     <span className="block text-xs font-medium text-foreground">
