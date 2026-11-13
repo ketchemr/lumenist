@@ -15,7 +15,11 @@ import Link from "next/link";
 
 interface GlobalMapProps {
   photos: Photo[];
-  categories: string[];
+  categories?: string[];
+  showCategoryFilter?: boolean;
+  className?: string;
+  heightClassName?: string;
+  onFilterToCluster?: (photos: Photo[]) => void;
 }
 
 interface LocationCluster {
@@ -61,7 +65,14 @@ const LAYER_CONFIGS: Record<
   },
 };
 
-export function GlobalMap({ photos, categories }: GlobalMapProps) {
+export function GlobalMap({
+  photos,
+  categories = [],
+  showCategoryFilter = false,
+  className = "",
+  heightClassName = "h-[72vh] min-h-[480px]",
+  onFilterToCluster,
+}: GlobalMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
@@ -77,12 +88,12 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
   const geotaggedPhotos = useMemo(() => {
     return photos.filter((p) => {
       if (!p.location?.latitude || !p.location?.longitude) return false;
-      if (selectedCategory === "All") return true;
+      if (!showCategoryFilter || selectedCategory === "All") return true;
       return p.categories.some(
         (c) => c.toLowerCase() === selectedCategory.toLowerCase()
       );
     });
-  }, [photos, selectedCategory]);
+  }, [photos, selectedCategory, showCategoryFilter]);
 
   // Group photos into location clusters (~11m precision or exact)
   const clusters = useMemo(() => {
@@ -120,10 +131,22 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
         center: [39.8283, -98.5795],
         zoom: 4,
         zoomControl: true,
+        scrollWheelZoom: false, // Prevent wheel zoom hijacking vertical page scrolling
         maxZoom: 18,
         minZoom: 2,
         attributionControl: false,
       });
+
+      // Enable scroll wheel zoom only when user actively clicks into the map
+      map.on("click", () => {
+        map.scrollWheelZoom.enable();
+      });
+
+      const container = mapContainerRef.current;
+      const handleMouseLeave = () => {
+        map.scrollWheelZoom.disable();
+      };
+      container?.addEventListener("mouseleave", handleMouseLeave);
 
       mapInstanceRef.current = map;
 
@@ -137,11 +160,30 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
 
       renderClusterMarkers(L, map, layerGroup, clusters);
 
+      let resizeObserver: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== "undefined" && container) {
+        resizeObserver = new ResizeObserver(() => {
+          if (isMounted && mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        });
+        resizeObserver.observe(container);
+      }
+
       setTimeout(() => {
         if (isMounted && mapInstanceRef.current) {
           map.invalidateSize();
         }
       }, 250);
+
+      return () => {
+        if (resizeObserver && container) {
+          resizeObserver.disconnect();
+        }
+        if (container) {
+          container.removeEventListener("mouseleave", handleMouseLeave);
+        }
+      };
     });
 
     return () => {
@@ -310,8 +352,10 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
       layerGroup.addLayer(marker);
     });
 
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    if (clusterList.length === 1) {
+      map.setView([clusterList[0].latitude, clusterList[0].longitude], 11);
+    } else if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
     }
   };
 
@@ -325,58 +369,68 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
     }
   }, [clusters]);
 
-  return (
-    <div className="space-y-4">
-      {/* Category Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-surface border border-surface-border p-3 rounded-sm">
-        <div className="flex items-center space-x-2 text-xs text-muted">
-          <Layers className="w-4 h-4 text-accent" />
-          <span className="font-medium text-foreground">Filter by Category:</span>
-        </div>
+  // Deselect cluster if it is filtered out of current selection
+  useEffect(() => {
+    if (selectedCluster && !clusters.some((c) => c.key === selectedCluster.key)) {
+      setSelectedCluster(null);
+      setActivePhotoIndex(0);
+    }
+  }, [clusters, selectedCluster]);
 
-        <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto">
-          <button
-            onClick={() => {
-              setSelectedCategory("All");
-              setSelectedCluster(null);
-            }}
-            className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
-              selectedCategory === "All"
-                ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                : "bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent/40"
-            }`}
-          >
-            All Locations ({photos.filter((p) => p.location).length})
-          </button>
-          {categories.map((cat) => {
-            const count = photos.filter(
-              (p) =>
-                p.location &&
-                p.categories.some((c) => c.toLowerCase() === cat.toLowerCase())
-            ).length;
-            if (count === 0) return null;
-            return (
-              <button
-                key={cat}
-                onClick={() => {
-                  setSelectedCategory(cat);
-                  setSelectedCluster(null);
-                }}
-                className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                  selectedCategory === cat
-                    ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                    : "bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent/40"
-                }`}
-              >
-                {cat} ({count})
-              </button>
-            );
-          })}
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Category Filter Bar */}
+      {showCategoryFilter && categories.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-surface border border-surface-border p-3 rounded-sm">
+          <div className="flex items-center space-x-2 text-xs text-muted">
+            <Layers className="w-4 h-4 text-accent" />
+            <span className="font-medium text-foreground">Filter by Category:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto">
+            <button
+              onClick={() => {
+                setSelectedCategory("All");
+                setSelectedCluster(null);
+              }}
+              className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                selectedCategory === "All"
+                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                  : "bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent/40"
+              }`}
+            >
+              All Locations ({photos.filter((p) => p.location).length})
+            </button>
+            {categories.map((cat) => {
+              const count = photos.filter(
+                (p) =>
+                  p.location &&
+                  p.categories.some((c) => c.toLowerCase() === cat.toLowerCase())
+              ).length;
+              if (count === 0) return null;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    setSelectedCluster(null);
+                  }}
+                  className={`text-xs px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    selectedCategory === cat
+                      ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                      : "bg-surface hover:bg-surface-hover border border-surface-border text-foreground hover:border-accent/40"
+                  }`}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Map View */}
-      <div className="relative rounded-sm overflow-hidden border border-surface-border bg-surface dark:bg-black h-[72vh] min-h-[480px]">
+      <div className={`relative rounded-sm overflow-hidden border border-surface-border bg-surface dark:bg-black ${heightClassName}`}>
         {/* Basemap Switcher Controls */}
         <div className="absolute top-3 right-3 z-[1000] flex items-center bg-surface/90 dark:bg-black/85 backdrop-blur-md border border-surface-border dark:border-white/20 rounded-sm overflow-hidden text-[11px] shadow-lg">
           <button
@@ -419,6 +473,19 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
         </div>
 
         <div ref={mapContainerRef} className="w-full h-full" />
+
+        {/* Empty state if no geotagged photos match */}
+        {geotaggedPhotos.length === 0 && (
+          <div className="absolute inset-0 z-[500] flex items-center justify-center bg-background/70 backdrop-blur-xs pointer-events-none p-4">
+            <div className="bg-surface/95 border border-surface-border p-4 rounded-sm shadow-xl text-center max-w-sm">
+              <MapPin className="w-5 h-5 text-muted mx-auto mb-1.5 opacity-60" />
+              <p className="text-xs font-medium text-foreground">No mapped locations</p>
+              <p className="text-[11px] text-muted mt-0.5">
+                No geotagged photographs match the current search or filters.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Selected Location / Multi-Photo Showcase Card */}
         {selectedCluster && (
@@ -515,7 +582,7 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                           {currentPhoto.description}
                         </p>
                       )}
-                      <div className="pt-1">
+                      <div className="pt-1 flex flex-wrap items-center gap-3">
                         <Link
                           href={`/photo/${currentPhoto.photoID}`}
                           className="inline-flex items-center space-x-1.5 text-xs text-accent hover:underline font-medium"
@@ -523,6 +590,19 @@ export function GlobalMap({ photos, categories }: GlobalMapProps) {
                           <span>Exhibition View</span>
                           <ExternalLink className="w-3 h-3" />
                         </Link>
+                        {onFilterToCluster && (
+                          <button
+                            type="button"
+                            onClick={() => onFilterToCluster(selectedCluster.photos)}
+                            className="inline-flex items-center space-x-1 text-xs text-muted hover:text-accent font-medium cursor-pointer transition-colors"
+                          >
+                            <span>
+                              {selectedCluster.photos.length === 1
+                                ? "View in list below ↓"
+                                : `View all ${selectedCluster.photos.length} in list below ↓`}
+                            </span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

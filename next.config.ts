@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, // Allows serving local files / static exports cleanly
   },
+  async redirects() {
+    return [
+      {
+        source: "/map",
+        destination: "/explore",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

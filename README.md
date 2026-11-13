@@ -20,18 +20,13 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
 - **Exhibition Grid & Pagination**: Responsive thumbnail grids with configurable page sizing (25, 50, 100, or All) and smooth scroll-to-top page navigation.
 - **Instant Clean Routing**: Direct navigation to `/galleries` automatically redirects to the homepage `/`.
 
-### 🔍 Instant Explore & Archive Search (`/explore`)
-- **Real-Time Client & Server Search**: Instant multi-field search across titles, captions, stories, locations, camera gear, lenses, and film emulsions.
-- **Multi-Category Pills**: Filter by one or more galleries with one click.
-- **Chronological Timeline Range**: Dual-handle year slider to explore works captured across specific decades or field seasons.
-
-### 🗺️ Interactive World Photography Map (`/map`)
-- **Global Clustered Pin Map**: Interactive Leaflet map aggregating shooting locations worldwide with auto-clustering for dense field locations.
-- **3 Switchable Cartographic Layers**:
-  - *Dark Vector Tiles*: High-contrast, distraction-free street and terrain vectors (OpenStreetMap-based, zero watermarks or API keys).
-  - *Esri World Topographic*: Mountain elevations, contour lines, and physical geography.
-  - *Esri World Satellite Imagery*: High-resolution aerial satellite orthophotos.
-- **Exhibition Quick-Cards**: Clicking any map pin reveals a thumbnail card with photo title, camera, date, and a direct link to the exhibition view.
+### 🔍 Instant Explore, Geographic Map & Archive Search (`/explore`)
+- **Real-Time Archive Search**: Instant multi-field search across titles, captions, stories, locations, camera gear, lenses, and film emulsions.
+- **Curated Album Pills & Interactive Tag Cloud**: Concise, scrollable filter sections for rapid discovery by collection, biome, and keyword.
+- **Embedded World Photography Map**: Interactive Leaflet map displaying shooting locations matching the active search, album, or tag filters with auto-clustering for dense field locations.
+  - *3 Switchable Cartographic Layers*: Dark/Map Vector Tiles, Esri World Topographic, and Esri World Satellite Imagery.
+  - *Exhibition Quick-Cards & List Sync*: Clicking any map pin reveals photo preview cards with exhibition details and lets you isolate and view those photographs in the gallery list below.
+  - *Clean Route Redirect*: Direct navigation to `/map` automatically redirects to `/explore`.
 
 ### 🔍 Deep Technical Photo Viewer (`/photo/[id]`)
 - **Adaptive Framing & Lightbox**: Pure OLED black or custom exhibition matting that fits horizontal, vertical, and panoramic orientations without clipping.

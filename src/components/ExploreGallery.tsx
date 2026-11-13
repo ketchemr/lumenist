@@ -2,12 +2,37 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { ExhibitionGallery } from "@/components/ExhibitionGallery";
 import { Pagination } from "@/components/Pagination";
 import { sortPhotos } from "@/lib/photoSort";
-import { Search, Film, Tag, Folder, X, ChevronDown, ChevronUp, Columns2, LayoutGrid, ArrowUpDown } from "lucide-react";
+import {
+  Search,
+  Film,
+  Tag,
+  Folder,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Columns2,
+  LayoutGrid,
+  ArrowUpDown,
+  MapPin,
+} from "lucide-react";
+
+const GlobalMap = dynamic(
+  () => import("@/components/GlobalMap").then((mod) => mod.GlobalMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[360px] sm:h-[440px] bg-surface border border-surface-border rounded-sm flex items-center justify-center text-xs text-muted">
+        Loading interactive map...
+      </div>
+    ),
+  }
+);
 
 interface ExploreGalleryProps {
   initialPhotos: Photo[];
@@ -56,6 +81,8 @@ export function ExploreGallery({
   const [tagSearch, setTagSearch] = useState("");
   const [showTagCloud, setShowTagCloud] = useState(true);
   const [showAllTags, setShowAllTags] = useState(true);
+  const [showMap, setShowMap] = useState(true);
+  const [locationClusterPhotos, setLocationClusterPhotos] = useState<Photo[] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"large" | "compact">("large");
   const [photoSort, setPhotoSort] = useState<string>("date-desc");
@@ -224,9 +251,19 @@ export function ExploreGallery({
     });
   }, [initialPhotos, searchQuery, selectedCategory, selectedTags, filmFilter]);
 
+  const geotaggedCount = useMemo(() => {
+    return filteredPhotos.filter(
+      (p) => p.location?.latitude && p.location?.longitude
+    ).length;
+  }, [filteredPhotos]);
+
+  const photosForGallery = useMemo(() => {
+    return locationClusterPhotos || filteredPhotos;
+  }, [locationClusterPhotos, filteredPhotos]);
+
   const sortedPhotos = useMemo(() => {
-    return sortPhotos(filteredPhotos, photoSort);
-  }, [filteredPhotos, photoSort]);
+    return sortPhotos(photosForGallery, photoSort);
+  }, [photosForGallery, photoSort]);
 
   const totalPages = Math.ceil(sortedPhotos.length / pageSize);
   const paginatedPhotos = useMemo(() => {
@@ -236,12 +273,14 @@ export function ExploreGallery({
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
     updateUrlParams(selectedTags, val, selectedCategory);
   };
 
   const handleCategoryChange = (val: string) => {
     setSelectedCategory(val);
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
     updateUrlParams(selectedTags, searchQuery, val);
   };
@@ -255,6 +294,7 @@ export function ExploreGallery({
       : [...selectedTags, tag];
 
     setSelectedTags(nextTags);
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
     updateUrlParams(nextTags, searchQuery, selectedCategory);
   };
@@ -264,18 +304,21 @@ export function ExploreGallery({
       (t) => t.toLowerCase() !== tag.toLowerCase()
     );
     setSelectedTags(nextTags);
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
     updateUrlParams(nextTags, searchQuery, selectedCategory);
   };
 
   const handleClearAllTags = () => {
     setSelectedTags([]);
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
     updateUrlParams([], searchQuery, selectedCategory);
   };
 
   const handleFilmChange = (val: "All" | "Film" | "Digital") => {
     setFilmFilter(val);
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
   };
 
@@ -284,22 +327,23 @@ export function ExploreGallery({
     setSelectedCategory("All");
     setSelectedTags([]);
     setFilmFilter("All");
+    setLocationClusterPhotos(null);
     setCurrentPage(1);
     router.replace(pathname, { scroll: false });
   };
 
   const hasActiveFilters =
-    searchQuery ||
+    Boolean(searchQuery) ||
     selectedCategory !== "All" ||
     selectedTags.length > 0 ||
-    filmFilter !== "All";
-
+    filmFilter !== "All" ||
+    locationClusterPhotos !== null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Controls Bar */}
-      <div className="space-y-4 bg-surface border border-surface-border p-4 sm:p-6 rounded-sm">
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+      <div className="space-y-4 bg-surface border border-surface-border p-4 sm:p-5 rounded-sm">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -307,15 +351,16 @@ export function ExploreGallery({
               placeholder="Search by subject, location, camera, or keyword..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-background border border-surface-border rounded-sm text-sm text-foreground placeholder-muted focus:outline-none focus:border-accent"
+              className="w-full pl-10 pr-4 py-2 bg-background border border-surface-border rounded-sm text-sm text-foreground placeholder-muted focus:outline-none focus:border-accent"
             />
           </div>
 
           <div className="flex items-center space-x-2">
             {/* Tag Cloud Toggle */}
             <button
+              type="button"
               onClick={() => setShowTagCloud(!showTagCloud)}
-              className={`px-3 py-2 rounded-sm border text-xs flex items-center space-x-1.5 transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-sm border text-xs flex items-center space-x-1.5 transition-colors cursor-pointer ${
                 showTagCloud || selectedTags.length > 0
                   ? "bg-accent/15 border-accent text-accent font-medium shadow-sm"
                   : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent/40"
@@ -330,11 +375,32 @@ export function ExploreGallery({
               )}
             </button>
 
+            {/* Map Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowMap(!showMap)}
+              className={`px-3 py-1.5 rounded-sm border text-xs flex items-center space-x-1.5 transition-colors cursor-pointer ${
+                showMap
+                  ? "bg-accent/15 border-accent text-accent font-medium shadow-sm"
+                  : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent/40"
+              }`}
+              title={showMap ? "Hide interactive map" : "Show interactive map"}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Map</span>
+              {geotaggedCount > 0 && (
+                <span className="text-[10px] opacity-75">
+                  ({geotaggedCount})
+                </span>
+              )}
+            </button>
+
             {/* Film / Digital toggle */}
-            <div className="flex items-center space-x-1 border border-surface-border rounded-sm p-1 bg-surface text-xs">
+            <div className="flex items-center space-x-1 border border-surface-border rounded-sm p-0.5 bg-surface text-xs">
               <button
+                type="button"
                 onClick={() => handleFilmChange("All")}
-                className={`px-3 py-1.5 rounded-sm transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-sm transition-colors cursor-pointer ${
                   filmFilter === "All"
                     ? "bg-surface-hover text-foreground font-medium shadow-sm"
                     : "text-muted hover:text-foreground"
@@ -343,8 +409,9 @@ export function ExploreGallery({
                 All
               </button>
               <button
+                type="button"
                 onClick={() => handleFilmChange("Digital")}
-                className={`px-3 py-1.5 rounded-sm transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-sm transition-colors cursor-pointer ${
                   filmFilter === "Digital"
                     ? "bg-surface-hover text-foreground font-medium shadow-sm"
                     : "text-muted hover:text-foreground"
@@ -353,8 +420,9 @@ export function ExploreGallery({
                 Digital
               </button>
               <button
+                type="button"
                 onClick={() => handleFilmChange("Film")}
-                className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-sm transition-colors flex items-center space-x-1 cursor-pointer ${
                   filmFilter === "Film"
                     ? "bg-surface-hover text-accent font-medium shadow-sm"
                     : "text-muted hover:text-foreground"
@@ -378,6 +446,7 @@ export function ExploreGallery({
               <span className="text-accent flex items-center gap-1.5 ml-1">
                 &bull; 1 active
                 <button
+                  type="button"
                   onClick={() => handleCategoryChange("All")}
                   className="text-xs text-accent hover:underline cursor-pointer ml-1"
                 >
@@ -387,7 +456,7 @@ export function ExploreGallery({
             )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5 max-h-80 overflow-y-auto pr-1 text-xs">
+          <div className="flex flex-wrap gap-1.5 max-h-28 sm:max-h-32 overflow-y-auto pr-1 text-xs">
             <button
               onClick={() => handleCategoryChange("All")}
               className={`text-xs px-2.5 py-1 rounded border transition-all cursor-pointer ${
@@ -528,7 +597,7 @@ export function ExploreGallery({
             </div>
 
             {/* Scrollable Tag Cloud Container */}
-            <div className="flex flex-wrap gap-1.5 max-h-80 overflow-y-auto pr-1">
+            <div className="flex flex-wrap gap-1.5 max-h-32 sm:max-h-36 overflow-y-auto pr-1">
               {displayedTags.map(({ tag, count }) => {
                 const isSelected = selectedTags.some(
                   (t) => t.toLowerCase() === tag.toLowerCase()
@@ -564,12 +633,82 @@ export function ExploreGallery({
         )}
       </div>
 
+      {/* Interactive Geographic Map */}
+      {showMap ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted px-0.5">
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-3.5 h-3.5 text-accent" />
+              <span className="uppercase tracking-wider font-semibold text-foreground">
+                Interactive Map
+              </span>
+              <span>
+                &bull; {geotaggedCount} {geotaggedCount === 1 ? "location" : "locations"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMap(false)}
+              className="text-xs text-muted hover:text-foreground flex items-center space-x-1 cursor-pointer transition-colors"
+              title="Collapse map"
+            >
+              <span>Hide Map</span>
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <GlobalMap
+            photos={filteredPhotos}
+            showCategoryFilter={false}
+            heightClassName="h-[360px] sm:h-[440px]"
+            onFilterToCluster={(clusterPhotos) => {
+              setLocationClusterPhotos(clusterPhotos);
+              setCurrentPage(1);
+              const el = document.getElementById("gallery-results");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowMap(true)}
+          className="w-full py-2.5 px-4 bg-surface hover:bg-surface-hover border border-surface-border rounded-sm flex items-center justify-between text-xs text-muted hover:text-foreground transition-colors cursor-pointer"
+        >
+          <div className="flex items-center space-x-2">
+            <MapPin className="w-4 h-4 text-accent" />
+            <span className="font-medium text-foreground">Show Interactive Map</span>
+            <span>&bull; {geotaggedCount} {geotaggedCount === 1 ? "location" : "locations"}</span>
+          </div>
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      )}
+
       {/* Results Header with Active Filters & View Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted border-b border-surface-border/60 pb-3">
+      <div id="gallery-results" className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted border-b border-surface-border/60 pb-3 pt-1">
         <div className="flex flex-wrap items-center gap-2">
           <span>
-            Showing <strong className="text-foreground font-medium">{filteredPhotos.length}</strong> photographs
+            Showing <strong className="text-foreground font-medium">{photosForGallery.length}</strong> photographs
+            {locationClusterPhotos && (
+              <span className="text-muted text-[11px] ml-1">
+                (at selected map site of {filteredPhotos.length})
+              </span>
+            )}
           </span>
+          {locationClusterPhotos && (
+            <span className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]">
+              <MapPin className="w-3 h-3" />
+              <span>Map Site ({locationClusterPhotos.length})</span>
+              <button
+                type="button"
+                onClick={() => setLocationClusterPhotos(null)}
+                className="hover:text-foreground cursor-pointer ml-0.5"
+                title="Clear site location filter"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
           {selectedTags.map((tag) => (
             <span
               key={tag}
@@ -677,7 +816,7 @@ export function ExploreGallery({
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={filteredPhotos.length}
+            totalItems={photosForGallery.length}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
           />
