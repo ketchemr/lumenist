@@ -68,7 +68,7 @@ html.light textarea,
 html.light select {
   background-color: #ffffff;
   color: #0f172a;
-  border-color: var(--surface-border, #e2e8f0);
+  border-color: var(--surface-border, #cbd5e1);
 }
 
 html.light input::placeholder,
@@ -151,7 +151,7 @@ html.light button.bg-black,
 html.light button[class~="bg-black"],
 html.light a[class~="bg-black"] {
   background-color: var(--surface, #ffffff);
-  border-color: var(--surface-border, #e2e8f0);
+  border-color: var(--surface-border, #cbd5e1);
   color: var(--foreground, #0f172a);
 }
 html.light button.bg-black *,
@@ -185,8 +185,8 @@ html.light a[class~="bg-black"] * {
 }
 
 html.light .photo-frame {
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.12);
-  outline: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+  outline: 1px solid rgba(0, 0, 0, 0.18);
   outline-offset: -1px;
 }
 
@@ -271,13 +271,13 @@ html.light .photo-frame:hover {
 
 /* Light mode Leaflet zoom controls and popup styling */
 html.light .leaflet-bar {
-  border: 1px solid var(--surface-border, #e2e8f0) !important;
+  border: 1px solid var(--surface-border, #cbd5e1) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
 }
 html.light .leaflet-bar a {
   background-color: var(--surface, #ffffff) !important;
   color: var(--foreground, #0f172a) !important;
-  border-bottom: 1px solid var(--surface-border, #e2e8f0) !important;
+  border-bottom: 1px solid var(--surface-border, #cbd5e1) !important;
 }
 html.light .leaflet-bar a:hover {
   background-color: var(--surface-hover, #f1f5f9) !important;
@@ -291,12 +291,12 @@ html.light .leaflet-bar a.leaflet-disabled {
 html.light .dark-map-popup .leaflet-popup-content-wrapper {
   background: var(--surface, #ffffff) !important;
   color: var(--foreground, #0f172a) !important;
-  border: 1px solid var(--surface-border, #e2e8f0) !important;
+  border: 1px solid var(--surface-border, #cbd5e1) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12) !important;
 }
 html.light .dark-map-popup .leaflet-popup-tip {
   background: var(--surface, #ffffff) !important;
-  border: 1px solid var(--surface-border, #e2e8f0) !important;
+  border: 1px solid var(--surface-border, #cbd5e1) !important;
 }
 html.light .dark-map-popup .leaflet-popup-close-button {
   color: var(--text-muted, #64748b) !important;

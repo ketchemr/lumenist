@@ -32,7 +32,7 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
     (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto">
+    <div className="space-y-10 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-8">
       {/* Top Navigation & Breadcrumb Trail */}
       <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
         <div className="flex items-center space-x-3">

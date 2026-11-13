@@ -1145,7 +1145,7 @@ export default function AdminUploadPage() {
         );
         document.documentElement.style.setProperty(
           "--surface-border",
-          settings.themeBorder || (isLight ? "#e2e8f0" : "#262626")
+          settings.themeBorder || (isLight ? "#cbd5e1" : "#262626")
         );
         document.documentElement.style.setProperty(
           "--foreground",
@@ -1274,7 +1274,7 @@ export default function AdminUploadPage() {
   const displayedAlbums = metadata.albums.length > 0 ? metadata.albums : [];
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Top Header & Navigation Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-4">
         <div>
@@ -3849,7 +3849,7 @@ export default function AdminUploadPage() {
                     let border = prev.themeBorder;
                     if (isLight) {
                       if (!isLightBackground(surface)) surface = "#ffffff";
-                      if (!isLightBackground(border)) border = "#e2e8f0";
+                      if (!isLightBackground(border)) border = "#cbd5e1";
                     } else {
                       if (isLightBackground(surface)) surface = "#111111";
                       if (isLightBackground(border)) border = "#262626";
@@ -3875,7 +3875,7 @@ export default function AdminUploadPage() {
                     let border = prev.themeBorder;
                     if (isLight) {
                       if (!isLightBackground(surface)) surface = "#ffffff";
-                      if (!isLightBackground(border)) border = "#e2e8f0";
+                      if (!isLightBackground(border)) border = "#cbd5e1";
                     } else {
                       if (isLightBackground(surface)) surface = "#111111";
                       if (isLightBackground(border)) border = "#262626";

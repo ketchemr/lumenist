@@ -106,8 +106,8 @@ export function getThemeCssVariables(settings: SiteSettings): string {
     if (!surface || !isLightBackground(surface)) {
       surface = "#ffffff";
     }
-    if (!border || !isLightBackground(border)) {
-      border = "#e2e8f0";
+    if (!border || !isLightBackground(border) || border.toLowerCase() === "#e2e8f0") {
+      border = "#cbd5e1";
     }
   } else {
     if (!surface || isLightBackground(surface)) {

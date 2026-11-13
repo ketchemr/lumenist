@@ -153,7 +153,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     name: "Clean Studio White",
     background: "#ffffff",
     surface: "#f8fafc",
-    border: "#e2e8f0",
+    border: "#cbd5e1",
     isLight: true,
   },
   {
@@ -161,7 +161,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     name: "Warm Gallery Parchment",
     background: "#f9f8f5",
     surface: "#ffffff",
-    border: "#e7e4dc",
+    border: "#d1cec7",
     isLight: true,
   },
   {
@@ -169,7 +169,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     name: "Soft Silver / Slate",
     background: "#f1f5f9",
     surface: "#ffffff",
-    border: "#cbd5e1",
+    border: "#94a3b8",
     isLight: true,
   },
 ];

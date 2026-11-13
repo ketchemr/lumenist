@@ -90,12 +90,13 @@ export default async function CategoryPage({
   const pagePhotos = allCategoryPhotos.slice(startIdx, startIdx + pageSize);
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="border-b border-surface-border pb-4 space-y-2">
         <div className="flex items-center justify-between">
           <Breadcrumbs
             items={[
               { label: "Home", href: "/" },
+              { label: "Galleries", href: "/galleries" },
               { label: title },
             ]}
           />

@@ -4,12 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Photo } from "@/types/photo";
 import {
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Pause,
   Play,
-  Camera,
 } from "lucide-react";
 import { WatermarkBadge } from "@/components/WatermarkBadge";
 
@@ -40,7 +38,6 @@ export function RandomHeroSlideshow({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  const descScrollRef = useRef<HTMLDivElement>(null);
   const remainingTimeRef = useRef<number>(intervalSeconds * 1000);
   const startedAtRef = useRef<number>(Date.now());
   const touchStartX = useRef<number | null>(null);
@@ -116,13 +113,6 @@ export function RandomHeroSlideshow({
     state.list.length > 0 && state.list[state.index] !== undefined
       ? state.list[state.index]
       : 0;
-
-  // Reset description scroll position when slide changes
-  useEffect(() => {
-    if (descScrollRef.current) {
-      descScrollRef.current.scrollTop = 0;
-    }
-  }, [currentIndex]);
 
   // Advance to Next:
   // If we navigated back in history, move forward to the next already-visited slide.
@@ -223,193 +213,118 @@ export function RandomHeroSlideshow({
     return () => clearTimeout(timer);
   }, [isPaused, state.index, advanceToNext, photos.length]);
 
+  // Keyboard navigation: Left/Right arrows and Space to pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        advanceToPrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        advanceToNext();
+      } else if (e.key === " ") {
+        e.preventDefault();
+        setIsPaused((p) => !p);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [advanceToPrev, advanceToNext]);
+
   if (!photos || photos.length === 0) return null;
 
   const current = photos[currentIndex] || photos[0];
 
   return (
-    <section className="relative rounded-sm overflow-hidden border border-surface-border bg-surface group w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
-        {/* Photo Column: Photo Frame with Controls Living Directly Under the Image */}
-        <div className="lg:col-span-8 flex flex-col justify-between h-[360px] sm:h-[440px] lg:h-[470px]">
-          {/* Photo Display: Constant Width & Constant Height Frame with clean gallery matting (Zero overlay clutter) */}
-          <div
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            className="flex-1 w-full overflow-hidden rounded-sm bg-background dark:bg-black/95 border border-surface-border relative flex items-center justify-center touch-pan-y"
-          >
-            <Link
-              href={`/photo/${current.photoID}`}
-              onClick={(e) => {
-                if (didSwipeRef.current) {
-                  e.preventDefault();
-                }
-              }}
-              className="w-full h-full flex items-center justify-center p-2 relative"
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div className="relative inline-flex items-center justify-center max-w-full max-h-full">
-                <img
-                  src={current.imageDesktop}
-                  alt={current.title}
-                  key={current.photoID}
-                  draggable={false}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className={`max-h-[290px] sm:max-h-[370px] lg:max-h-[400px] max-w-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 photo-frame select-none pointer-events-none ${
-                    isTransitioning
-                      ? "opacity-20 scale-[0.99]"
-                      : "opacity-100 scale-100"
-                  }`}
-                />
-                {/* Protection shield & Watermark overlay (Toggleable via Admin Settings) */}
-                <WatermarkBadge
-                  show={showWatermark}
-                  notice={copyrightNotice}
-                  size="md"
-                  withShield={true}
-                />
-              </div>
-            </Link>
-          </div>
-
-          {/* Navigation Controls: Living directly under the image */}
-          <div className="flex items-center justify-between pt-2.5 px-0.5">
-            <div className="flex items-center gap-1.5 text-xs text-muted">
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isPaused ? "bg-muted" : "bg-accent animate-pulse"
-                }`}
-              />
-              <span className="font-mono text-[11px] uppercase tracking-wider">
-                {isPaused ? "Rotation Paused" : "Random Selection"}
-              </span>
-            </div>
-
-            {/* Navigation & Rotation Toolbar */}
-            <div className="inline-flex items-center gap-1 bg-surface-hover/80 border border-surface-border rounded-full p-1 shadow-sm">
-              <button
-                type="button"
-                onClick={advanceToPrev}
-                aria-label="Previous photo"
-                title="Previous photo"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted hover:text-foreground hover:bg-surface active:scale-95 transition-all cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                <span>Prev</span>
-              </button>
-
-              <div className="w-px h-3.5 bg-surface-border" />
-
-              <button
-                type="button"
-                onClick={() => setIsPaused((p) => !p)}
-                aria-label={isPaused ? "Resume rotation" : "Pause rotation"}
-                title={isPaused ? "Resume rotation" : "Pause rotation"}
-                className="p-1 rounded-full text-muted hover:text-foreground hover:bg-surface active:scale-95 transition-all cursor-pointer"
-              >
-                {isPaused ? (
-                  <Play className="w-3.5 h-3.5 text-accent" />
-                ) : (
-                  <Pause className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              <div className="w-px h-3.5 bg-surface-border" />
-
-              <button
-                type="button"
-                onClick={advanceToNext}
-                aria-label="Next random photo"
-                title="Next random photo"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-foreground hover:text-accent hover:bg-surface active:scale-95 transition-all cursor-pointer"
-              >
-                <span>Next</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Narrative & Details Column: Top Justified */}
-        <div className="lg:col-span-4 h-full flex flex-col justify-start py-2 space-y-4">
-          <div
-            className={`space-y-4 transition-opacity duration-300 ${
-              isTransitioning ? "opacity-0" : "opacity-100"
+    <section
+      className="relative w-full flex-1 flex flex-col justify-between items-center h-[calc(100vh-4rem)] h-[calc(100dvh-4rem)] min-h-[500px] max-h-[1100px] overflow-hidden bg-background select-none pt-4 sm:pt-6 md:pt-8"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      aria-label="Random Featured Photograph Slideshow"
+    >
+      {/* Full-Screen Photograph Canvas */}
+      <div className="w-full flex-1 min-h-0 flex items-center justify-center px-3 sm:px-6 pb-2 relative">
+        <Link
+          href={`/photo/${current.photoID}`}
+          onClick={(e) => {
+            if (didSwipeRef.current) {
+              e.preventDefault();
+            }
+          }}
+          className="relative inline-flex items-center justify-center max-w-full max-h-full cursor-pointer"
+          title={`View "${current.title}" details`}
+          aria-label={`View "${current.title}" details`}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <img
+            src={current.imageDesktop}
+            alt={current.title}
+            key={current.photoID}
+            draggable={false}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`max-w-full max-h-[calc(100vh-14rem)] sm:max-h-[calc(100vh-15rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl transition-all duration-500 photo-frame select-none pointer-events-none ${
+              isTransitioning ? "opacity-20 scale-[0.99]" : "opacity-100 scale-100"
             }`}
-          >
-            {/* Title */}
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
-                <Link
-                  href={`/photo/${current.photoID}`}
-                  className="hover:text-accent transition-colors"
-                >
-                  {current.title}
-                </Link>
-              </h2>
-            </div>
-
-            {/* Description (Scrollable container for long stories) */}
-            <div
-              ref={descScrollRef}
-              className="max-h-[160px] sm:max-h-[190px] overflow-y-auto pr-2 space-y-2 select-text"
-            >
-              <p className="text-sm text-muted leading-relaxed font-normal">
-                {current.description ||
-                  "A fine art landscape photograph exploring natural light and form."}
-              </p>
-            </div>
-
-            {/* Categories */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {current.categories.map((c) => (
-                <Link
-                  key={c}
-                  href={`/galleries/${encodeURIComponent(c)}`}
-                  className="text-xs bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent px-2.5 py-1 rounded text-muted hover:text-foreground transition-colors"
-                >
-                  {c}
-                </Link>
-              ))}
-            </div>
-
-            {/* Camera & Year Metadata */}
-            <div className="flex items-center space-x-3 text-xs text-muted font-mono pt-1">
-              {current.camera && (
-                <span className="flex items-center space-x-1">
-                  <Camera className="w-3.5 h-3.5 text-muted" />
-                  <span>{current.camera.replace("ILCE-", "A")}</span>
-                </span>
-              )}
-              {current.dateTaken.year > 0 && (
-                <span>· {current.dateTaken.year}</span>
-              )}
-            </div>
-
-            {/* Exhibition Link */}
-            <div className="pt-2">
-              <Link
-                href={`/photo/${current.photoID}`}
-                className="inline-flex items-center space-x-2 text-sm text-accent hover:text-accent-light transition-colors font-medium group/link"
-              >
-                <span>View Full Exhibition & Technicals</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />
-              </Link>
-            </div>
-          </div>
-        </div>
+          />
+          {/* Protection shield & Watermark overlay */}
+          <WatermarkBadge
+            show={showWatermark}
+            notice={copyrightNotice}
+            size="md"
+            withShield={true}
+          />
+        </Link>
       </div>
 
-      {/* Subtle Progress Bar: Freezes on pause, resumes smoothly */}
-      <div className="w-full bg-surface-border/40 h-0.5 relative overflow-hidden">
-        <div
-          key={state.index}
-          className="bg-accent h-0.5 animate-progress-bar"
-          style={{
-            animationDuration: `${intervalSeconds}s`,
-            animationPlayState: isPaused ? "paused" : "running",
-          }}
-        />
+      {/* Slideshow Controls Bar Below the Image */}
+      <div className="w-full pb-4 pt-1 flex items-center justify-center shrink-0">
+        <div className="inline-flex items-center space-x-1.5 bg-surface border border-surface-border rounded-full p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={advanceToPrev}
+            aria-label="Previous photograph"
+            title="Previous photograph (Left Arrow)"
+            className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs text-muted hover:text-foreground hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Prev</span>
+          </button>
+
+          <div className="w-px h-3.5 bg-surface-border" />
+
+          <button
+            type="button"
+            onClick={() => setIsPaused((p) => !p)}
+            aria-label={isPaused ? "Resume rotation" : "Pause rotation"}
+            title={isPaused ? "Resume rotation (Space)" : "Pause rotation (Space)"}
+            className="p-1.5 rounded-full text-muted hover:text-foreground hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
+          >
+            {isPaused ? (
+              <Play className="w-3.5 h-3.5 text-accent" />
+            ) : (
+              <Pause className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          <div className="w-px h-3.5 bg-surface-border" />
+
+          <button
+            type="button"
+            onClick={advanceToNext}
+            aria-label="Next photograph"
+            title="Next photograph (Right Arrow)"
+            className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:text-accent hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
+          >
+            <span>Next</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </section>
   );

@@ -421,7 +421,7 @@ export function PhotoViewer({
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
-      <div className="relative bg-surface dark:bg-black/90 rounded-sm p-2 sm:p-6 border border-surface-border overflow-hidden select-none">
+      <div className="relative bg-surface dark:bg-black/90 rounded-sm p-2 sm:p-4 md:p-5 border border-surface-border overflow-hidden select-none">
         <div className="flex justify-center items-center">
           <div className="relative inline-flex items-center justify-center max-w-full">
             <img

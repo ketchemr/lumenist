@@ -37,7 +37,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground">
         <Header settings={settings} />
-        <main className="flex-1 max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 w-full flex flex-col">
           {children}
         </main>
         <Footer settings={settings} />

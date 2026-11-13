@@ -14,7 +14,7 @@ export default function ExplorePage() {
     (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
           Explore the Archive
