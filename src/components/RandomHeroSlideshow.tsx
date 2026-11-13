@@ -43,6 +43,35 @@ export function RandomHeroSlideshow({
   const descScrollRef = useRef<HTMLDivElement>(null);
   const remainingTimeRef = useRef<number>(intervalSeconds * 1000);
   const startedAtRef = useRef<number>(Date.now());
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const didSwipeRef = useRef<boolean>(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Detect horizontal swipe: distance > 45px and predominantly horizontal
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      didSwipeRef.current = true;
+      if (deltaX < 0) {
+        advanceToNext();
+      } else {
+        advanceToPrev();
+      }
+      setTimeout(() => {
+        didSwipeRef.current = false;
+      }, 350);
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   // Initialize from sessionStorage or pick initial random photo on mount
   useEffect(() => {
@@ -201,10 +230,19 @@ export function RandomHeroSlideshow({
   return (
     <section className="relative rounded-sm overflow-hidden border border-surface-border bg-surface group w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
-        {/* Photo Display: Constant Width & Constant Height Frame with dark matting */}
-        <div className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center">
+        {/* Photo Display: Constant Width & Constant Height Frame with dark matting (Zero overlay clutter) */}
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center touch-pan-y"
+        >
           <Link
             href={`/photo/${current.photoID}`}
+            onClick={(e) => {
+              if (didSwipeRef.current) {
+                e.preventDefault();
+              }
+            }}
             className="w-full h-full flex items-center justify-center p-2 relative"
             onContextMenu={(e) => e.preventDefault()}
           >
@@ -230,50 +268,74 @@ export function RandomHeroSlideshow({
               />
             </div>
           </Link>
-
-          {/* Navigation Controls: Prev/Next in slideshow (Always visible on mobile & desktop) */}
-          <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-2 sm:pl-3 pointer-events-none">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                advanceToPrev();
-              }}
-              aria-label="Previous photo in slideshow"
-              title="Previous photo"
-              className="p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 active:scale-95 text-white/90 hover:text-white border border-white/15 backdrop-blur-md shadow-lg transition-all cursor-pointer pointer-events-auto"
-            >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          </div>
-
-          <div className="absolute inset-y-0 right-0 z-30 flex items-center pr-2 sm:pr-3 pointer-events-none">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                advanceToNext();
-              }}
-              aria-label="Next random photo"
-              title="Next photo"
-              className="p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 active:scale-95 text-white/90 hover:text-white border border-white/15 backdrop-blur-md shadow-lg transition-all cursor-pointer pointer-events-auto"
-            >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          </div>
         </div>
 
-        {/* Narrative & Details Column: Top Justified */}
-        <div className="lg:col-span-4 h-full flex flex-col justify-start py-2 space-y-4">
+        {/* Narrative & Details Column: Top Justified with Unified Slideshow Controls */}
+        <div className="lg:col-span-4 h-full flex flex-col justify-start py-1 space-y-3.5">
+          {/* Controls Bar: Clear indication of rotation & instant navigation (No image overlap) */}
+          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-surface-border/70">
+            <div className="flex items-center gap-1.5 text-xs text-muted">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isPaused ? "bg-muted" : "bg-accent animate-pulse"
+                }`}
+              />
+              <span className="font-mono text-[11px] uppercase tracking-wider">
+                {isPaused ? "Rotation Paused" : "Random Selection"}
+              </span>
+            </div>
+
+            {/* Navigation & Rotation Toolbar */}
+            <div className="inline-flex items-center gap-1 bg-surface-hover/80 border border-surface-border rounded-full p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={advanceToPrev}
+                aria-label="Previous photo"
+                title="Previous photo"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-muted hover:text-foreground hover:bg-surface active:scale-95 transition-all cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
+              </button>
+
+              <div className="w-px h-3.5 bg-surface-border" />
+
+              <button
+                type="button"
+                onClick={() => setIsPaused((p) => !p)}
+                aria-label={isPaused ? "Resume rotation" : "Pause rotation"}
+                title={isPaused ? "Resume rotation" : "Pause rotation"}
+                className="p-1 rounded-full text-muted hover:text-foreground hover:bg-surface active:scale-95 transition-all cursor-pointer"
+              >
+                {isPaused ? (
+                  <Play className="w-3.5 h-3.5 text-accent" />
+                ) : (
+                  <Pause className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              <div className="w-px h-3.5 bg-surface-border" />
+
+              <button
+                type="button"
+                onClick={advanceToNext}
+                aria-label="Next random photo"
+                title="Next random photo"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-foreground hover:text-accent hover:bg-surface active:scale-95 transition-all cursor-pointer"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
           <div
-            className={`space-y-4 transition-opacity duration-300 ${
+            className={`space-y-3.5 transition-opacity duration-300 ${
               isTransitioning ? "opacity-0" : "opacity-100"
             }`}
           >
-            {/* Title with discreet Pause/Play toggle */}
-            <div className="flex items-start justify-between gap-3">
+            {/* Title */}
+            <div>
               <h2 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
                 <Link
                   href={`/photo/${current.photoID}`}
@@ -282,30 +344,12 @@ export function RandomHeroSlideshow({
                   {current.title}
                 </Link>
               </h2>
-
-              <button
-                onClick={() => setIsPaused((p) => !p)}
-                className="text-xs text-muted hover:text-foreground flex-shrink-0 flex items-center space-x-1 bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded transition-colors mt-1 cursor-pointer"
-                title={isPaused ? "Resume rotation" : "Pause rotation"}
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="w-3 h-3 text-accent" />
-                    <span className="hidden sm:inline">Resume</span>
-                  </>
-                ) : (
-                  <>
-                    <Pause className="w-3 h-3 text-muted" />
-                    <span className="hidden sm:inline">Pause</span>
-                  </>
-                )}
-              </button>
             </div>
 
             {/* Description (Scrollable container for long stories) */}
             <div
               ref={descScrollRef}
-              className="max-h-[160px] sm:max-h-[190px] overflow-y-auto pr-2 space-y-2 select-text"
+              className="max-h-[150px] sm:max-h-[175px] overflow-y-auto pr-2 space-y-2 select-text"
             >
               <p className="text-sm text-muted leading-relaxed font-normal">
                 {current.description ||
@@ -340,7 +384,7 @@ export function RandomHeroSlideshow({
             </div>
 
             {/* Exhibition Link */}
-            <div className="pt-2">
+            <div className="pt-1">
               <Link
                 href={`/photo/${current.photoID}`}
                 className="inline-flex items-center space-x-2 text-sm text-accent hover:text-accent-light transition-colors font-medium group/link"
