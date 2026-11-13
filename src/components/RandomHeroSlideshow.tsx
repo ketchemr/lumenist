@@ -135,6 +135,7 @@ export function RandomHeroSlideshow({
 
   // Advance to Prev:
   // Moves back to the exact photograph that was shown right before this one!
+  // If at the start of history, seamlessly picks and prepends a random photo so Prev always works.
   const advanceToPrev = useCallback(() => {
     if (photos.length <= 1) return;
     setIsTransitioning(true);
@@ -147,7 +148,17 @@ export function RandomHeroSlideshow({
             index: prev.index - 1,
           };
         }
-        return prev;
+
+        // At the start of history: pick a new random photo and prepend to history
+        const currentPhoto = prev.list.length > 0 ? prev.list[0] : 0;
+        let prevRandom = Math.floor(Math.random() * photos.length);
+        while (prevRandom === currentPhoto && photos.length > 1) {
+          prevRandom = Math.floor(Math.random() * photos.length);
+        }
+        return {
+          list: [prevRandom, ...prev.list],
+          index: 0,
+        };
       });
 
       setIsTransitioning(false);
@@ -186,7 +197,6 @@ export function RandomHeroSlideshow({
   if (!photos || photos.length === 0) return null;
 
   const current = photos[currentIndex] || photos[0];
-  const canGoPrev = state.index > 0;
 
   return (
     <section className="relative rounded-sm overflow-hidden border border-surface-border bg-surface group w-full">
@@ -221,33 +231,24 @@ export function RandomHeroSlideshow({
             </div>
           </Link>
 
-          {/* Navigation Controls: Prev/Next in slideshow history */}
-          <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          {/* Navigation Controls: Prev/Next in slideshow (Always visible on mobile & desktop) */}
+          <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-2 sm:pl-3 pointer-events-none">
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (canGoPrev) advanceToPrev();
+                advanceToPrev();
               }}
-              disabled={!canGoPrev}
               aria-label="Previous photo in slideshow"
-              title={
-                canGoPrev
-                  ? "Previous photo you just saw"
-                  : "At the start of slideshow history"
-              }
-              className={`p-2 rounded-full border border-white/10 backdrop-blur-sm transition-all pointer-events-auto ${
-                canGoPrev
-                  ? "bg-black/60 hover:bg-black/90 text-white cursor-pointer"
-                  : "bg-black/30 text-white/30 cursor-not-allowed opacity-40"
-              }`}
+              title="Previous photo"
+              className="p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 active:scale-95 text-white/90 hover:text-white border border-white/15 backdrop-blur-md shadow-lg transition-all cursor-pointer pointer-events-auto"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
 
-          <div className="absolute inset-y-0 right-0 z-30 flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <div className="absolute inset-y-0 right-0 z-30 flex items-center pr-2 sm:pr-3 pointer-events-none">
             <button
               type="button"
               onClick={(e) => {
@@ -257,9 +258,9 @@ export function RandomHeroSlideshow({
               }}
               aria-label="Next random photo"
               title="Next photo"
-              className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white border border-white/10 backdrop-blur-sm transition-all cursor-pointer pointer-events-auto"
+              className="p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 active:scale-95 text-white/90 hover:text-white border border-white/15 backdrop-blur-md shadow-lg transition-all cursor-pointer pointer-events-auto"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
