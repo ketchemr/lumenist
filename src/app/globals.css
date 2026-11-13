@@ -20,6 +20,10 @@
   --accent-contrast: #000000;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);

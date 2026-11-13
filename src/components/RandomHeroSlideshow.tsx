@@ -374,77 +374,13 @@ export function RandomHeroSlideshow({
 
   return (
     <section
-      className="relative w-full flex-1 flex flex-col justify-between items-center h-[calc(100vh-4rem)] h-[calc(100dvh-4rem)] min-h-[500px] max-h-[1100px] overflow-hidden bg-background select-none pt-3 sm:pt-4 md:pt-6"
+      className="relative w-full h-[calc(100vh-4rem)] h-[calc(100dvh-4rem)] min-h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] shrink-0 flex flex-col items-center overflow-hidden bg-background select-none"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       aria-label="Random Featured Photograph Slideshow"
     >
-      {/* Full-Screen Photograph Canvas */}
-      <div className="w-full flex-1 min-h-0 flex items-center justify-center px-3 sm:px-6 pb-3 sm:pb-4 relative">
-        <Link
-          href={`/photo/${current.photoID}`}
-          onClick={(e) => {
-            if (didSwipeRef.current) {
-              e.preventDefault();
-            }
-          }}
-          className="relative inline-flex items-center justify-center max-w-full max-h-full cursor-pointer"
-          title={`View "${current.title}" details`}
-          aria-label={`View "${current.title}" details`}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          {/* Two-layer crossfade stage: stacks outgoing and incoming images at the exact same center */}
-          <div className="relative inline-grid grid-cols-1 grid-rows-1 place-items-center max-w-full max-h-full">
-            {/* Outgoing photo dissolving out */}
-            {outgoingPhoto && (
-              <div
-                key={`outgoing-${outgoingPhoto.photoID}-${transitionId}`}
-                className="col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center animate-hero-fade-out z-0 pointer-events-none"
-              >
-                <img
-                  src={outgoingPhoto.imageDesktop}
-                  alt={outgoingPhoto.title}
-                  draggable={false}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="max-w-full max-h-[calc(100vh-17rem)] sm:max-h-[calc(100vh-18rem)] md:max-h-[calc(100vh-19rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
-                />
-                <WatermarkBadge
-                  show={showWatermark}
-                  notice={copyrightNotice}
-                  size="md"
-                  withShield={false}
-                />
-              </div>
-            )}
-
-            {/* Current/Incoming photo dissolving in */}
-            <div
-              key={`current-${current.photoID}-${transitionId}`}
-              className={`col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center ${
-                outgoingPhoto ? "animate-hero-fade-in z-[1]" : "opacity-100 z-0"
-              }`}
-            >
-              <img
-                src={current.imageDesktop}
-                alt={current.title}
-                draggable={false}
-                onContextMenu={(e) => e.preventDefault()}
-                className="max-w-full max-h-[calc(100vh-17rem)] sm:max-h-[calc(100vh-18rem)] md:max-h-[calc(100vh-19rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
-              />
-              {/* Protection shield & Watermark overlay */}
-              <WatermarkBadge
-                show={showWatermark}
-                notice={copyrightNotice}
-                size="md"
-                withShield={true}
-              />
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Slideshow Controls Bar Below the Image */}
-      <div className="w-full pb-4 pt-2 flex items-center justify-center shrink-0 z-20 relative">
+      {/* Slideshow Controls Bar Above the Image: Fixed position directly under the header, never moves between pictures */}
+      <div className="w-full h-11 shrink-0 flex items-center justify-center select-none pt-2 pb-1 z-20 relative">
         <div className="inline-flex items-center space-x-1.5 bg-surface border border-surface-border rounded-full p-1 shadow-sm">
           <button
             type="button"
@@ -487,6 +423,86 @@ export function RandomHeroSlideshow({
             <span>Next</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
+        </div>
+      </div>
+
+      {/* Full-Screen Photograph Canvas: Rigid bounded stage that never changes dimensions */}
+      <div className="w-full flex-1 min-h-0 min-w-0 flex items-center justify-center px-3 sm:px-6 pt-1 pb-3 sm:pb-4 relative overflow-hidden">
+        <div className="relative w-full h-full max-w-7xl min-h-0 min-w-0 flex items-center justify-center">
+          <Link
+            href={`/photo/${current.photoID}`}
+            onClick={(e) => {
+              if (didSwipeRef.current) {
+                e.preventDefault();
+              }
+            }}
+            className="relative flex items-center justify-center max-w-full max-h-full cursor-pointer"
+            title={`View "${current.title}" details`}
+            aria-label={`View "${current.title}" details`}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {/* Two-layer crossfade stage: stacks outgoing and incoming images at the exact same center */}
+            <div className="relative inline-grid grid-cols-1 grid-rows-1 place-items-center max-w-full max-h-full">
+              {/* Outgoing photo dissolving out */}
+              {outgoingPhoto && (
+                <div
+                  key={`outgoing-${outgoingPhoto.photoID}-${transitionId}`}
+                  className="col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center animate-hero-fade-out z-0 pointer-events-none"
+                >
+                  <img
+                    src={outgoingPhoto.imageDesktop}
+                    alt={outgoingPhoto.title}
+                    width={outgoingPhoto.size?.width}
+                    height={outgoingPhoto.size?.height}
+                    style={
+                      outgoingPhoto.size?.aspectRatio
+                        ? { aspectRatio: `${outgoingPhoto.size.aspectRatio}` }
+                        : undefined
+                    }
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="max-w-full max-h-[calc(100vh-9rem)] sm:max-h-[calc(100vh-9.5rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
+                  />
+                  <WatermarkBadge
+                    show={showWatermark}
+                    notice={copyrightNotice}
+                    size="md"
+                    withShield={false}
+                  />
+                </div>
+              )}
+
+              {/* Current/Incoming photo dissolving in */}
+              <div
+                key={`current-${current.photoID}-${transitionId}`}
+                className={`col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center ${
+                  outgoingPhoto ? "animate-hero-fade-in z-[1]" : "opacity-100 z-0"
+                }`}
+              >
+                <img
+                  src={current.imageDesktop}
+                  alt={current.title}
+                  width={current.size?.width}
+                  height={current.size?.height}
+                  style={
+                    current.size?.aspectRatio
+                      ? { aspectRatio: `${current.size.aspectRatio}` }
+                      : undefined
+                  }
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="max-w-full max-h-[calc(100vh-9rem)] sm:max-h-[calc(100vh-9.5rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
+                />
+                {/* Protection shield & Watermark overlay */}
+                <WatermarkBadge
+                  show={showWatermark}
+                  notice={copyrightNotice}
+                  size="md"
+                  withShield={true}
+                />
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
     </section>

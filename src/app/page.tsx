@@ -14,7 +14,7 @@ export default function HomePage() {
   const showWatermark = settings.showWatermarkOverlay ?? false;
 
   return (
-    <div className="w-full flex-1 flex flex-col">
+    <div className="w-full flex flex-col shrink-0 min-h-[calc(100vh-4rem)]">
       <RandomHeroSlideshow
         photos={photos}
         intervalSeconds={settings.slideshowInterval || 10}

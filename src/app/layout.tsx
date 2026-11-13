@@ -37,7 +37,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground">
         <Header settings={settings} />
-        <main className="flex-1 w-full flex flex-col">
+        <main className="flex-1 w-full flex flex-col min-h-0">
           {children}
         </main>
         <Footer settings={settings} />
