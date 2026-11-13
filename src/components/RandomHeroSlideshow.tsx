@@ -230,50 +230,50 @@ export function RandomHeroSlideshow({
   return (
     <section className="relative rounded-sm overflow-hidden border border-surface-border bg-surface group w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center p-4 sm:p-6 lg:p-8 lg:h-[520px]">
-        {/* Photo Display: Constant Width & Constant Height Frame with dark matting (Zero overlay clutter) */}
-        <div
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          className="lg:col-span-8 h-[320px] sm:h-[420px] lg:h-[470px] w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center touch-pan-y"
-        >
-          <Link
-            href={`/photo/${current.photoID}`}
-            onClick={(e) => {
-              if (didSwipeRef.current) {
-                e.preventDefault();
-              }
-            }}
-            className="w-full h-full flex items-center justify-center p-2 relative"
-            onContextMenu={(e) => e.preventDefault()}
+        {/* Photo Column: Photo Frame with Controls Living Directly Under the Image */}
+        <div className="lg:col-span-8 flex flex-col justify-between h-[360px] sm:h-[440px] lg:h-[470px]">
+          {/* Photo Display: Constant Width & Constant Height Frame with dark matting (Zero overlay clutter) */}
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="flex-1 w-full overflow-hidden rounded-sm bg-black/95 border border-surface-border relative flex items-center justify-center touch-pan-y"
           >
-            <div className="relative inline-flex items-center justify-center max-w-full max-h-full">
-              <img
-                src={current.imageDesktop}
-                alt={current.title}
-                key={current.photoID}
-                draggable={false}
-                onContextMenu={(e) => e.preventDefault()}
-                className={`max-h-[304px] sm:max-h-[404px] lg:max-h-[454px] max-w-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 photo-frame select-none pointer-events-none ${
-                  isTransitioning
-                    ? "opacity-20 scale-[0.99]"
-                    : "opacity-100 scale-100"
-                }`}
-              />
-              {/* Protection shield & Watermark overlay (Toggleable via Admin Settings) */}
-              <WatermarkBadge
-                show={showWatermark}
-                notice={copyrightNotice}
-                size="md"
-                withShield={true}
-              />
-            </div>
-          </Link>
-        </div>
+            <Link
+              href={`/photo/${current.photoID}`}
+              onClick={(e) => {
+                if (didSwipeRef.current) {
+                  e.preventDefault();
+                }
+              }}
+              className="w-full h-full flex items-center justify-center p-2 relative"
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <div className="relative inline-flex items-center justify-center max-w-full max-h-full">
+                <img
+                  src={current.imageDesktop}
+                  alt={current.title}
+                  key={current.photoID}
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className={`max-h-[290px] sm:max-h-[370px] lg:max-h-[400px] max-w-full w-auto h-auto object-contain mx-auto rounded shadow-2xl transition-all duration-500 photo-frame select-none pointer-events-none ${
+                    isTransitioning
+                      ? "opacity-20 scale-[0.99]"
+                      : "opacity-100 scale-100"
+                  }`}
+                />
+                {/* Protection shield & Watermark overlay (Toggleable via Admin Settings) */}
+                <WatermarkBadge
+                  show={showWatermark}
+                  notice={copyrightNotice}
+                  size="md"
+                  withShield={true}
+                />
+              </div>
+            </Link>
+          </div>
 
-        {/* Narrative & Details Column: Top Justified with Unified Slideshow Controls */}
-        <div className="lg:col-span-4 h-full flex flex-col justify-start py-1 space-y-3.5">
-          {/* Controls Bar: Clear indication of rotation & instant navigation (No image overlap) */}
-          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-surface-border/70">
+          {/* Navigation Controls: Living directly under the image */}
+          <div className="flex items-center justify-between pt-2.5 px-0.5">
             <div className="flex items-center gap-1.5 text-xs text-muted">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
@@ -328,9 +328,12 @@ export function RandomHeroSlideshow({
               </button>
             </div>
           </div>
+        </div>
 
+        {/* Narrative & Details Column: Top Justified */}
+        <div className="lg:col-span-4 h-full flex flex-col justify-start py-2 space-y-4">
           <div
-            className={`space-y-3.5 transition-opacity duration-300 ${
+            className={`space-y-4 transition-opacity duration-300 ${
               isTransitioning ? "opacity-0" : "opacity-100"
             }`}
           >
@@ -349,7 +352,7 @@ export function RandomHeroSlideshow({
             {/* Description (Scrollable container for long stories) */}
             <div
               ref={descScrollRef}
-              className="max-h-[150px] sm:max-h-[175px] overflow-y-auto pr-2 space-y-2 select-text"
+              className="max-h-[160px] sm:max-h-[190px] overflow-y-auto pr-2 space-y-2 select-text"
             >
               <p className="text-sm text-muted leading-relaxed font-normal">
                 {current.description ||
@@ -384,7 +387,7 @@ export function RandomHeroSlideshow({
             </div>
 
             {/* Exhibition Link */}
-            <div className="pt-1">
+            <div className="pt-2">
               <Link
                 href={`/photo/${current.photoID}`}
                 className="inline-flex items-center space-x-2 text-sm text-accent hover:text-accent-light transition-colors font-medium group/link"
