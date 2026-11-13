@@ -25,7 +25,16 @@ export interface SiteSettings {
   showWatermarkOverlay?: boolean;
 }
 
-export const THEME_PRESETS = [
+export interface ThemePreset {
+  id: string;
+  name: string;
+  accent: string;
+  light: string;
+  dark: string;
+  description?: string;
+}
+
+export const THEME_PRESETS: ThemePreset[] = [
   {
     id: "amber",
     name: "Amber Gold (Signature)",
@@ -34,11 +43,28 @@ export const THEME_PRESETS = [
     dark: "#d97706",
   },
   {
+    id: "dark-slate",
+    name: "Monochrome / Dark Slate",
+    accent: "#0f172a",
+    light: "#334155",
+    dark: "#020617",
+    description: "Ideal for light themes",
+  },
+  {
+    id: "charcoal",
+    name: "Charcoal / Pitch Black",
+    accent: "#18181b",
+    light: "#3f3f46",
+    dark: "#000000",
+    description: "High contrast dark",
+  },
+  {
     id: "monochrome",
     name: "Monochrome / Pure Silver",
     accent: "#e2e8f0",
     light: "#ffffff",
     dark: "#94a3b8",
+    description: "Ideal for dark themes",
   },
   {
     id: "cyan",

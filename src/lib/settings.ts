@@ -4,13 +4,14 @@ import {
   SiteSettings,
   DEFAULT_SETTINGS,
   THEME_PRESETS,
+  ThemePreset,
   BACKGROUND_PRESETS,
   BackgroundPreset,
   isLightBackground,
   isLightModeActive,
 } from "@/types/settings";
 
-export type { SiteSettings, BackgroundPreset };
+export type { SiteSettings, BackgroundPreset, ThemePreset };
 export {
   DEFAULT_SETTINGS,
   THEME_PRESETS,
@@ -117,7 +118,7 @@ export function getThemeCssVariables(settings: SiteSettings): string {
     }
   }
 
-  // Accent color contrast adaptation (e.g. silver on white becomes rich slate)
+  // Accent color contrast adaptation (e.g. silver on white becomes rich slate, pitch black on OLED black becomes silver)
   let accent = settings.themeAccent;
   let accentLight = settings.themeAccentLight;
   let accentDark = settings.themeAccentDark;
@@ -134,6 +135,20 @@ export function getThemeCssVariables(settings: SiteSettings): string {
         accent = "#0f172a";
         accentLight = "#334155";
         accentDark = "#000000";
+      }
+    }
+  } else {
+    const cleanAccent = accent.replace("#", "").trim();
+    const num = parseInt(cleanAccent, 16);
+    if (!isNaN(num)) {
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      if (brightness < 45) {
+        accent = "#e2e8f0";
+        accentLight = "#ffffff";
+        accentDark = "#94a3b8";
       }
     }
   }

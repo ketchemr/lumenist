@@ -3690,7 +3690,7 @@ export default function AdminUploadPage() {
               buttons, and progress indicators across the entire site.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
               {THEME_PRESETS.map((preset) => {
                 const isSelected =
                   settings.themeAccent.toLowerCase() ===
@@ -3723,6 +3723,7 @@ export default function AdminUploadPage() {
                       </span>
                       <span className="block text-[10px] font-mono text-muted">
                         {preset.accent}
+                        {preset.description ? ` · ${preset.description}` : ""}
                       </span>
                     </div>
                   </button>
