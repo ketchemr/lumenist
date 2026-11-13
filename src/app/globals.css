@@ -329,3 +329,40 @@ img, .photo-frame, .photo-frame img {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Photographic two-layer crossfade animations for hero slideshow */
+@keyframes heroCrossfadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes heroCrossfadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-hero-fade-in {
+  animation: heroCrossfadeIn 700ms ease-in-out forwards;
+  will-change: opacity;
+}
+
+.animate-hero-fade-out {
+  animation: heroCrossfadeOut 700ms ease-in-out forwards;
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-fade-in,
+  .animate-hero-fade-out {
+    animation-duration: 1ms !important;
+  }
+}
+
