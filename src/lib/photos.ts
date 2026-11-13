@@ -21,7 +21,19 @@ export function getAllPhotos(): Photo[] {
       return sortPhotos(cachedPhotos);
     }
     const raw = fs.readFileSync(filePath, "utf-8");
-    cachedPhotos = JSON.parse(raw);
+    const parsed: Photo[] = JSON.parse(raw);
+    cachedPhotos = parsed.map((p) => {
+      if (p.imageDesktop) {
+        const v = p.updatedAt || p.createdTimestamp;
+        if (v && !p.imageDesktop.includes("?v=")) {
+          return {
+            ...p,
+            imageDesktop: `${p.imageDesktop}?v=${v}`,
+          };
+        }
+      }
+      return p;
+    });
     lastMtime = stats.mtimeMs;
     return sortPhotos(cachedPhotos || []);
   } catch {
@@ -31,7 +43,38 @@ export function getAllPhotos(): Photo[] {
 
 export function getPhotoById(id: string): Photo | undefined {
   const photos = getAllPhotos();
-  return photos.find((p) => p.photoID === id);
+  const photo = photos.find((p) => p.photoID === id);
+  if (!photo) return undefined;
+
+  // Real-time mtime check for single photo page:
+  // Dynamically attach the file's latest modification timestamp as ?v=
+  // so any replaced file on disk updates immediately without waiting for re-import
+  try {
+    const photosDir =
+      process.env.PHOTOS_SOURCE_DIR ||
+      process.env.LOCAL_PHOTO_DIR ||
+      path.join(process.cwd(), "public", "photos");
+    const cleanPath = photo.imageDesktop.replace(/^\/photos\//, "").split("?")[0];
+    const candidatePaths = [
+      path.join(photosDir, cleanPath),
+      path.join(process.cwd(), "public", "photos", cleanPath),
+      path.join("/home/ubuntu/photos", cleanPath),
+    ];
+    for (const cand of candidatePaths) {
+      if (fs.existsSync(cand)) {
+        const stat = fs.statSync(cand);
+        const mtimeSec = Math.floor(stat.mtimeMs / 1000);
+        const basePath = photo.imageDesktop.split("?")[0];
+        return {
+          ...photo,
+          updatedAt: mtimeSec,
+          imageDesktop: `${basePath}?v=${mtimeSec}`,
+        };
+      }
+    }
+  } catch {}
+
+  return photo;
 }
 
 export function getPhotosByCategory(category: string): Photo[] {

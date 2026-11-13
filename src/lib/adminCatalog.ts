@@ -16,7 +16,7 @@ export function resolvePhotosDir(): string {
 
 export function findTxtPath(photo: Photo, photosRoot: string): string | null {
   if (photo.imageDesktop && photo.imageDesktop.startsWith("/photos/")) {
-    const relPath = photo.imageDesktop.replace(/^\/photos\//, "");
+    const relPath = photo.imageDesktop.replace(/^\/photos\//, "").split("?")[0];
     const fullDesktopPath = path.join(photosRoot, relPath);
     const dirName = path.dirname(fullDesktopPath);
     const p1 = path.join(dirName, `${photo.photoID}.txt`);
@@ -33,7 +33,7 @@ export function findTxtPath(photo: Photo, photosRoot: string): string | null {
 export function findCandidateFilesToDelete(photo: Photo, photosRoot: string): string[] {
   const files: string[] = [];
   if (photo.imageDesktop && photo.imageDesktop.startsWith("/photos/")) {
-    const relPath = photo.imageDesktop.replace(/^\/photos\//, "");
+    const relPath = photo.imageDesktop.replace(/^\/photos\//, "").split("?")[0];
     const fullDesktopPath = path.join(photosRoot, relPath);
     files.push(fullDesktopPath);
     const dirName = path.dirname(fullDesktopPath);

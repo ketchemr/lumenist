@@ -34,6 +34,7 @@ export interface Photo {
   // Chronology
   dateTaken: DateTaken;
   createdTimestamp?: string;    // "20261106214010"
+  updatedAt?: number;           // File modification timestamp (Unix seconds)
   
   // Capture & Optics
   film: string;                 // "Digital", "Fuji Velvia 50", "Kodak Tri-X", etc.

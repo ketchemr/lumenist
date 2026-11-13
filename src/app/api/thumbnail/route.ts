@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Resolve path to the source image
-  // src is e.g. "/photos/2026/d20261026125756_desktop.jpg"
-  let cleanSrc = decodeURIComponent(src).replace(/^\/+/, "");
+  // src is e.g. "/photos/2026/d20261026125756_desktop.jpg" (or with ?v=... cache buster)
+  let cleanSrc = decodeURIComponent(src).replace(/^\/+/, "").split("?")[0];
   let fullPath = path.join(process.cwd(), "public", cleanSrc);
 
   // If symlink or path doesn't exist in public, check configured external photo dir directly

@@ -20,7 +20,7 @@ console.log(`Starting thumbnail pre-caching for ${photos.length} photos...`);
 
 // Resolve photo file path on disk
 function resolvePhotoPath(src) {
-  let cleanSrc = decodeURIComponent(src).replace(/^\/+/, "");
+  let cleanSrc = decodeURIComponent(src).replace(/^\/+/, "").split("?")[0];
   let fullPath = path.join(ROOT_DIR, "public", cleanSrc);
 
   if (!fs.existsSync(fullPath)) {

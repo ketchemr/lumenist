@@ -77,11 +77,23 @@ async function main() {
         const content = fs.readFileSync(filePath, "utf-8");
         const photo = parseTxtMetadata(content, baseName, imagePath);
 
-        // Adjust image path to preserve folder structure
+        // Adjust image path to preserve folder structure and attach file mtime version
         const imageFilename = fs.existsSync(path.join(subPath, `${baseName}.jpg`))
           ? `${photo.photoID}.jpg`
           : `${photo.photoID}_desktop.jpg`;
-        photo.imageDesktop = `/photos/${sub}/${imageFilename}`;
+
+        if (fs.existsSync(imagePath)) {
+          try {
+            const stat = fs.statSync(imagePath);
+            const mtimeSec = Math.floor(stat.mtimeMs / 1000);
+            photo.updatedAt = mtimeSec;
+            photo.imageDesktop = `/photos/${sub}/${imageFilename}?v=${mtimeSec}`;
+          } catch {
+            photo.imageDesktop = `/photos/${sub}/${imageFilename}`;
+          }
+        } else {
+          photo.imageDesktop = `/photos/${sub}/${imageFilename}`;
+        }
 
         // Automatically extract technical metadata from JPEG EXIF/XMP (overriding manual txt values)
         if (fs.existsSync(imagePath)) {

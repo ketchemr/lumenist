@@ -262,6 +262,11 @@ export async function PUT(
     }
 
     // Update Photo in catalog
+    const updatedMtime = imageReplaced
+      ? Math.floor(Date.now() / 1000)
+      : (photo.updatedAt || (photo.imageDesktop?.includes("?v=") ? parseInt(photo.imageDesktop.split("?v=")[1], 10) : Math.floor(Date.now() / 1000)));
+    const baseDesktop = (photo.imageDesktop || `/photos/${year}/${id}.jpg`).split("?")[0];
+
     const updatedPhoto: Photo = {
       ...photo,
       title,
@@ -280,6 +285,8 @@ export async function PUT(
       tripod,
       availability,
       location: newLocation,
+      updatedAt: updatedMtime,
+      imageDesktop: `${baseDesktop}?v=${updatedMtime}`,
     };
 
     catalog[photoIndex] = updatedPhoto;

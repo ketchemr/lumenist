@@ -89,6 +89,11 @@ export async function GET(
 
     const fileBuffer = fs.readFileSync(foundPath);
 
+    const hasVersion = req.nextUrl.searchParams.has("v");
+    const cacheControl = hasVersion
+      ? "public, max-age=31536000, immutable"
+      : "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400";
+
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
@@ -96,7 +101,7 @@ export async function GET(
         "Content-Length": String(stat.size),
         "Last-Modified": stat.mtime.toUTCString(),
         ETag: etag,
-        "Cache-Control": "public, max-age=14400, stale-while-revalidate=86400",
+        "Cache-Control": cacheControl,
       },
     });
   } catch (err: any) {
