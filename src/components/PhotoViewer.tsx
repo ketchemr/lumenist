@@ -313,6 +313,21 @@ export function PhotoViewer({
         header.style.setProperty("display", "none", "important");
       }
 
+      // Force mobile browser chrome / status bar to black during fullscreen
+      let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      let createdMeta = false;
+      let prevThemeColor = "";
+      if (themeColorMeta) {
+        prevThemeColor = themeColorMeta.getAttribute("content") || "";
+        themeColorMeta.setAttribute("content", "#000000");
+      } else {
+        themeColorMeta = document.createElement("meta");
+        themeColorMeta.setAttribute("name", "theme-color");
+        themeColorMeta.setAttribute("content", "#000000");
+        document.head.appendChild(themeColorMeta);
+        createdMeta = true;
+      }
+
       return () => {
         document.body.classList.remove("viewer-fullscreen-active");
         document.documentElement.classList.remove("viewer-fullscreen-active");
@@ -322,6 +337,11 @@ export function PhotoViewer({
         document.documentElement.style.overscrollBehavior = prevDocOverscroll;
         if (header) {
           header.style.display = prevHeaderDisplay;
+        }
+        if (createdMeta && themeColorMeta && themeColorMeta.parentNode) {
+          themeColorMeta.parentNode.removeChild(themeColorMeta);
+        } else if (themeColorMeta && prevThemeColor) {
+          themeColorMeta.setAttribute("content", prevThemeColor);
         }
       };
     }
