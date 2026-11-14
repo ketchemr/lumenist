@@ -20,6 +20,8 @@ import {
   LayoutGrid,
   ArrowUpDown,
   MapPin,
+  ZoomIn,
+  LassoSelect,
 } from "lucide-react";
 
 const GlobalMap = dynamic(
@@ -83,6 +85,10 @@ export function ExploreGallery({
   const [showAllTags, setShowAllTags] = useState(true);
   const [showMap, setShowMap] = useState(true);
   const [locationClusterPhotos, setLocationClusterPhotos] = useState<Photo[] | null>(null);
+  const [lassoedPhotos, setLassoedPhotos] = useState<Photo[] | null>(null);
+  const [filterByMapBounds, setFilterByMapBounds] = useState(true);
+  const [mapVisiblePhotos, setMapVisiblePhotos] = useState<Photo[] | null>(null);
+  const [mapZoom, setMapZoom] = useState<number>(4);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"large" | "compact">("large");
   const [photoSort, setPhotoSort] = useState<string>("date-desc");
@@ -258,14 +264,30 @@ export function ExploreGallery({
   }, [filteredPhotos]);
 
   const photosForGallery = useMemo(() => {
-    return locationClusterPhotos || filteredPhotos;
-  }, [locationClusterPhotos, filteredPhotos]);
+    if (locationClusterPhotos) {
+      return locationClusterPhotos;
+    }
+    if (lassoedPhotos !== null) {
+      return lassoedPhotos;
+    }
+    if (filterByMapBounds && mapVisiblePhotos !== null) {
+      return mapVisiblePhotos;
+    }
+    return filteredPhotos;
+  }, [locationClusterPhotos, lassoedPhotos, filterByMapBounds, mapVisiblePhotos, filteredPhotos]);
 
   const sortedPhotos = useMemo(() => {
     return sortPhotos(photosForGallery, photoSort);
   }, [photosForGallery, photoSort]);
 
   const totalPages = Math.ceil(sortedPhotos.length / pageSize);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
   const paginatedPhotos = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return sortedPhotos.slice(start, start + pageSize);
@@ -328,16 +350,25 @@ export function ExploreGallery({
     setSelectedTags([]);
     setFilmFilter("All");
     setLocationClusterPhotos(null);
+    setLassoedPhotos(null);
+    setFilterByMapBounds(true);
     setCurrentPage(1);
     router.replace(pathname, { scroll: false });
   };
+
+  const isMapNarrowingResults =
+    filterByMapBounds &&
+    mapVisiblePhotos !== null &&
+    mapVisiblePhotos.length < filteredPhotos.length;
 
   const hasActiveFilters =
     Boolean(searchQuery) ||
     selectedCategory !== "All" ||
     selectedTags.length > 0 ||
     filmFilter !== "All" ||
-    locationClusterPhotos !== null;
+    locationClusterPhotos !== null ||
+    lassoedPhotos !== null ||
+    isMapNarrowingResults;
 
   return (
     <div className="space-y-6">
@@ -636,7 +667,7 @@ export function ExploreGallery({
       {/* Interactive Geographic Map */}
       {showMap ? (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted px-0.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted px-0.5">
             <div className="flex items-center space-x-2">
               <MapPin className="w-3.5 h-3.5 text-accent" />
               <span className="uppercase tracking-wider font-semibold text-foreground">
@@ -646,21 +677,64 @@ export function ExploreGallery({
                 &bull; {geotaggedCount} {geotaggedCount === 1 ? "location" : "locations"}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowMap(false)}
-              className="text-xs text-muted hover:text-foreground flex items-center space-x-1 cursor-pointer transition-colors"
-              title="Collapse map"
-            >
-              <span>Hide Map</span>
-              <ChevronUp className="w-3.5 h-3.5" />
-            </button>
+
+            <div className="flex items-center space-x-3">
+              {/* Map View Filter Toggle */}
+              <label className="flex items-center space-x-1.5 text-xs cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filterByMapBounds}
+                  onChange={(e) => {
+                    setFilterByMapBounds(e.target.checked);
+                    setCurrentPage(1);
+                  }}
+                  className="rounded border-surface-border text-accent focus:ring-accent accent-accent w-3.5 h-3.5 cursor-pointer"
+                />
+                <span
+                  className={
+                    filterByMapBounds
+                      ? "text-accent font-medium"
+                      : "text-muted hover:text-foreground"
+                  }
+                >
+                  Filter gallery by map zoom & view
+                </span>
+                {filterByMapBounds && (
+                  <span className="text-[10px] px-1.5 py-0.2 bg-accent text-accent-contrast rounded-full font-bold">
+                    {photosForGallery.length}
+                  </span>
+                )}
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setShowMap(false)}
+                className="text-xs text-muted hover:text-foreground flex items-center space-x-1 cursor-pointer transition-colors"
+                title="Collapse map"
+              >
+                <span>Hide Map</span>
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           <GlobalMap
             photos={filteredPhotos}
             showCategoryFilter={false}
             heightClassName="h-[360px] sm:h-[440px]"
+            filterByMapBounds={filterByMapBounds}
+            onToggleFilterByMapBounds={(enabled) => {
+              setFilterByMapBounds(enabled);
+              setCurrentPage(1);
+            }}
+            onVisiblePhotosChange={(visible, zoom) => {
+              setMapVisiblePhotos(visible);
+              setMapZoom(zoom);
+            }}
+            onLassoSelect={(photos) => {
+              setLassoedPhotos(photos);
+              setCurrentPage(1);
+            }}
             onFilterToCluster={(clusterPhotos) => {
               setLocationClusterPhotos(clusterPhotos);
               setCurrentPage(1);
@@ -694,6 +768,16 @@ export function ExploreGallery({
                 (at selected map site of {filteredPhotos.length})
               </span>
             )}
+            {lassoedPhotos !== null && !locationClusterPhotos && (
+              <span className="text-muted text-[11px] ml-1">
+                (in drawn lasso area of {filteredPhotos.length})
+              </span>
+            )}
+            {lassoedPhotos === null && isMapNarrowingResults && !locationClusterPhotos && (
+              <span className="text-muted text-[11px] ml-1">
+                (in visible map view of {filteredPhotos.length})
+              </span>
+            )}
           </span>
           {locationClusterPhotos && (
             <span className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]">
@@ -704,6 +788,34 @@ export function ExploreGallery({
                 onClick={() => setLocationClusterPhotos(null)}
                 className="hover:text-foreground cursor-pointer ml-0.5"
                 title="Clear site location filter"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {lassoedPhotos !== null && !locationClusterPhotos && (
+            <span className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]">
+              <LassoSelect className="w-3 h-3" />
+              <span>Drawn Area ({photosForGallery.length})</span>
+              <button
+                type="button"
+                onClick={() => setLassoedPhotos(null)}
+                className="hover:text-foreground cursor-pointer ml-0.5"
+                title="Clear drawn lasso filter"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {lassoedPhotos === null && isMapNarrowingResults && !locationClusterPhotos && (
+            <span className="inline-flex items-center space-x-1 bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full text-[11px]">
+              <ZoomIn className="w-3 h-3" />
+              <span>Map View ({photosForGallery.length})</span>
+              <button
+                type="button"
+                onClick={() => setFilterByMapBounds(false)}
+                className="hover:text-foreground cursor-pointer ml-0.5"
+                title="Disable map view filter"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -824,14 +936,46 @@ export function ExploreGallery({
       ) : (
         <div className="text-center py-20 bg-surface border border-surface-border rounded-sm space-y-3">
           <p className="text-muted text-sm">
-            No photographs found matching your criteria.
+            {lassoedPhotos !== null
+              ? "No photographs found in the drawn lasso area."
+              : filterByMapBounds
+              ? "No photographs found in the current map view."
+              : "No photographs found matching your criteria."}
           </p>
-          <button
-            onClick={clearAllFilters}
-            className="text-accent text-xs underline cursor-pointer"
-          >
-            Reset all filters
-          </button>
+          {lassoedPhotos !== null && (
+            <p className="text-xs text-muted">
+              Try drawing a wider boundary on the map or clearing the lasso filter.
+            </p>
+          )}
+          {lassoedPhotos === null && filterByMapBounds && (
+            <p className="text-xs text-muted">
+              Try panning or zooming out on the map, or disable the map view filter.
+            </p>
+          )}
+          <div className="flex items-center justify-center gap-3 pt-1">
+            {lassoedPhotos !== null && (
+              <button
+                onClick={() => setLassoedPhotos(null)}
+                className="text-accent text-xs underline cursor-pointer"
+              >
+                Clear drawn area
+              </button>
+            )}
+            {filterByMapBounds && (
+              <button
+                onClick={() => setFilterByMapBounds(false)}
+                className="text-accent text-xs underline cursor-pointer"
+              >
+                Show all matching photographs
+              </button>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="text-muted hover:text-foreground text-xs underline cursor-pointer"
+            >
+              Reset all filters
+            </button>
+          </div>
         </div>
       )}
     </div>

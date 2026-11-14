@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import { Photo } from "@/types/photo";
 import {
@@ -10,6 +10,10 @@ import {
   ChevronRight,
   X,
   MapPin,
+  RotateCcw,
+  Filter,
+  ZoomIn,
+  LassoSelect,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -20,6 +24,10 @@ interface GlobalMapProps {
   className?: string;
   heightClassName?: string;
   onFilterToCluster?: (photos: Photo[]) => void;
+  filterByMapBounds?: boolean;
+  onToggleFilterByMapBounds?: (enabled: boolean) => void;
+  onVisiblePhotosChange?: (visiblePhotos: Photo[], zoom: number) => void;
+  onLassoSelect?: (selectedPhotos: Photo[] | null) => void;
 }
 
 interface LocationCluster {
@@ -65,6 +73,32 @@ const LAYER_CONFIGS: Record<
   },
 };
 
+function isPhotoInBounds(bounds: any, lat: number, lng: number): boolean {
+  if (!bounds) return false;
+  if (bounds.contains([lat, lng])) return true;
+  const south = bounds.getSouth();
+  const north = bounds.getNorth();
+  if (lat < south || lat > north) return false;
+  const west = bounds.getWest();
+  const east = bounds.getEast();
+  if (east - west >= 360) return true;
+  let normLng = (((lng - west) % 360) + 360) % 360 + west;
+  return normLng >= west && normLng <= east;
+}
+
+function isPointInPolygon(point: [number, number], vs: [number, number][]): boolean {
+  const [x, y] = point;
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const [xi, yi] = vs[i];
+    const [xj, yj] = vs[j];
+    const intersect =
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 export function GlobalMap({
   photos,
   categories = [],
@@ -72,17 +106,44 @@ export function GlobalMap({
   className = "",
   heightClassName = "h-[72vh] min-h-[480px]",
   onFilterToCluster,
+  filterByMapBounds = true,
+  onToggleFilterByMapBounds,
+  onVisiblePhotosChange,
+  onLassoSelect,
 }: GlobalMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const leafletLibRef = useRef<any>(null);
+  const lassoLayerRef = useRef<any>(null);
+  const activeLassoVerticesRef = useRef<[number, number][] | null>(null);
+  const isLassoActiveRef = useRef<boolean>(false);
+  const isDrawingRef = useRef<boolean>(false);
+  const currentLassoPointsRef = useRef<any[]>([]);
+  const currentPolygonLayerRef = useRef<any>(null);
+  const onLassoSelectRef = useRef(onLassoSelect);
 
   const [activeLayer, setActiveLayer] = useState<LayerMode>("dark");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedCluster, setSelectedCluster] = useState<LocationCluster | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0);
+  const [mapZoom, setMapZoom] = useState<number>(4);
+  const [visiblePhotosInView, setVisiblePhotosInView] = useState<Photo[]>(() =>
+    photos.filter((p) => p.location?.latitude && p.location?.longitude)
+  );
+
+  const [isLassoActive, setIsLassoActive] = useState<boolean>(false);
+  const [hasLassoShape, setHasLassoShape] = useState<boolean>(false);
+  const [lassoCount, setLassoCount] = useState<number>(0);
+
+  useEffect(() => {
+    onLassoSelectRef.current = onLassoSelect;
+  }, [onLassoSelect]);
+
+  useEffect(() => {
+    isLassoActiveRef.current = isLassoActive;
+  }, [isLassoActive]);
 
   // Filter photos with valid coordinates and matching category
   const geotaggedPhotos = useMemo(() => {
@@ -94,6 +155,105 @@ export function GlobalMap({
       );
     });
   }, [photos, selectedCategory, showCategoryFilter]);
+
+  const geotaggedPhotosRef = useRef<Photo[]>(geotaggedPhotos);
+  const onVisiblePhotosChangeRef = useRef(onVisiblePhotosChange);
+
+  useEffect(() => {
+    geotaggedPhotosRef.current = geotaggedPhotos;
+  }, [geotaggedPhotos]);
+
+  useEffect(() => {
+    onVisiblePhotosChangeRef.current = onVisiblePhotosChange;
+  }, [onVisiblePhotosChange]);
+
+  // Re-evaluate lasso selection if underlying photos change
+  useEffect(() => {
+    if (activeLassoVerticesRef.current) {
+      const vs = activeLassoVerticesRef.current;
+      const selected = geotaggedPhotos.filter((p) => {
+        if (!p.location?.latitude || !p.location?.longitude) return false;
+        return isPointInPolygon([p.location.latitude, p.location.longitude], vs);
+      });
+      setLassoCount(selected.length);
+      onLassoSelectRef.current?.(selected);
+    }
+  }, [geotaggedPhotos]);
+
+  const computeVisiblePhotos = useCallback(
+    (currentMap: any, photoList: Photo[]) => {
+      if (!currentMap) return [];
+      const bounds = currentMap.getBounds();
+      const zoom = currentMap.getZoom();
+      setMapZoom(zoom);
+      const visible = photoList.filter((p) => {
+        if (!p.location?.latitude || !p.location?.longitude) return false;
+        return isPhotoInBounds(bounds, p.location.latitude, p.location.longitude);
+      });
+      setVisiblePhotosInView(visible);
+      onVisiblePhotosChangeRef.current?.(visible, zoom);
+      return visible;
+    },
+    []
+  );
+
+  const clearLasso = useCallback(() => {
+    if (lassoLayerRef.current) {
+      lassoLayerRef.current.clearLayers();
+    }
+    activeLassoVerticesRef.current = null;
+    currentPolygonLayerRef.current = null;
+    currentLassoPointsRef.current = [];
+    isDrawingRef.current = false;
+    setHasLassoShape(false);
+    setLassoCount(0);
+    onLassoSelectRef.current?.(null);
+
+    if (mapInstanceRef.current) {
+      const map = mapInstanceRef.current;
+      map.dragging.enable();
+      if (map.touchZoom) map.touchZoom.enable();
+      if (map.doubleClickZoom) map.doubleClickZoom.enable();
+      if (mapContainerRef.current) {
+        mapContainerRef.current.style.cursor = "";
+      }
+    }
+    setIsLassoActive(false);
+  }, []);
+
+  const toggleLassoMode = () => {
+    if (isLassoActive) {
+      setIsLassoActive(false);
+      if (mapInstanceRef.current) {
+        const map = mapInstanceRef.current;
+        map.dragging.enable();
+        if (map.touchZoom) map.touchZoom.enable();
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        if (mapContainerRef.current) {
+          mapContainerRef.current.style.cursor = "";
+        }
+      }
+    } else {
+      if (lassoLayerRef.current) {
+        lassoLayerRef.current.clearLayers();
+      }
+      activeLassoVerticesRef.current = null;
+      setHasLassoShape(false);
+      setLassoCount(0);
+      setSelectedCluster(null);
+
+      setIsLassoActive(true);
+      if (mapInstanceRef.current) {
+        const map = mapInstanceRef.current;
+        map.dragging.disable();
+        if (map.touchZoom) map.touchZoom.disable();
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        if (mapContainerRef.current) {
+          mapContainerRef.current.style.cursor = "crosshair";
+        }
+      }
+    }
+  };
 
   // Group photos into location clusters (~11m precision or exact)
   const clusters = useMemo(() => {
@@ -158,7 +318,158 @@ export function GlobalMap({
       const layerGroup = L.layerGroup().addTo(map);
       markersLayerRef.current = layerGroup;
 
+      const lassoLayer = L.layerGroup().addTo(map);
+      lassoLayerRef.current = lassoLayer;
+
+      const getLatLngFromEvent = (e: MouseEvent | TouchEvent) => {
+        if (!container) return null;
+        const rect = container.getBoundingClientRect();
+        const clientX =
+          "touches" in e && e.touches.length > 0
+            ? e.touches[0].clientX
+            : (e as MouseEvent).clientX;
+        const clientY =
+          "touches" in e && e.touches.length > 0
+            ? e.touches[0].clientY
+            : (e as MouseEvent).clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        return map.containerPointToLatLng([x, y]);
+      };
+
+      const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+        if (!isLassoActiveRef.current) return;
+        const target = e.target as HTMLElement;
+        if (
+          target.closest("button") ||
+          target.closest(".leaflet-control") ||
+          target.closest(".dark-map-popup")
+        ) {
+          return;
+        }
+
+        e.preventDefault();
+        isDrawingRef.current = true;
+        currentLassoPointsRef.current = [];
+        if (lassoLayerRef.current) {
+          lassoLayerRef.current.clearLayers();
+        }
+
+        const latlng = getLatLngFromEvent(e);
+        if (!latlng) return;
+        currentLassoPointsRef.current.push(latlng);
+
+        const poly = L.polygon([latlng], {
+          color: "#f59e0b",
+          weight: 2.5,
+          opacity: 0.95,
+          dashArray: "4, 4",
+          fillColor: "#f59e0b",
+          fillOpacity: 0.15,
+        }).addTo(lassoLayerRef.current);
+        currentPolygonLayerRef.current = poly;
+      };
+
+      const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+        if (!isLassoActiveRef.current || !isDrawingRef.current) return;
+        e.preventDefault();
+
+        const latlng = getLatLngFromEvent(e);
+        if (!latlng) return;
+
+        const pts = currentLassoPointsRef.current;
+        if (pts.length > 0) {
+          const lastPt = pts[pts.length - 1];
+          const p1 = map.latLngToContainerPoint(lastPt);
+          const p2 = map.latLngToContainerPoint(latlng);
+          const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+          if (dist < 4) return;
+        }
+
+        pts.push(latlng);
+        if (currentPolygonLayerRef.current) {
+          currentPolygonLayerRef.current.setLatLngs(pts);
+        }
+      };
+
+      const handlePointerUp = () => {
+        if (!isLassoActiveRef.current || !isDrawingRef.current) return;
+        isDrawingRef.current = false;
+
+        const pts = currentLassoPointsRef.current;
+        if (pts.length >= 3) {
+          if (currentPolygonLayerRef.current) {
+            currentPolygonLayerRef.current.setStyle({
+              dashArray: undefined,
+              weight: 2,
+              fillOpacity: 0.2,
+            });
+          }
+
+          const vertices: [number, number][] = pts.map((pt: any) => [
+            pt.lat,
+            pt.lng,
+          ]);
+          activeLassoVerticesRef.current = vertices;
+
+          const currentGeotagged = geotaggedPhotosRef.current;
+          const selected = currentGeotagged.filter((p) => {
+            if (!p.location?.latitude || !p.location?.longitude) return false;
+            return isPointInPolygon(
+              [p.location.latitude, p.location.longitude],
+              vertices
+            );
+          });
+
+          setHasLassoShape(true);
+          setLassoCount(selected.length);
+          onLassoSelectRef.current?.(selected);
+        } else {
+          if (lassoLayerRef.current) {
+            lassoLayerRef.current.clearLayers();
+          }
+          activeLassoVerticesRef.current = null;
+          setHasLassoShape(false);
+          setLassoCount(0);
+        }
+
+        setIsLassoActive(false);
+        map.dragging.enable();
+        if (map.touchZoom) map.touchZoom.enable();
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        if (container) {
+          container.style.cursor = "";
+        }
+      };
+
+      container.addEventListener("mousedown", handlePointerDown);
+      window.addEventListener("mousemove", handlePointerMove);
+      window.addEventListener("mouseup", handlePointerUp);
+
+      container.addEventListener("touchstart", handlePointerDown, {
+        passive: false,
+      });
+      window.addEventListener("touchmove", handlePointerMove, {
+        passive: false,
+      });
+      window.addEventListener("touchend", handlePointerUp);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && isLassoActiveRef.current) {
+          clearLasso();
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+
+      const handleMoveEnd = () => {
+        if (!isMounted || !mapInstanceRef.current) return;
+        computeVisiblePhotos(mapInstanceRef.current, geotaggedPhotosRef.current);
+      };
+
+      map.on("moveend", handleMoveEnd);
+
       renderClusterMarkers(L, map, layerGroup, clusters);
+      computeVisiblePhotos(map, geotaggedPhotosRef.current);
 
       let resizeObserver: ResizeObserver | null = null;
       if (typeof ResizeObserver !== "undefined" && container) {
@@ -177,6 +488,16 @@ export function GlobalMap({
       }, 250);
 
       return () => {
+        map.off("moveend", handleMoveEnd);
+        container.removeEventListener("mousedown", handlePointerDown);
+        window.removeEventListener("mousemove", handlePointerMove);
+        window.removeEventListener("mouseup", handlePointerUp);
+
+        container.removeEventListener("touchstart", handlePointerDown);
+        window.removeEventListener("touchmove", handlePointerMove);
+        window.removeEventListener("touchend", handlePointerUp);
+        window.removeEventListener("keydown", handleKeyDown);
+
         if (resizeObserver && container) {
           resizeObserver.disconnect();
         }
@@ -192,6 +513,7 @@ export function GlobalMap({
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         markersLayerRef.current = null;
+        lassoLayerRef.current = null;
         tileLayerRef.current = null;
         leafletLibRef.current = null;
       }
@@ -366,8 +688,22 @@ export function GlobalMap({
     const layerGroup = markersLayerRef.current;
     if (L && map && layerGroup) {
       renderClusterMarkers(L, map, layerGroup, clusters);
+      computeVisiblePhotos(map, geotaggedPhotos);
     }
-  }, [clusters]);
+  }, [clusters, computeVisiblePhotos, geotaggedPhotos]);
+
+  const handleResetView = () => {
+    if (!mapInstanceRef.current || !leafletLibRef.current) return;
+    const L = leafletLibRef.current;
+    const map = mapInstanceRef.current;
+    const bounds = L.latLngBounds([]);
+    clusters.forEach((c) => bounds.extend([c.latitude, c.longitude]));
+    if (clusters.length === 1) {
+      map.setView([clusters[0].latitude, clusters[0].longitude], 11);
+    } else if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    }
+  };
 
   // Deselect cluster if it is filtered out of current selection
   useEffect(() => {
@@ -470,6 +806,129 @@ export function GlobalMap({
           >
             Satellite
           </button>
+        </div>
+
+        {/* Map View & Filter Controls (Top Left, alongside zoom buttons) */}
+        <div className="absolute top-2.5 left-12 z-[1000] flex items-center gap-1.5 sm:gap-2">
+          {/* Fit All button */}
+          <button
+            type="button"
+            onClick={handleResetView}
+            className="px-2.5 py-1.5 bg-surface/90 dark:bg-black/85 backdrop-blur-md border border-surface-border dark:border-white/20 rounded-sm text-[11px] text-foreground dark:text-white/90 hover:text-accent hover:border-accent transition-colors shadow-lg flex items-center space-x-1.5 cursor-pointer"
+            title="Fit all photographs in view"
+          >
+            <RotateCcw className="w-3 h-3 text-accent" />
+            <span className="hidden sm:inline">Fit All</span>
+          </button>
+
+          {/* Filter by map view toggle button */}
+          {onToggleFilterByMapBounds && (
+            <button
+              type="button"
+              onClick={() => onToggleFilterByMapBounds(!filterByMapBounds)}
+              className={`px-2.5 py-1.5 rounded-sm backdrop-blur-md text-[11px] font-medium shadow-lg border transition-all cursor-pointer flex items-center space-x-1.5 ${
+                filterByMapBounds
+                  ? "bg-accent text-accent-contrast border-accent shadow-accent/20"
+                  : "bg-surface/90 dark:bg-black/85 text-foreground dark:text-white/90 border-surface-border dark:border-white/20 hover:border-accent"
+              }`}
+              title={
+                filterByMapBounds
+                  ? "Disable map view gallery filter"
+                  : "Filter gallery to photographs in current map view"
+              }
+            >
+              <Filter className="w-3 h-3" />
+              <span>{filterByMapBounds ? "Filtered to Map" : "Filter to Map"}</span>
+              <span className="font-mono text-[10px] opacity-85">
+                ({visiblePhotosInView.length})
+              </span>
+            </button>
+          )}
+
+          {/* Freehand Lasso Tool Button */}
+          {onLassoSelect && (
+            <button
+              type="button"
+              onClick={toggleLassoMode}
+              className={`px-2.5 py-1.5 rounded-sm backdrop-blur-md text-[11px] font-medium shadow-lg border transition-all cursor-pointer flex items-center space-x-1.5 ${
+                isLassoActive
+                  ? "bg-accent text-accent-contrast border-accent ring-2 ring-accent/40 animate-pulse"
+                  : hasLassoShape
+                  ? "bg-accent/20 text-accent border-accent/60"
+                  : "bg-surface/90 dark:bg-black/85 text-foreground dark:text-white/90 border-surface-border dark:border-white/20 hover:border-accent"
+              }`}
+              title={
+                isLassoActive
+                  ? "Drawing active: Click & drag on map to encircle photographs (or Esc to cancel)"
+                  : hasLassoShape
+                  ? "Lasso active. Click to draw a new boundary"
+                  : "Draw freehand lasso around a set of photographs"
+              }
+            >
+              <LassoSelect className="w-3.5 h-3.5" />
+              <span>{isLassoActive ? "Drawing..." : "Lasso"}</span>
+              {hasLassoShape && (
+                <span className="font-mono text-[10px] font-bold">
+                  ({lassoCount})
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Clear Lasso button if shape exists */}
+          {hasLassoShape && (
+            <button
+              type="button"
+              onClick={clearLasso}
+              className="px-2 py-1.5 bg-surface/90 dark:bg-black/85 backdrop-blur-md border border-surface-border dark:border-white/20 rounded-sm text-[11px] text-muted hover:text-foreground transition-colors shadow-lg flex items-center space-x-1 cursor-pointer"
+              title="Clear lasso boundary"
+            >
+              <X className="w-3 h-3" />
+              <span className="hidden sm:inline text-[10px]">Clear Lasso</span>
+            </button>
+          )}
+        </div>
+
+        {/* Floating guidance banner when lasso drawing mode is active */}
+        {isLassoActive && (
+          <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-[1000] animate-in fade-in duration-150">
+            <div className="px-3.5 py-1.5 bg-surface/95 dark:bg-black/95 backdrop-blur-md border border-accent text-accent rounded-full text-xs font-medium shadow-2xl flex items-center space-x-2">
+              <LassoSelect className="w-3.5 h-3.5" />
+              <span>Click &amp; drag on map to encircle photos</span>
+              <button
+                type="button"
+                onClick={toggleLassoMode}
+                className="ml-1.5 text-muted hover:text-foreground cursor-pointer text-[11px] underline"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Floating prompt when zoomed into an area with fewer photos than the total */}
+        {!filterByMapBounds &&
+          onToggleFilterByMapBounds &&
+          visiblePhotosInView.length < geotaggedPhotos.length &&
+          visiblePhotosInView.length > 0 && (
+            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-[1000]">
+              <button
+                type="button"
+                onClick={() => onToggleFilterByMapBounds(true)}
+                className="px-3 py-1.5 bg-surface/95 dark:bg-black/95 backdrop-blur-md border border-accent/60 hover:border-accent text-foreground dark:text-white rounded-full text-xs font-medium shadow-xl flex items-center space-x-1.5 hover:scale-105 transition-all cursor-pointer group"
+              >
+                <ZoomIn className="w-3.5 h-3.5 text-accent group-hover:scale-110 transition-transform" />
+                <span>Filter gallery to this view</span>
+                <span className="bg-accent/20 text-accent px-1.5 py-0.2 rounded-full text-[10px] font-bold">
+                  {visiblePhotosInView.length}
+                </span>
+              </button>
+            </div>
+          )}
+
+        {/* Subtle Zoom Badge in bottom right */}
+        <div className="absolute bottom-2 right-2 z-[1000] px-2 py-0.5 rounded bg-surface/80 dark:bg-black/80 backdrop-blur-xs text-[10px] font-mono text-muted border border-surface-border/40 pointer-events-none">
+          Zoom: {mapZoom}
         </div>
 
         <div ref={mapContainerRef} className="w-full h-full" />
