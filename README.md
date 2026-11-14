@@ -85,6 +85,11 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
 ```
 
 ### 1. 📁 Upload (`?tab=upload`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-Upload.png" alt="Lumenist Admin Upload Suite with Client-Side EXIF and Map Pin Picker" width="100%" />
+</p>
+
 - **Drag-and-Drop Publishing**: Upload high-resolution TIFF, JPEG, or WebP photographs directly into the live site.
 - **Automated Client-Side EXIF Extraction**: Automatically extracts camera make/model, lens, focal length, aperture, shutter speed, ISO, exposure compensation, Kelvin white balance, capture timestamp, and GPS coordinates before upload.
 - **Smart ID Generation**: Creates standardized photo IDs (`dYYYYMMDDHHMMSS`) derived from original shutter timestamps.
@@ -93,6 +98,11 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
 - **Support Gear & Film Selectors**: Quick-pick dropdowns for tripod setups and film emulsions.
 
 ### 2. 🖼️ Manage & Batch Operations (`?tab=manage`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-ManagePhotos.png" alt="Lumenist Catalog Management and Batch Operations" width="100%" />
+</p>
+
 - **Full Catalog Archive Table**: Search and sort hundreds or thousands of photos with live search across titles, IDs, categories, and cameras.
 - **Curation Filter**: Filter by individual album or select **"Only in All"** to isolate works that are not yet assigned to any curated gallery.
 - **Configurable Page Density**: View 25, 50, 100, or All works per page.
@@ -106,6 +116,11 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
   - **Bulk Delete**: Delete selected photos with options to preserve or delete master files from the server disk.
 
 ### 3. 📚 Albums & Collection Management (`?tab=albums`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-ManageAlbums.png" alt="Lumenist Albums and Collection Management" width="100%" />
+</p>
+
 - **Album Grid Overview**: Visual gallery cards for every curated album showing the assigned cover photo, total count of contained works, and quick action buttons.
 - **"All Photographs" Master Card**: High-level overview of the entire archive.
 - **"Only in All" Quick Curation Card**: Surfaces the number of photographs that exist in the archive but have no curated album assignment. Clicking the card immediately opens the Manage tab pre-filtered to those images for quick curation.
@@ -114,6 +129,11 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
 - **Safe Album Deletion**: Deleting an album removes the album category label from all member photos while **safely preserving the photos themselves** in the archive ("All").
 
 ### 4. ⚙️ Studio Settings & Dynamic Theming (`?tab=settings`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-Settings.png" alt="Lumenist Studio Settings, Dynamic Theming, and Watermark Engine" width="100%" />
+</p>
+
 - **Studio Identity**: Update Artist Name, Site Title, Tagline, Bio, and copyright notices live from the browser without server restarts.
 - **Watermark & Protection Engine**: Toggle the public copyright overlay badge on or off, configure custom copyright strings, and enable/disable the frosted glass shield backing.
 - **Exhibition Theme Presets**: Choose between Pure OLED Black (`#000000`), Midnight Slate, Charcoal, Warm Espresso, Studio White, Gallery Parchment, or Soft Silver.
