@@ -46,6 +46,11 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
   - *Clean Route Redirect*: Direct navigation to `/map` automatically redirects to `/explore`.
 
 ### 🔍 Deep Technical Photo Viewer (`/photo/[id]`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-Image.png" alt="Lumenist Deep Technical Photo Viewer and Exposure Drawer" width="100%" />
+</p>
+
 - **Adaptive Framing & Lightbox**: Pure OLED black or custom exhibition matting that fits horizontal, vertical, and panoramic orientations without clipping.
 - **Keyboard & Touch Gestures**: Full keyboard navigation (Left/Right arrows for adjacent works, `F` for fullscreen, `Esc` to close) and mobile swipe gestures.
 - **Discreet Copyright & Watermark Badge**: Configurable semi-transparent copyright overlay with an optional frosted shield in the corner of master previews.
