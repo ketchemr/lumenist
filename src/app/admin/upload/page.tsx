@@ -3158,7 +3158,12 @@ export default function AdminUploadPage() {
               availableAlbums={availableAlbums}
               isOpen={!!editingPhotoID}
               onClose={() => setEditingPhotoID(null)}
-              onSaved={() => {
+              onSaved={(savedPhoto) => {
+                if (savedPhoto && savedPhoto.photoID !== editingPhotoID) {
+                  setSelectedPhotoIDs((prev) =>
+                    prev.map((id) => (id === editingPhotoID ? savedPhoto.photoID : id))
+                  );
+                }
                 loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
                 loadAlbums();
               }}

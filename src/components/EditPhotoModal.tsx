@@ -48,6 +48,7 @@ export function EditPhotoModal({
   const [photo, setPhoto] = useState<Photo | null>(initialPhoto || null);
 
   // Form states
+  const [photoIDInput, setPhotoIDInput] = useState(photoID);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedAlbums, setSelectedAlbums] = useState<string[]>([]);
@@ -88,6 +89,7 @@ export function EditPhotoModal({
   // Populate form fields from photo
   const populateFields = (p: Photo) => {
     setPhoto(p);
+    setPhotoIDInput(p.photoID || photoID);
     setTitle(p.title || "");
     setDescription(p.description || "");
     setSelectedAlbums(
@@ -122,6 +124,7 @@ export function EditPhotoModal({
   useEffect(() => {
     if (!isOpen) return;
 
+    setPhotoIDInput(photoID);
     setErrorMessage("");
     setSuccessMessage("");
     setReplacementFile(null);
@@ -252,8 +255,22 @@ export function EditPhotoModal({
     setErrorMessage("");
     setSuccessMessage("");
 
+    const trimmedPhotoID = photoIDInput.trim();
+    if (!trimmedPhotoID) {
+      setErrorMessage("Photo ID cannot be empty.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedPhotoID)) {
+      setErrorMessage("Photo ID may only contain letters, numbers, hyphens, and underscores.");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const formData = new FormData();
+      formData.append("photoID", trimmedPhotoID);
       formData.append("title", title);
       formData.append("description", description);
       formData.append("albums", selectedAlbums.join(", "));
@@ -295,7 +312,9 @@ export function EditPhotoModal({
       }
 
       setSuccessMessage(
-        data.imageReplaced
+        data.idChanged
+          ? `Photograph details and Photo ID (${data.newPhotoID}) updated successfully!`
+          : data.imageReplaced
           ? "Photograph details and image file updated successfully!"
           : "Photograph details saved successfully!"
       );
@@ -328,7 +347,7 @@ export function EditPhotoModal({
           <div className="flex items-center space-x-2">
             <Sliders className="w-4 h-4 text-accent" />
             <h2 className="text-base font-medium text-foreground">
-              Edit Photograph <span className="font-mono text-xs text-accent">({photoID})</span>
+              Edit Photograph <span className="font-mono text-xs text-accent">({photoIDInput || photoID})</span>
             </h2>
           </div>
           <button
@@ -433,19 +452,47 @@ export function EditPhotoModal({
 
           {/* Section: Title & Description */}
           <div className="space-y-4 bg-surface border border-surface-border p-4 rounded-sm">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-foreground">
-                Photograph Title <span className="text-accent">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Max Patch View, Fall, Band of Trees"
-                className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-1 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-medium text-foreground font-mono">
+                    Photo ID <span className="text-accent">*</span>
+                  </label>
+                  <span className="text-[10px] text-muted">Canonical ID</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={photoIDInput}
+                  onChange={(e) => setPhotoIDInput(e.target.value.trim())}
+                  placeholder="e.g. d20261027134052 or s00000613"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-accent focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-xs font-medium text-foreground">
+                  Photograph Title <span className="text-accent">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Max Patch View, Fall, Band of Trees"
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
             </div>
+
+            {photoIDInput && photoIDInput !== photoID && (
+              <div className="p-2.5 bg-amber-950/30 border border-amber-800/60 rounded text-amber-300 text-xs flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  Renaming Photo ID from <strong className="font-mono text-accent">{photoID}</strong> to <strong className="font-mono text-accent">{photoIDInput}</strong> will update the catalog, rename associated image and metadata files on disk (<code className="font-mono">{photoID}.jpg</code>, <code className="font-mono">{photoID}.txt</code>), and clear cached thumbnails.
+                </span>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-foreground">

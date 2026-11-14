@@ -84,8 +84,12 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
         photoID={photoID}
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onSaved={() => {
-          router.refresh();
+        onSaved={(updatedPhoto) => {
+          if (updatedPhoto && updatedPhoto.photoID !== photoID) {
+            router.push(`/photo/${encodeURIComponent(updatedPhoto.photoID)}`);
+          } else {
+            router.refresh();
+          }
         }}
       />
 

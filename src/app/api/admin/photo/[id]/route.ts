@@ -110,6 +110,27 @@ export async function PUT(
     const formData = await req.formData();
     const replacementFile = formData.get("file") as File | null;
 
+    // Optional Photo ID renaming
+    const requestedPhotoID = (formData.get("photoID") as string)?.trim();
+    const targetPhotoID = requestedPhotoID || id;
+    const idChanged = targetPhotoID !== id;
+
+    if (idChanged) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(targetPhotoID)) {
+        return NextResponse.json(
+          { error: "Photo ID may only contain letters, numbers, hyphens, and underscores." },
+          { status: 400 }
+        );
+      }
+      const existingIdx = catalog.findIndex((p) => p.photoID === targetPhotoID);
+      if (existingIdx !== -1 && existingIdx !== photoIndex) {
+        return NextResponse.json(
+          { error: `Photograph with ID "${targetPhotoID}" already exists in catalog` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Optional replacement image processing
     const defaultSize: PhotoSize = {
       width: 1600,
@@ -133,7 +154,7 @@ export async function PUT(
       const aspectRatio = parseFloat((width / height).toFixed(3));
       updatedSize = { width, height, aspectRatio, orientation };
 
-      const desktopFilename = `${id}.jpg`;
+      const desktopFilename = `${targetPhotoID}.jpg`;
       const targetImagePath = path.join(targetFolder, desktopFilename);
 
       if (width > 2400) {
@@ -145,29 +166,102 @@ export async function PUT(
         fs.writeFileSync(targetImagePath, buffer);
       }
 
+      // If ID changed and old desktop image exists under a different name, clean it up
+      if (idChanged) {
+        const oldImagePath = path.join(targetFolder, `${id}.jpg`);
+        if (fs.existsSync(oldImagePath) && oldImagePath !== targetImagePath) {
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch {}
+        }
+      }
+
       // Also ensure public/photos copy is synced if public/photos isn't symlinked
       const publicTargetFolder = path.join(process.cwd(), "public", "photos", String(year));
       if (fs.existsSync(publicTargetFolder) && publicTargetFolder !== targetFolder) {
         try {
           fs.copyFileSync(targetImagePath, path.join(publicTargetFolder, desktopFilename));
+          if (idChanged) {
+            const oldPublicImg = path.join(publicTargetFolder, `${id}.jpg`);
+            if (fs.existsSync(oldPublicImg)) {
+              fs.unlinkSync(oldPublicImg);
+            }
+          }
         } catch {}
       }
 
       imageReplaced = true;
+    } else if (idChanged) {
+      // No replacement file uploaded, but photoID was renamed: rename disk image files
+      const suffixes = [
+        ".jpg",
+        "_desktop.jpg",
+        ".jpeg",
+        "_gallery.jpg",
+        "_home.jpg",
+        "_tn.jpg",
+        "_fullsize.jpg",
+      ];
+      for (const suffix of suffixes) {
+        const oldFile = path.join(targetFolder, `${id}${suffix}`);
+        const newFile = path.join(targetFolder, `${targetPhotoID}${suffix}`);
+        if (fs.existsSync(oldFile) && !fs.existsSync(newFile)) {
+          try {
+            fs.renameSync(oldFile, newFile);
+          } catch (e) {
+            console.warn(`Could not rename image file ${oldFile} to ${newFile}:`, e);
+          }
+        }
+      }
 
-      // Invalidate existing cached thumbnails for this photo ID
-      const thumbDir = path.join(process.cwd(), ".thumbnails");
-      if (fs.existsSync(thumbDir)) {
-        try {
-          const cachedFiles = fs.readdirSync(thumbDir);
-          for (const cf of cachedFiles) {
-            if (cf.includes(id)) {
-              fs.unlinkSync(path.join(thumbDir, cf));
+      // Sync public/photos if separate
+      const publicTargetFolder = path.join(process.cwd(), "public", "photos", String(year));
+      if (fs.existsSync(publicTargetFolder) && publicTargetFolder !== targetFolder) {
+        for (const suffix of suffixes) {
+          const oldPub = path.join(publicTargetFolder, `${id}${suffix}`);
+          const newPub = path.join(publicTargetFolder, `${targetPhotoID}${suffix}`);
+          if (fs.existsSync(oldPub) && !fs.existsSync(newPub)) {
+            try {
+              fs.renameSync(oldPub, newPub);
+            } catch {}
+          }
+        }
+      }
+
+      // Check fullsize archive locations if present
+      const possibleFullsizeDirs = [
+        path.join(photosRoot, "..", "..", "Photography", "rrkphoto", "RRKPhoto_fullsize", String(year)),
+        path.join("/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/Photography/rrkphoto/RRKPhoto_fullsize", String(year)),
+      ];
+      for (const fDir of possibleFullsizeDirs) {
+        if (fs.existsSync(fDir)) {
+          const oldFs = path.join(fDir, `${id}_fullsize.jpg`);
+          const newFs = path.join(fDir, `${targetPhotoID}_fullsize.jpg`);
+          if (fs.existsSync(oldFs) && !fs.existsSync(newFs)) {
+            try {
+              fs.renameSync(oldFs, newFs);
+            } catch (err) {
+              console.warn(`Could not rename fullsize file in ${fDir}:`, err);
             }
           }
-        } catch (e) {
-          console.warn("Could not clear cached thumbnails:", e);
         }
+      }
+    }
+
+    // Invalidate existing cached thumbnails for old and new photo IDs
+    const thumbDir = path.join(process.cwd(), ".thumbnails");
+    if (fs.existsSync(thumbDir)) {
+      try {
+        const cachedFiles = fs.readdirSync(thumbDir);
+        for (const cf of cachedFiles) {
+          if (cf.includes(id) || (idChanged && cf.includes(targetPhotoID))) {
+            try {
+              fs.unlinkSync(path.join(thumbDir, cf));
+            } catch {}
+          }
+        }
+      } catch (e) {
+        console.warn("Could not clear cached thumbnails:", e);
       }
     }
 
@@ -234,12 +328,12 @@ export async function PUT(
     }
 
     // Write updated .txt file
-    const txtFilename = `${id}.txt`;
+    const txtFilename = `${targetPhotoID}.txt`;
     const targetTxtPath = path.join(targetFolder, txtFilename);
 
     const createdVal = photo.createdTimestamp || photo.rawFields?.created;
     const txtLines = [
-      `photoID:${id}`,
+      `photoID:${targetPhotoID}`,
       `title:${title}`,
       createdVal ? `created:${createdVal}` : "",
       description ? `description:${description}` : "",
@@ -253,22 +347,53 @@ export async function PUT(
 
     fs.writeFileSync(targetTxtPath, txtLines.join("\n") + "\n", "utf-8");
 
+    if (idChanged) {
+      const oldTxtPath = path.join(targetFolder, `${id}.txt`);
+      if (fs.existsSync(oldTxtPath) && oldTxtPath !== targetTxtPath) {
+        try {
+          fs.unlinkSync(oldTxtPath);
+        } catch {}
+      }
+    }
+
     // Also sync public/photos .txt if separate
     const publicTxtPath = path.join(process.cwd(), "public", "photos", String(year), txtFilename);
     if (fs.existsSync(path.dirname(publicTxtPath)) && publicTxtPath !== targetTxtPath) {
       try {
         fs.copyFileSync(targetTxtPath, publicTxtPath);
+        if (idChanged) {
+          const oldPublicTxt = path.join(path.dirname(publicTxtPath), `${id}.txt`);
+          if (fs.existsSync(oldPublicTxt)) {
+            fs.unlinkSync(oldPublicTxt);
+          }
+        }
       } catch {}
     }
 
     // Update Photo in catalog
-    const updatedMtime = imageReplaced
+    const updatedMtime = (imageReplaced || idChanged)
       ? Math.floor(Date.now() / 1000)
       : (photo.updatedAt || (photo.imageDesktop?.includes("?v=") ? parseInt(photo.imageDesktop.split("?v=")[1], 10) : Math.floor(Date.now() / 1000)));
-    const baseDesktop = (photo.imageDesktop || `/photos/${year}/${id}.jpg`).split("?")[0];
+
+    let baseDesktop = (photo.imageDesktop || `/photos/${year}/${id}.jpg`).split("?")[0];
+    if (idChanged) {
+      baseDesktop = baseDesktop
+        .replace(`/${id}.jpg`, `/${targetPhotoID}.jpg`)
+        .replace(`/${id}_desktop.jpg`, `/${targetPhotoID}_desktop.jpg`)
+        .replace(`/${id}.jpeg`, `/${targetPhotoID}.jpeg`);
+      if (!baseDesktop.includes(targetPhotoID)) {
+        baseDesktop = `/photos/${year}/${targetPhotoID}.jpg`;
+      }
+    }
+
+    let imageFullsize = photo.imageFullsize;
+    if (imageFullsize && idChanged) {
+      imageFullsize = imageFullsize.replace(id, targetPhotoID);
+    }
 
     const updatedPhoto: Photo = {
       ...photo,
+      photoID: targetPhotoID,
       title,
       description,
       categories: categories.length > 0 ? categories : ["All"],
@@ -287,6 +412,18 @@ export async function PUT(
       location: newLocation,
       updatedAt: updatedMtime,
       imageDesktop: `${baseDesktop}?v=${updatedMtime}`,
+      ...(imageFullsize ? { imageFullsize } : {}),
+      rawFields: {
+        ...(photo.rawFields || {}),
+        photoID: targetPhotoID,
+        title,
+        description,
+        tripod,
+        availability,
+        category: categories.join(","),
+        keyword: keywords.join(","),
+        size: `${updatedSize.width}x${updatedSize.height}`,
+      },
     };
 
     catalog[photoIndex] = updatedPhoto;
@@ -299,6 +436,9 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       imageReplaced,
+      idChanged,
+      oldPhotoID: id,
+      newPhotoID: targetPhotoID,
       photo: updatedPhoto,
     });
   } catch (err: any) {
