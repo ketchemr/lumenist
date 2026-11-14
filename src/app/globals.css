@@ -103,8 +103,6 @@ html.light .dark-map-popup .leaflet-popup-content-wrapper {
 /* Crisp white text inside dark photo overlays and keep-white elements ONLY */
 html.light .photo-overlay,
 html.light .photo-overlay *,
-html.light [data-theater],
-html.light [data-theater] *,
 html.light .keep-white,
 html.light .keep-white * {
   color: #ffffff !important;
@@ -151,16 +149,16 @@ a[class*="bg-red-"]:not([class*="/"]) * {
 }
 
 /* Light-mode fail-safe for any lingering hardcoded dark buttons */
-html.light button.bg-black,
-html.light button[class~="bg-black"],
-html.light a[class~="bg-black"] {
+html.light button.bg-black:not(.photo-theater *),
+html.light button[class~="bg-black"]:not(.photo-theater *),
+html.light a[class~="bg-black"]:not(.photo-theater *) {
   background-color: var(--surface, #ffffff);
   border-color: var(--surface-border, #cbd5e1);
   color: var(--foreground, #0f172a);
 }
-html.light button.bg-black *,
-html.light button[class~="bg-black"] *,
-html.light a[class~="bg-black"] * {
+html.light button.bg-black:not(.photo-theater *) *,
+html.light button[class~="bg-black"]:not(.photo-theater *) *,
+html.light a[class~="bg-black"]:not(.photo-theater *) * {
   color: var(--foreground, #0f172a);
 }
 
@@ -194,10 +192,49 @@ html.light .photo-frame {
   outline-offset: -1px;
 }
 
-/* Within fullscreen theater in dark mode, preserve the subtle light keyline on the dark theater canvas */
+/* Fullscreen photo theater: pure black border and background regardless of theme, matching Google Photos */
+:fullscreen,
+::backdrop,
+html.viewer-fullscreen-active,
+body.viewer-fullscreen-active {
+  background-color: #000000 !important;
+}
+
+.photo-theater {
+  color-scheme: only dark;
+  background-color: #000000 !important;
+}
+
+/* Photo frame inside fullscreen theater: clean black border / no white outlines or box shadows */
+.photo-theater .photo-frame,
+.photo-theater .photo-frame:hover,
+html.light .photo-theater .photo-frame,
 html.dark .photo-theater .photo-frame {
-  outline: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8) !important;
+  outline: 1px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Theater controls & text: preserve dark theater styling even when html has light class */
+html.light .photo-theater .text-white {
+  color: #ffffff !important;
+}
+html.light .photo-theater .text-gray-100 {
+  color: #f3f4f6 !important;
+}
+html.light .photo-theater .text-gray-200 {
+  color: #e5e7eb !important;
+}
+html.light .photo-theater .text-gray-300 {
+  color: #d1d5db !important;
+}
+html.light .photo-theater .text-gray-400 {
+  color: #9ca3af !important;
+}
+html.light .photo-theater .text-gray-500 {
+  color: #6b7280 !important;
+}
+html.light .photo-theater .text-gray-700 {
+  color: #374151 !important;
 }
 
 /* Completely suppress site header & menu bars whenever fullscreen viewer is active */
