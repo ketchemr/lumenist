@@ -25,6 +25,9 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
 - **Curated Album Pills & Interactive Tag Cloud**: Concise, scrollable filter sections for rapid discovery by collection, biome, and keyword.
 - **Embedded World Photography Map**: Interactive Leaflet map displaying shooting locations matching the active search, album, or tag filters with auto-clustering for dense field locations.
   - *3 Switchable Cartographic Layers*: Dark/Map Vector Tiles, Esri World Topographic, and Esri World Satellite Imagery.
+  - *Map Zoom & Viewport Synchronization (Default On)*: Automatically filters the exhibition gallery below in real time to match photographs visible within the current map zoom and pan boundaries. Features a quick toggle switch in the map header bar and one-click filter removal pills.
+  - *Freehand Lasso Selection*: Click and drag directly on the map (via mouse, stylus, or touchscreen) to encircle any arbitrary cluster of field locations; ray-casting point-in-polygon math instantly isolates and displays only the works from that hand-drawn boundary.
+  - *Navigation & View Controls*: Includes a one-click *Fit All* button to re-center the full archive, real-time photo count badges, a zoom level indicator, and smart *"Filter to this area"* prompts.
   - *Exhibition Quick-Cards & List Sync*: Clicking any map pin reveals photo preview cards with exhibition details and lets you isolate and view those photographs in the gallery list below.
   - *Clean Route Redirect*: Direct navigation to `/map` automatically redirects to `/explore`.
 
@@ -365,7 +368,7 @@ lumenist/
 │   │   ├── api/               # API routes (auth, albums, metadata, photos, bulk, thumbnails)
 │   │   ├── galleries/         # Curated gallery exhibition views ([category]/page.tsx)
 │   │   ├── photo/[id]/        # Individual photo showcase, lightroom, & technical drawer
-│   │   ├── explore/           # Search, multi-category pills, and year timeline
+│   │   ├── explore/           # Archive search, interactive map with zoom & freehand lasso filtering, and exhibition galleries
 │   │   ├── map/               # Global photography map with multi-layer raster/vector tiles
 │   │   └── about/             # Artist statement & bio
 │   ├── components/            # Reusable UI components (Leaflet maps, Hero, Lightbox, etc.)
