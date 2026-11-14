@@ -6,6 +6,10 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
 
 🌐 **Live Exhibition Example**: See Lumenist running in production at <a href="https://rrkphoto.com" target="_blank" rel="noopener noreferrer"><strong>rrkphoto.com</strong> ↗</a> (*Randal R. Ketchem Photography: Fine Art Landscape and Nature Photography*).
 
+<p align="center">
+  <img src="docs/images/Lumenist-Home.png" alt="Lumenist Fine-Art Photography Gallery" width="100%" />
+</p>
+
 ---
 
 ## Public Exhibition Features
@@ -15,12 +19,22 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
 - **Unified Galleries Grid**: Displays all curated collections in a clean, responsive card layout. The **"All"** archive is prominently featured as the first gallery (displaying the total collection size), followed by thematic albums (biomes, seasons, subjects). Each card presents a representative, randomly refreshed photograph with dynamic aspect framing and photo title overlays on hover.
 
 ### 🖼️ Galleries & Albums (`/galleries/[category]`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-Galleries.png" alt="Lumenist Curated Galleries and Album Grid" width="100%" />
+</p>
+
 - **Flicker-Free Layouts (Zero CLS)**: Pre-calculated aspect ratios preserve exact bounding containers before images download, completely eliminating Cumulative Layout Shift.
 - **Deep Navigation Trail**: Hierarchical breadcrumb navigation (`Home > [Gallery Name]`) with smart fallback back-buttons for rapid browsing.
 - **Exhibition Grid & Pagination**: Responsive thumbnail grids with configurable page sizing (25, 50, 100, or All) and smooth scroll-to-top page navigation.
 - **Instant Clean Routing**: Direct navigation to `/galleries` automatically redirects to the homepage `/`.
 
 ### 🔍 Instant Explore, Geographic Map & Archive Search (`/explore`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-Explore.png" alt="Lumenist Interactive Map, Freehand Lasso, and Explore Search" width="100%" />
+</p>
+
 - **Real-Time Archive Search**: Instant multi-field search across titles, captions, stories, locations, camera gear, lenses, and film emulsions.
 - **Curated Album Pills & Interactive Tag Cloud**: Concise, scrollable filter sections for rapid discovery by collection, biome, and keyword.
 - **Embedded World Photography Map**: Interactive Leaflet map displaying shooting locations matching the active search, album, or tag filters with auto-clustering for dense field locations.
@@ -44,6 +58,11 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
   - **Print Availability**: Edition and fine-art print ordering status.
 
 ### 📖 About & Artist Statement (`/about`)
+
+<p align="center">
+  <img src="docs/images/Lumenist-About.png" alt="Lumenist Artist Statement and Biography" width="100%" />
+</p>
+
 - Biography, photographic philosophy, list of field cameras/optics, exhibitions, and direct contact options.
 
 ---
