@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { parseTxtMetadata } from "../src/lib/parseTxt";
+import { parseTxtMetadata, getJpegDimensions } from "../src/lib/parseTxt";
 import { Photo } from "../src/types/photo";
 import exifr from "exifr";
 
@@ -8,6 +8,36 @@ const DEFAULT_SOURCE_DIR =
   process.env.PHOTOS_SOURCE_DIR ||
   process.env.LOCAL_PHOTO_DIR ||
   path.join(process.cwd(), "public", "photos");
+
+const DEFAULT_FULLSIZE_DIR =
+  process.env.PHOTOS_FULLSIZE_DIR ||
+  process.env.FULLSIZE_DIR ||
+  "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/Photography/rrkphoto/RRKPhoto_fullsize";
+
+function indexFullsize(dir: string): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!fs.existsSync(dir)) return map;
+
+  function scan(current: string) {
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    for (const e of entries) {
+      const full = path.join(current, e.name);
+      if (e.isDirectory()) {
+        scan(full);
+      } else if (e.name.toLowerCase().endsWith(".jpg")) {
+        let key = e.name.replace(/\.jpg$/i, "");
+        if (key.endsWith("_fullsize")) {
+          key = key.replace(/_fullsize$/, "");
+        }
+        if (!map.has(key)) {
+          map.set(key, full);
+        }
+      }
+    }
+  }
+  scan(dir);
+  return map;
+}
 
 function cleanCameraName(make?: string, model?: string): string {
   if (!model && !make) return "Unknown Camera";
@@ -52,6 +82,13 @@ async function main() {
 
   console.log(`Found ${subDirs.length} folders: ${subDirs.join(", ")}`);
 
+  const fullsizeDir =
+    process.env.PHOTOS_FULLSIZE_DIR ||
+    process.env.FULLSIZE_DIR ||
+    DEFAULT_FULLSIZE_DIR;
+  const fullsizeMap = indexFullsize(fullsizeDir);
+  console.log(`Indexed ${fullsizeMap.size} master fullsize images from: ${fullsizeDir}`);
+
   const photos: Photo[] = [];
   const categoriesCount = new Map<string, number>();
   const filmStocks = new Set<string>();
@@ -95,6 +132,51 @@ async function main() {
           photo.imageDesktop = `/photos/${sub}/${imageFilename}`;
         }
 
+        // Master Dimensions & Aspect Ratio:
+        // Always derive from actual fullsize or web JPG, ignoring stale/incorrect txt values
+        const fullsizeFile = fullsizeMap.get(photo.photoID);
+        if (fullsizeFile && fs.existsSync(fullsizeFile)) {
+          const dims = getJpegDimensions(fullsizeFile);
+          if (dims) {
+            const aspectRatio = parseFloat((dims.width / dims.height).toFixed(3));
+            const orientation =
+              dims.width === dims.height
+                ? "square"
+                : dims.height > dims.width
+                ? "vertical"
+                : "horizontal";
+            photo.size = {
+              width: dims.width,
+              height: dims.height,
+              aspectRatio,
+              orientation,
+            };
+          }
+        } else if (fs.existsSync(imagePath)) {
+          const dims = getJpegDimensions(imagePath);
+          if (dims) {
+            const aspectRatio = parseFloat((dims.width / dims.height).toFixed(3));
+            const orientation =
+              dims.width === dims.height
+                ? "square"
+                : dims.height > dims.width
+                ? "vertical"
+                : "horizontal";
+            if (
+              !photo.size ||
+              Math.abs(photo.size.aspectRatio - aspectRatio) > 0.05 ||
+              photo.size.orientation !== orientation
+            ) {
+              photo.size = {
+                width: dims.width,
+                height: dims.height,
+                aspectRatio,
+                orientation,
+              };
+            }
+          }
+        }
+
         // Automatically extract technical metadata from JPEG EXIF/XMP (overriding manual txt values)
         if (fs.existsSync(imagePath)) {
           try {
@@ -102,6 +184,7 @@ async function main() {
               tiff: true,
               exif: true,
               xmp: true,
+              gps: true,
             });
             if (data) {
               // 1. Camera
@@ -158,6 +241,36 @@ async function main() {
                 ) {
                   photo.film = "Digital";
                 }
+              }
+              // 10. Date and Time derived from EXIF (overriding manual txt values)
+              const dateVal =
+                data.DateTimeOriginal || data.DateCreated || data.CreateDate;
+              if (dateVal) {
+                const d =
+                  dateVal instanceof Date ? dateVal : new Date(dateVal);
+                if (!isNaN(d.getTime())) {
+                  photo.dateTaken = {
+                    year: d.getFullYear(),
+                    month: d.getMonth() + 1,
+                    day: d.getDate(),
+                    hour: d.getHours(),
+                    minute: d.getMinutes(),
+                    second: d.getSeconds(),
+                    iso: d.toISOString(),
+                  };
+                }
+              }
+              // 11. GPS Coordinates derived from EXIF (overriding manual txt values if present in EXIF)
+              if (
+                data.latitude !== undefined &&
+                data.longitude !== undefined &&
+                !isNaN(Number(data.latitude)) &&
+                !isNaN(Number(data.longitude))
+              ) {
+                photo.location = {
+                  latitude: Number(data.latitude),
+                  longitude: Number(data.longitude),
+                };
               }
             }
           } catch {

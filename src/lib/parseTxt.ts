@@ -1,34 +1,46 @@
 import fs from "fs";
 import { Photo, PhotoLocation, PhotoSize } from "../types/photo";
 
-// Extract real image dimensions from JPEG SOF marker
+// Extract real image dimensions from JPEG SOF marker using robust segment seeking
 export function getJpegDimensions(filePath: string): { width: number; height: number } | null {
   try {
     if (!fs.existsSync(filePath)) return null;
     const fd = fs.openSync(filePath, "r");
-    const buffer = Buffer.alloc(65536);
-    fs.readSync(fd, buffer, 0, 65536, 0);
-    fs.closeSync(fd);
+    const header = Buffer.alloc(2);
+    fs.readSync(fd, header, 0, 2, 0);
+    if (header[0] !== 0xff || header[1] !== 0xd8) {
+      fs.closeSync(fd);
+      return null;
+    }
 
-    if (buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
-
-    let offset = 2;
-    while (offset < buffer.length - 8) {
-      if (buffer[offset] !== 0xff) {
-        offset++;
+    let pos = 2;
+    const buf = Buffer.alloc(9);
+    while (true) {
+      const bytesRead = fs.readSync(fd, buf, 0, 2, pos);
+      if (bytesRead < 2) break;
+      if (buf[0] !== 0xff) {
+        pos++;
         continue;
       }
-      const marker = buffer[offset + 1];
+      const marker = buf[1];
       if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
-        const height = buffer.readUInt16BE(offset + 5);
-        const width = buffer.readUInt16BE(offset + 7);
+        fs.readSync(fd, buf, 0, 7, pos + 2);
+        const height = buf.readUInt16BE(3);
+        const width = buf.readUInt16BE(5);
+        fs.closeSync(fd);
         if (width > 0 && height > 0) {
           return { width, height };
         }
+        return null;
+      } else if (marker === 0xd9 || marker === 0xda) {
+        break;
+      } else {
+        fs.readSync(fd, buf, 0, 2, pos + 2);
+        const segLen = buf.readUInt16BE(0);
+        pos += 2 + segLen;
       }
-      const length = buffer.readUInt16BE(offset + 2);
-      offset += 2 + length;
     }
+    fs.closeSync(fd);
   } catch {
     return null;
   }
@@ -66,7 +78,7 @@ export function parseTxtMetadata(content: string, fallbackId?: string, imageFile
     }
   }
 
-  // Parse size & aspect ratio
+  // Parse size & aspect ratio from raw text first
   let size: PhotoSize | undefined;
   if (raw["size"] && raw["size"].toLowerCase().includes("x")) {
     const [wStr, hStr] = raw["size"].toLowerCase().split("x");
@@ -85,16 +97,42 @@ export function parseTxtMetadata(content: string, fallbackId?: string, imageFile
     }
   }
 
-  // Fallback: probe actual JPEG dimensions if size is missing or invalid
-  if (!size && imageFilePath && fs.existsSync(imageFilePath)) {
+  // Cross-reference with actual JPEG file on disk:
+  // If the JPEG exists, its actual geometry takes precedence over incorrect/stale values in txt
+  if (imageFilePath && fs.existsSync(imageFilePath)) {
     const dims = getJpegDimensions(imageFilePath);
     if (dims) {
-      const aspectRatio = parseFloat((dims.width / dims.height).toFixed(3));
-      let orientation: "horizontal" | "vertical" | "square" = "horizontal";
-      if (dims.width === dims.height) orientation = "square";
-      else if (dims.height > dims.width) orientation = "vertical";
+      const actualRatio = parseFloat((dims.width / dims.height).toFixed(3));
+      let actualOrientation: "horizontal" | "vertical" | "square" = "horizontal";
+      if (dims.width === dims.height) actualOrientation = "square";
+      else if (dims.height > dims.width) actualOrientation = "vertical";
 
-      size = { width: dims.width, height: dims.height, aspectRatio, orientation };
+      if (!size) {
+        // No size in txt: derive directly from JPEG
+        size = {
+          width: dims.width,
+          height: dims.height,
+          aspectRatio: actualRatio,
+          orientation: actualOrientation,
+        };
+      } else {
+        // Compare txt aspect ratio against actual JPEG aspect ratio
+        const ratioDiff = Math.abs(size.aspectRatio - actualRatio);
+        const orientationMismatch = size.orientation !== actualOrientation;
+        if (ratioDiff > 0.05 || orientationMismatch) {
+          // Txt size has wrong aspect ratio or inverted orientation: ignore txt size and trust the image
+          size = {
+            width: dims.width,
+            height: dims.height,
+            aspectRatio: actualRatio,
+            orientation: actualOrientation,
+          };
+        } else {
+          // Aspect ratios match: keep master dimensions from txt but align aspect ratio precisely to JPEG
+          size.aspectRatio = actualRatio;
+          size.orientation = actualOrientation;
+        }
+      }
     }
   }
 
