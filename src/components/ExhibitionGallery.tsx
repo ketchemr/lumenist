@@ -99,17 +99,6 @@ export function ExhibitionGallery({
               const rawAr = photo.size?.aspectRatio || 1.5;
               const ar = Math.max(0.4, Math.min(4.0, rawAr));
 
-              // Curate clean metadata line (Camera, Lens, Film)
-              const cameraParts: string[] = [];
-              if (photo.camera) {
-                cameraParts.push(photo.camera);
-              } else if (photo.film && photo.film !== "Digital") {
-                cameraParts.push(photo.film);
-              }
-              if (photo.lens) {
-                cameraParts.push(photo.lens);
-              }
-
               return (
                 <article key={photo.photoID} className="group">
                   <Link
@@ -157,22 +146,16 @@ export function ExhibitionGallery({
                         )}
                       </div>
 
-                      {/* Subtle Secondary Detail Line */}
+                      {/* Secondary Detail Line: ID and Album Memberships */}
                       <div className="flex items-center space-x-2 text-xs text-muted font-light truncate">
-                        {cameraParts.length > 0 && (
-                          <span className="truncate">{cameraParts.join(" · ")}</span>
-                        )}
-                        {cameraParts.length > 0 && (
-                          <span>·</span>
-                        )}
                         <span className="font-mono shrink-0">{photo.photoID}</span>
                         {photo.categories && photo.categories.length > 0 && (
-                          <span>·</span>
-                        )}
-                        {photo.categories && photo.categories.length > 0 && (
-                          <span className="truncate text-muted/80">
-                            {photo.categories.slice(0, 2).join(", ")}
-                          </span>
+                          <>
+                            <span>·</span>
+                            <span className="truncate text-muted/80">
+                              {photo.categories.join(", ")}
+                            </span>
+                          </>
                         )}
                       </div>
                     </div>
