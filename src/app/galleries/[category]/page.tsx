@@ -51,6 +51,9 @@ export async function generateMetadata({
     description: isAll
       ? "Complete fine-art photography archive across all years and subjects."
       : `Photographs curated in the ${decodedCategory} collection.`,
+    alternates: {
+      canonical: `/galleries/${encodeURIComponent(decodedCategory)}`,
+    },
   };
 }
 

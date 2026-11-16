@@ -9,7 +9,14 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = getSettings();
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    "https://rrkphoto.com"
+  ).replace(/\/+$/, "");
+
   return {
+    metadataBase: new URL(siteUrl),
     title: {
       default: settings.siteTitle || siteConfig.siteTitle,
       template: `%s | ${settings.siteTitle || siteConfig.siteTitle}`,
@@ -17,6 +24,14 @@ export async function generateMetadata(): Promise<Metadata> {
     description: settings.siteTagline || siteConfig.tagline,
     icons: {
       icon: "/favicon.ico",
+    },
+    openGraph: {
+      title: settings.siteTitle || siteConfig.siteTitle,
+      description: settings.siteTagline || siteConfig.tagline,
+      url: siteUrl,
+      siteName: settings.siteTitle || siteConfig.siteTitle,
+      locale: "en_US",
+      type: "website",
     },
   };
 }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPhotoById, getAdjacentPhotos } from "@/lib/photos";
@@ -17,6 +18,54 @@ interface PhotoPageProps {
   }>;
 }
 
+export async function generateMetadata({
+  params,
+}: PhotoPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const photo = getPhotoById(id);
+  const settings = getSettings();
+  const siteTitle = settings.siteTitle || "Fine Art Photography";
+
+  if (!photo) {
+    return {
+      title: "Photograph Not Found",
+    };
+  }
+
+  const title = photo.title;
+  const description =
+    photo.description ||
+    `${photo.title} — Fine art landscape and nature photography by ${settings.artistName || "Randal R. Ketchem"}.`;
+
+  const ogImageUrl = `/api/thumbnail?id=${photo.photoID}&size=600`;
+
+  return {
+    title,
+    description,
+    keywords: photo.keywords,
+    openGraph: {
+      title: `${title} | ${siteTitle}`,
+      description,
+      type: "article",
+      images: [
+        {
+          url: ogImageUrl,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | ${siteTitle}`,
+      description,
+      images: [ogImageUrl],
+    },
+    alternates: {
+      canonical: `/photo/${photo.photoID}`,
+    },
+  };
+}
+
 export default async function PhotoPage({ params }: PhotoPageProps) {
   const { id } = await params;
   const photo = getPhotoById(id);
@@ -31,8 +80,48 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
     settings.copyrightOverlay ||
     (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
 
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    "https://rrkphoto.com"
+  ).replace(/\/+$/, "");
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Photograph",
+    name: photo.title,
+    description: photo.description || photo.title,
+    creator: {
+      "@type": "Person",
+      name: settings.artistName || "Randal R. Ketchem",
+    },
+    image: `${baseUrl}/api/thumbnail?id=${photo.photoID}&size=600`,
+    url: `${baseUrl}/photo/${photo.photoID}`,
+    copyrightNotice,
+    ...(photo.keywords && photo.keywords.length > 0
+      ? { keywords: photo.keywords.join(", ") }
+      : {}),
+    ...(photo.location
+      ? {
+          contentLocation: {
+            "@type": "Place",
+            geo: {
+              "@type": "GeoCoordinates",
+              latitude: photo.location.latitude,
+              longitude: photo.location.longitude,
+            },
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="space-y-10 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-8">
+      {/* Schema.org Photograph Structured Data for Search Console & Google Images */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Top Navigation & Breadcrumb Trail */}
       <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
         <div className="flex items-center space-x-3">

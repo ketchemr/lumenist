@@ -1,9 +1,27 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getAllPhotos, getAllCategories } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { ExploreGallery } from "@/components/ExploreGallery";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = getSettings();
+  const siteTitle = settings.siteTitle || "Fine Art Photography";
+  return {
+    title: "Explore Archive & Map",
+    description: `Explore the complete fine art landscape and nature photography archive by ${settings.artistName || "Randal R. Ketchem"}. Search, filter by analog film or digital capture, and discover by geographic location.`,
+    alternates: {
+      canonical: "/explore",
+    },
+    openGraph: {
+      title: `Explore Archive & Map | ${siteTitle}`,
+      description: "Search, filter by analog film or digital capture, and explore photographs by keywords and locations.",
+      url: "/explore",
+    },
+  };
+}
 
 export default function ExplorePage() {
   const photos = getAllPhotos();

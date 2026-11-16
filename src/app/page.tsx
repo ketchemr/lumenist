@@ -1,8 +1,25 @@
+import type { Metadata } from "next";
 import { getAllPhotos } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { RandomHeroSlideshow } from "@/components/RandomHeroSlideshow";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = getSettings();
+  const siteTitle = settings.siteTitle || "Randal R. Ketchem Photography";
+  const tagline = settings.siteTagline || "Fine Art Landscape and Nature Photography";
+
+  return {
+    title: {
+      absolute: `${siteTitle} | ${tagline}`,
+    },
+    description: tagline,
+    alternates: {
+      canonical: "/",
+    },
+  };
+}
 
 export default function HomePage() {
   const photos = getAllPhotos();

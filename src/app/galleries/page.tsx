@@ -18,6 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description: desc,
+    alternates: {
+      canonical: "/galleries",
+    },
   };
 }
 

@@ -19,8 +19,11 @@ export async function generateMetadata(): Promise<Metadata> {
     "Fine art photography.";
 
   return {
-    title: `${aboutTitle} | ${siteTitle}`,
+    title: aboutTitle,
     description: `${aboutTitle} — ${description}`,
+    alternates: {
+      canonical: "/about",
+    },
   };
 }
 
