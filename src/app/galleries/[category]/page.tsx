@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPhotosByCategory, sortPhotos, syncPhotoIfModified } from "@/lib/photos";
+import { getPhotosByCategory, syncPhotoIfModified } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { PaginatedGallery } from "@/components/PaginatedGallery";
 import { Folder, Images } from "lucide-react";
@@ -14,7 +14,7 @@ interface CategoryPageProps {
   params: Promise<{
     category: string;
   }>;
-  searchParams: Promise<{
+  searchParams?: Promise<{
     page?: string;
     sort?: string;
   }>;
@@ -59,7 +59,7 @@ export default async function CategoryPage({
   searchParams,
 }: CategoryPageProps) {
   const { category } = await params;
-  const { page, sort } = await searchParams;
+  const { page, sort } = (await searchParams) || {};
 
   const decodedCategory = cleanCategoryString(category);
   const isAll = decodedCategory.toLowerCase() === "all";
@@ -70,26 +70,12 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const activeSort = sort || settings.defaultSortOrder || "date-desc";
-  const allCategoryPhotos = sortPhotos(rawPhotos, activeSort);
-
   const title = isAll ? "All Photographs" : decodedCategory;
   const description = isAll
     ? "Complete fine-art photography archive across all years and subjects."
     : `Photographs curated in the ${decodedCategory} collection.`;
 
-  // Pagination calculations (48 photos per page)
-  const pageSize = 48;
-  const totalPages = Math.ceil(allCategoryPhotos.length / pageSize);
-  const currentPage = Math.min(
-    Math.max(1, parseInt(page || "1", 10) || 1),
-    Math.max(1, totalPages)
-  );
-
-  const startIdx = (currentPage - 1) * pageSize;
-  const pagePhotos = allCategoryPhotos
-    .slice(startIdx, startIdx + pageSize)
-    .map(syncPhotoIfModified);
+  const syncedPhotos = rawPhotos.map(syncPhotoIfModified);
 
   return (
     <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -117,29 +103,23 @@ export default async function CategoryPage({
             <p className="text-xs text-muted pt-1">{description}</p>
           </div>
           <span className="text-xs text-muted font-mono self-start sm:self-auto">
-            {allCategoryPhotos.length}{" "}
-            {allCategoryPhotos.length === 1 ? "work" : "works"}
+            {syncedPhotos.length}{" "}
+            {syncedPhotos.length === 1 ? "work" : "works"}
           </span>
         </div>
       </div>
 
       <PaginatedGallery
-        photos={pagePhotos}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={allCategoryPhotos.length}
-        pageSize={pageSize}
+        photos={syncedPhotos}
+        categoryName={decodedCategory}
+        pageSize={48}
         defaultView={settings.defaultGalleryView || "large"}
-        currentSort={activeSort}
+        initialSort={sort || settings.defaultSortOrder || "date-desc"}
+        initialPage={parseInt(page || "1", 10) || 1}
         showWatermark={settings.showWatermarkOverlay ?? false}
         copyrightNotice={
           settings.copyrightOverlay ||
           (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem")
-        }
-        baseUrl={
-          isAll
-            ? "/galleries/All"
-            : `/galleries/${encodeURIComponent(decodedCategory)}`
         }
       />
     </div>

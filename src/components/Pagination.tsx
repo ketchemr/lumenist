@@ -91,20 +91,82 @@ export function Pagination({
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = totalItems ? Math.min(currentPage * pageSize, totalItems) : currentPage * pageSize;
 
+  const renderNavButton = (
+    targetPage: number,
+    ariaLabel: string,
+    icon: React.ReactNode,
+    className: string
+  ) => {
+    if (baseUrl) {
+      return (
+        <Link
+          href={getPageUrl(targetPage)}
+          onClick={(e) => handleClick(e, targetPage)}
+          aria-label={ariaLabel}
+          className={className}
+        >
+          {icon}
+        </Link>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={(e) => handleClick(e, targetPage)}
+        aria-label={ariaLabel}
+        className={`${className} cursor-pointer`}
+      >
+        {icon}
+      </button>
+    );
+  };
+
+  const renderPageItem = (p: number, isCurrent: boolean) => {
+    const className = `min-w-[32px] h-8 flex items-center justify-center rounded px-2.5 font-medium transition-all ${
+      isCurrent
+        ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+        : "bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground cursor-pointer"
+    }`;
+
+    if (baseUrl) {
+      return (
+        <Link
+          key={p}
+          href={getPageUrl(p)}
+          onClick={(e) => handleClick(e, p)}
+          aria-current={isCurrent ? "page" : undefined}
+          className={className}
+        >
+          {p}
+        </Link>
+      );
+    }
+
+    return (
+      <button
+        key={p}
+        type="button"
+        onClick={(e) => handleClick(e, p)}
+        aria-current={isCurrent ? "page" : undefined}
+        className={className}
+      >
+        {p}
+      </button>
+    );
+  };
+
   return (
     <div className="flex flex-col items-center space-y-4 pt-10 pb-16">
       {/* Page Controls */}
       <div className="flex items-center space-x-1 sm:space-x-1.5 text-xs select-none">
         {/* First Page ( |<< ) */}
         {currentPage > 1 ? (
-          <Link
-            href={getPageUrl(1)}
-            onClick={(e) => handleClick(e, 1)}
-            aria-label="First page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
-          >
-            <ChevronsLeft className="w-3.5 h-3.5" />
-          </Link>
+          renderNavButton(
+            1,
+            "First page",
+            <ChevronsLeft className="w-3.5 h-3.5" />,
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+          )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronsLeft className="w-3.5 h-3.5" />
@@ -113,14 +175,12 @@ export function Pagination({
 
         {/* Previous Page ( < ) */}
         {currentPage > 1 ? (
-          <Link
-            href={getPageUrl(currentPage - 1)}
-            onClick={(e) => handleClick(e, currentPage - 1)}
-            aria-label="Previous page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </Link>
+          renderNavButton(
+            currentPage - 1,
+            "Previous page",
+            <ChevronLeft className="w-3.5 h-3.5" />,
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+          )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -142,34 +202,18 @@ export function Pagination({
             }
 
             const isCurrent = p === currentPage;
-            return (
-              <Link
-                key={p}
-                href={getPageUrl(p)}
-                onClick={(e) => handleClick(e, p)}
-                aria-current={isCurrent ? "page" : undefined}
-                className={`min-w-[32px] h-8 flex items-center justify-center rounded px-2.5 font-medium transition-all ${
-                  isCurrent
-                    ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                    : "bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground"
-                }`}
-              >
-                {p}
-              </Link>
-            );
+            return renderPageItem(p, isCurrent);
           })}
         </div>
 
         {/* Next Page ( > ) */}
         {currentPage < totalPages ? (
-          <Link
-            href={getPageUrl(currentPage + 1)}
-            onClick={(e) => handleClick(e, currentPage + 1)}
-            aria-label="Next page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
+          renderNavButton(
+            currentPage + 1,
+            "Next page",
+            <ChevronRight className="w-3.5 h-3.5" />,
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+          )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronRight className="w-3.5 h-3.5" />
@@ -178,14 +222,12 @@ export function Pagination({
 
         {/* Last Page ( >>| ) */}
         {currentPage < totalPages ? (
-          <Link
-            href={getPageUrl(totalPages)}
-            onClick={(e) => handleClick(e, totalPages)}
-            aria-label="Last page"
-            className="p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
-          >
-            <ChevronsRight className="w-3.5 h-3.5" />
-          </Link>
+          renderNavButton(
+            totalPages,
+            "Last page",
+            <ChevronsRight className="w-3.5 h-3.5" />,
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+          )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
             <ChevronsRight className="w-3.5 h-3.5" />

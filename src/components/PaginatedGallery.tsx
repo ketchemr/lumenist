@@ -1,89 +1,120 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { ExhibitionGallery } from "@/components/ExhibitionGallery";
 import { Pagination } from "@/components/Pagination";
+import { sortPhotos } from "@/lib/photoSort";
 import { Columns2, LayoutGrid, ArrowUpDown } from "lucide-react";
 
 type GalleryViewMode = "large" | "compact";
 
 interface PaginatedGalleryProps {
   photos: Photo[];
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
+  categoryName?: string;
   pageSize?: number;
-  baseUrl: string;
   defaultView?: GalleryViewMode;
-  currentSort?: string;
+  initialSort?: string;
+  initialPage?: number;
   showWatermark?: boolean;
   copyrightNotice?: string;
 }
 
 export function PaginatedGallery({
   photos,
-  currentPage,
-  totalPages,
-  totalItems,
+  categoryName = "gallery",
   pageSize = 48,
-  baseUrl,
   defaultView = "large",
-  currentSort = "date-desc",
+  initialSort = "date-desc",
+  initialPage = 1,
   showWatermark = false,
   copyrightNotice = "© Randal R. Ketchem",
 }: PaginatedGalleryProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Default to large (Exhibition mode) for fine-art impact
+  // Density view mode (Exhibition vs Grid)
   const [viewMode, setViewMode] = useState<GalleryViewMode>(defaultView);
 
-  // Load persistent user preference from localStorage without causing hydration mismatch
+  // Active sort order (pure in-memory client state)
+  const [currentSort, setCurrentSort] = useState<string>(initialSort);
+
+  // Active page (pure in-memory client state)
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
+
+  // Load preferences from localStorage and restore page from sessionStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("lumenist_gallery_view");
-      if (saved === "compact" || saved === "large") {
-        setViewMode(saved);
+      // 1. View mode
+      const savedView = localStorage.getItem("lumenist_gallery_view");
+      if (savedView === "compact" || savedView === "large") {
+        setViewMode(savedView);
       }
+
+      // 2. Preferred sort order
       const savedSort = localStorage.getItem("lumenist_preferred_sort");
-      const currentSortParam = searchParams.get("sort");
-      if (savedSort && !currentSortParam && savedSort !== currentSort) {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("sort", savedSort);
-        router.replace(`${baseUrl}?${params.toString()}`);
+      if (savedSort) {
+        setCurrentSort(savedSort);
+      }
+
+      // 3. Saved page within current browser session
+      const savedPage = sessionStorage.getItem(`lumenist_page_${categoryName}`);
+      if (savedPage) {
+        const p = parseInt(savedPage, 10);
+        if (p > 0) setCurrentPage(p);
+      }
+
+      // 4. Silently clean any legacy query parameters from URL address bar
+      if (window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname);
       }
     } catch {
       // Storage unavailable / blocked
     }
-  }, []);
+  }, [categoryName]);
 
   const handleViewChange = (mode: GalleryViewMode) => {
     setViewMode(mode);
     try {
       localStorage.setItem("lumenist_gallery_view", mode);
-    } catch {
-      // Storage unavailable
-    }
+    } catch {}
   };
 
   const handleSortChange = (newSort: string) => {
+    setCurrentSort(newSort);
+    setCurrentPage(1);
     try {
       localStorage.setItem("lumenist_preferred_sort", newSort);
-    } catch {
-      // Storage unavailable
-    }
-    router.push(`${baseUrl}?sort=${newSort}&page=1`);
+      sessionStorage.setItem(`lumenist_page_${categoryName}`, "1");
+    } catch {}
   };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    try {
+      sessionStorage.setItem(`lumenist_page_${categoryName}`, newPage.toString());
+    } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Instant in-memory client sort
+  const sortedPhotos = useMemo(() => {
+    return sortPhotos(photos, currentSort);
+  }, [photos, currentSort]);
+
+  const totalPages = Math.ceil(sortedPhotos.length / pageSize) || 1;
+  const validPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIdx = (validPage - 1) * pageSize;
+  const pagePhotos = useMemo(() => {
+    return sortedPhotos.slice(startIdx, startIdx + pageSize);
+  }, [sortedPhotos, startIdx, pageSize]);
 
   return (
     <div className="space-y-6">
       {/* View Switcher Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-border/60 pb-3">
         <span className="text-xs text-muted font-mono">
-          Showing {photos.length} of {totalItems} {totalItems === 1 ? "work" : "works"}
+          Showing {pagePhotos.length} of {sortedPhotos.length}{" "}
+          {sortedPhotos.length === 1 ? "work" : "works"}
         </span>
 
         <div className="flex items-center space-x-3 self-end sm:self-auto">
@@ -96,11 +127,21 @@ export function PaginatedGallery({
               aria-label="Sort photographs by"
               className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
             >
-              <option value="date-desc" className="bg-surface text-foreground">Date (Newest First)</option>
-              <option value="date-asc" className="bg-surface text-foreground">Date (Oldest First)</option>
-              <option value="title-asc" className="bg-surface text-foreground">Title (A to Z)</option>
-              <option value="title-desc" className="bg-surface text-foreground">Title (Z to A)</option>
-              <option value="created-desc" className="bg-surface text-foreground">Recently Added</option>
+              <option value="date-desc" className="bg-surface text-foreground">
+                Date (Newest First)
+              </option>
+              <option value="date-asc" className="bg-surface text-foreground">
+                Date (Oldest First)
+              </option>
+              <option value="title-asc" className="bg-surface text-foreground">
+                Title (A to Z)
+              </option>
+              <option value="title-desc" className="bg-surface text-foreground">
+                Title (Z to A)
+              </option>
+              <option value="created-desc" className="bg-surface text-foreground">
+                Recently Added
+              </option>
             </select>
           </div>
 
@@ -146,14 +187,14 @@ export function PaginatedGallery({
       {/* Gallery Presentation */}
       {viewMode === "large" ? (
         <ExhibitionGallery
-          photos={photos}
+          photos={pagePhotos}
           gap={32}
           showWatermark={showWatermark}
           copyrightNotice={copyrightNotice}
         />
       ) : (
         <JustifiedGallery
-          photos={photos}
+          photos={pagePhotos}
           targetRowHeight={210}
           gap={8}
           showWatermark={showWatermark}
@@ -161,14 +202,13 @@ export function PaginatedGallery({
         />
       )}
 
-      {/* Piwigo-style numbered pagination bar */}
+      {/* Numbered pagination bar (pure in-memory client navigation) */}
       <Pagination
-        currentPage={currentPage}
+        currentPage={validPage}
         totalPages={totalPages}
-        totalItems={totalItems}
+        totalItems={sortedPhotos.length}
         pageSize={pageSize}
-        baseUrl={baseUrl}
-        queryParams={{ sort: currentSort }}
+        onPageChange={handlePageChange}
       />
     </div>
   );
