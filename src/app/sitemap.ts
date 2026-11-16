@@ -62,14 +62,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
 
     const photoUrl = `${baseUrl}/photo/${photo.photoID}`;
-    const imageUrl = `${baseUrl}/api/thumbnail?id=${photo.photoID}&size=600`;
+    
+    // Provide clean static image URL without query string ampersands
+    let images: string[] | undefined;
+    if (photo.imageDesktop) {
+      const cleanSub = photo.imageDesktop.split("?")[0].replace(/^\/+/, "");
+      images = [`${baseUrl}/${cleanSub}`];
+    }
 
     return {
       url: photoUrl,
       lastModified: lastMod,
       changeFrequency: "monthly",
       priority: 0.6,
-      images: [imageUrl],
+      ...(images ? { images } : {}),
     };
   });
 
