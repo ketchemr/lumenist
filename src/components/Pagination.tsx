@@ -14,6 +14,7 @@ interface PaginationProps {
   totalItems?: number;
   pageSize?: number;
   baseUrl?: string;
+  queryParams?: Record<string, string | number | undefined | null>;
   onPageChange?: (page: number) => void;
 }
 
@@ -23,6 +24,7 @@ export function Pagination({
   totalItems,
   pageSize = 48,
   baseUrl,
+  queryParams,
   onPageChange,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
@@ -57,8 +59,21 @@ export function Pagination({
 
   const getPageUrl = (page: number) => {
     if (!baseUrl) return "#";
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    return `${baseUrl}${separator}page=${page}`;
+    try {
+      const url = new URL(baseUrl, "http://localhost");
+      if (queryParams) {
+        for (const [key, val] of Object.entries(queryParams)) {
+          if (val !== undefined && val !== null && val !== "") {
+            url.searchParams.set(key, String(val));
+          }
+        }
+      }
+      url.searchParams.set("page", page.toString());
+      return `${url.pathname}${url.search}`;
+    } catch {
+      const separator = baseUrl.includes("?") ? "&" : "?";
+      return `${baseUrl}${separator}page=${page}`;
+    }
   };
 
   const handleClick = (

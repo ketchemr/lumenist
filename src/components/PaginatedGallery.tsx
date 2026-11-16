@@ -49,8 +49,11 @@ export function PaginatedGallery({
         setViewMode(saved);
       }
       const savedSort = localStorage.getItem("lumenist_preferred_sort");
-      if (savedSort && !searchParams.get("sort") && savedSort !== currentSort) {
-        router.replace(`${baseUrl}?sort=${savedSort}`);
+      const currentSortParam = searchParams.get("sort");
+      if (savedSort && !currentSortParam && savedSort !== currentSort) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("sort", savedSort);
+        router.replace(`${baseUrl}?${params.toString()}`);
       }
     } catch {
       // Storage unavailable / blocked
@@ -165,6 +168,7 @@ export function PaginatedGallery({
         totalItems={totalItems}
         pageSize={pageSize}
         baseUrl={baseUrl}
+        queryParams={{ sort: currentSort }}
       />
     </div>
   );
