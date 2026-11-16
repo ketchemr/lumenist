@@ -2,32 +2,47 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+function getBaseUrl(request: NextRequest): string {
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+    return `${proto}://${host}`;
+  }
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    "https://rrkphoto.com"
+  ).replace(/\/+$/, "");
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const photoID = url.searchParams.get("photoID") || url.searchParams.get("id");
   const category = url.searchParams.get("category");
+  const baseUrl = getBaseUrl(request);
 
   // Showimage or technical details
   if (photoID) {
-    return NextResponse.redirect(new URL(`/photo/${photoID}`, request.url), 301);
+    return NextResponse.redirect(new URL(`/photo/${photoID}`, baseUrl), 301);
   }
 
   // Gallery category
   if (category) {
     return NextResponse.redirect(
-      new URL(`/galleries/${encodeURIComponent(category)}`, request.url),
+      new URL(`/galleries/${encodeURIComponent(category)}`, baseUrl),
       301
     );
   }
 
   // Gallery entry or general search
   if (url.pathname.includes("search")) {
-    return NextResponse.redirect(new URL("/explore", request.url), 301);
+    return NextResponse.redirect(new URL("/explore", baseUrl), 301);
   }
 
   if (url.pathname.includes("gallery")) {
-    return NextResponse.redirect(new URL("/galleries", request.url), 301);
+    return NextResponse.redirect(new URL("/galleries", baseUrl), 301);
   }
 
-  return NextResponse.redirect(new URL("/", request.url), 301);
+  return NextResponse.redirect(new URL("/", baseUrl), 301);
 }
