@@ -99,18 +99,15 @@ export function ExhibitionGallery({
               const rawAr = photo.size?.aspectRatio || 1.5;
               const ar = Math.max(0.4, Math.min(4.0, rawAr));
 
-              // Curate clean metadata line (Camera, Lens, Film, Year)
-              const metaParts: string[] = [];
-              if (photo.dateTaken?.year) {
-                metaParts.push(String(photo.dateTaken.year));
-              }
+              // Curate clean metadata line (Camera, Lens, Film)
+              const cameraParts: string[] = [];
               if (photo.camera) {
-                metaParts.push(photo.camera);
+                cameraParts.push(photo.camera);
               } else if (photo.film && photo.film !== "Digital") {
-                metaParts.push(photo.film);
+                cameraParts.push(photo.film);
               }
               if (photo.lens) {
-                metaParts.push(photo.lens);
+                cameraParts.push(photo.lens);
               }
 
               return (
@@ -162,13 +159,17 @@ export function ExhibitionGallery({
 
                       {/* Subtle Secondary Detail Line */}
                       <div className="flex items-center space-x-2 text-xs text-muted font-light truncate">
-                        {metaParts.length > 1 && (
-                          <span className="truncate">{metaParts.slice(1).join(" · ")}</span>
+                        {cameraParts.length > 0 && (
+                          <span className="truncate">{cameraParts.join(" · ")}</span>
                         )}
-                        {metaParts.length > 1 && photo.categories.length > 0 && (
+                        {cameraParts.length > 0 && (
                           <span>·</span>
                         )}
-                        {photo.categories.length > 0 && (
+                        <span className="font-mono shrink-0">{photo.photoID}</span>
+                        {photo.categories && photo.categories.length > 0 && (
+                          <span>·</span>
+                        )}
+                        {photo.categories && photo.categories.length > 0 && (
                           <span className="truncate text-muted/80">
                             {photo.categories.slice(0, 2).join(", ")}
                           </span>

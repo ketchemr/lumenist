@@ -200,11 +200,12 @@ export function JustifiedGallery({
                   <p className="text-xs text-white truncate font-medium drop-shadow">
                     {photo.title}
                   </p>
-                  {photo.categories.length > 0 && (
-                    <p className="text-[10px] text-gray-200 truncate">
-                      {photo.categories.slice(0, 2).join(" · ")}
-                    </p>
-                  )}
+                  <p className="text-[10px] text-gray-200 truncate">
+                    <span className="font-mono">{photo.photoID}</span>
+                    {photo.categories && photo.categories.length > 0 && (
+                      <span> · {photo.categories.slice(0, 2).join(" · ")}</span>
+                    )}
+                  </p>
                 </div>
               </Link>
             ))}
