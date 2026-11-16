@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import { syncPhotoSizeFromDimensions } from "@/lib/photos";
 
 const THUMB_CACHE_DIR = path.join(process.cwd(), ".thumbnails");
 if (!fs.existsSync(THUMB_CACHE_DIR)) {
@@ -71,7 +72,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Downsample using sharp with high-quality Lanczos3 anti-aliasing filter
-    let pipeline = sharp(fullPath).resize(width, null, {
+    const sharpInstance = sharp(fullPath);
+    try {
+      sharpInstance.metadata().then((meta) => {
+        if (meta.width && meta.height) {
+          syncPhotoSizeFromDimensions(cleanSrc, meta.width, meta.height, stats.mtimeMs);
+        }
+      }).catch(() => {});
+    } catch {}
+
+    let pipeline = sharpInstance.resize(width, null, {
       kernel: sharp.kernel.lanczos3,
       withoutEnlargement: true,
     });

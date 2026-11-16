@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPhotosByCategory, sortPhotos } from "@/lib/photos";
+import { getPhotosByCategory, sortPhotos, syncPhotoIfModified } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { PaginatedGallery } from "@/components/PaginatedGallery";
 import { Folder, Images } from "lucide-react";
@@ -87,7 +87,9 @@ export default async function CategoryPage({
   );
 
   const startIdx = (currentPage - 1) * pageSize;
-  const pagePhotos = allCategoryPhotos.slice(startIdx, startIdx + pageSize);
+  const pagePhotos = allCategoryPhotos
+    .slice(startIdx, startIdx + pageSize)
+    .map(syncPhotoIfModified);
 
   return (
     <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
