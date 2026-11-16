@@ -6,6 +6,7 @@ import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { ExhibitionGallery } from "@/components/ExhibitionGallery";
 import { Pagination } from "@/components/Pagination";
 import { sortPhotos } from "@/lib/photoSort";
+import { recordPhotoClick, getAndClearReturnState } from "@/lib/galleryState";
 import { Columns2, LayoutGrid, ArrowUpDown } from "lucide-react";
 
 type GalleryViewMode = "large" | "compact";
@@ -40,7 +41,7 @@ export function PaginatedGallery({
   // Active page (pure in-memory client state)
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
 
-  // Load preferences from localStorage and restore page from sessionStorage
+  // Load preferences from localStorage and restore page ONLY when returning from photo view
   useEffect(() => {
     try {
       // 1. View mode
@@ -55,11 +56,19 @@ export function PaginatedGallery({
         setCurrentSort(savedSort);
       }
 
-      // 3. Saved page within current browser session
-      const savedPage = sessionStorage.getItem(`lumenist_page_${categoryName}`);
-      if (savedPage) {
-        const p = parseInt(savedPage, 10);
-        if (p > 0) setCurrentPage(p);
+      // 3. Return state: only restore if returning from a photo view, else reset to page 1 & top
+      const returnState = getAndClearReturnState(categoryName);
+      if (returnState) {
+        setCurrentPage(returnState.page);
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: returnState.scroll, left: 0, behavior: "instant" });
+        });
+      } else {
+        setCurrentPage(1);
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        });
       }
 
       // 4. Silently clean any legacy query parameters from URL address bar
@@ -83,16 +92,23 @@ export function PaginatedGallery({
     setCurrentPage(1);
     try {
       localStorage.setItem("lumenist_preferred_sort", newSort);
-      sessionStorage.setItem(`lumenist_page_${categoryName}`, "1");
     } catch {}
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    try {
-      sessionStorage.setItem(`lumenist_page_${categoryName}`, newPage.toString());
-    } catch {}
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest("a");
+    if (link) {
+      const href = link.getAttribute("href") || "";
+      if (href.startsWith("/photo/")) {
+        recordPhotoClick(categoryName, currentPage);
+      }
+    }
   };
 
   // Instant in-memory client sort
@@ -109,7 +125,7 @@ export function PaginatedGallery({
   }, [sortedPhotos, startIdx, pageSize]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClickCapture={handleContainerClick}>
       {/* View Switcher Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-border/60 pb-3">
         <span className="text-xs text-muted font-mono">

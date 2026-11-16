@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/settings";
 import { Folder, Images } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { WatermarkBadge } from "@/components/WatermarkBadge";
+import { ResetGalleryScroll } from "@/components/ResetGalleryScroll";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default function GalleriesIndexPage() {
 
   return (
     <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ResetGalleryScroll />
       {/* Header & Breadcrumb Trail */}
       <div className="border-b border-surface-border pb-4 space-y-2">
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Galleries" }]} />

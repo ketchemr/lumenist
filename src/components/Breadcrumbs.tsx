@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Home, ChevronRight } from "lucide-react";
+import { resetAllGalleryStates } from "@/lib/galleryState";
 
 export interface BreadcrumbItem {
   label: string;
@@ -14,6 +17,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
     >
       <Link
         href="/"
+        onClick={() => resetAllGalleryStates()}
         className="flex items-center space-x-1 hover:text-accent transition-colors"
         title="Home"
       >
@@ -29,6 +33,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
             {item.href && !isLast ? (
               <Link
                 href={item.href}
+                onClick={() => resetAllGalleryStates()}
                 className="hover:text-accent transition-colors truncate max-w-[180px] sm:max-w-none"
               >
                 {item.label}
