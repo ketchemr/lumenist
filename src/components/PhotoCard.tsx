@@ -18,6 +18,12 @@ export function PhotoCard({
   return (
     <Link
       href={`/photo/${photo.photoID}`}
+      draggable={false}
+      onClick={(e) => {
+        if (window.getSelection()?.toString()) {
+          e.preventDefault();
+        }
+      }}
       className={`relative inline-block ${heightClass} overflow-hidden group bg-surface dark:bg-black shrink-0 transition-transform duration-200 hover:z-10 rounded-[1px] select-none`}
       title={photo.title}
       onContextMenu={(e) => e.preventDefault()}
@@ -47,14 +53,14 @@ export function PhotoCard({
 
       {/* Subtle hover overlay with title */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors pointer-events-none" />
-      <div className="photo-overlay absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-        <p className="text-xs text-white truncate font-medium drop-shadow-md">
+      <div className="photo-overlay absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-auto select-text">
+        <p className="text-xs text-white truncate font-medium drop-shadow-md select-text cursor-text">
           {photo.title}
         </p>
-        <p className="text-[10px] text-gray-300 truncate">
-          <span className="font-mono">{photo.photoID}</span>
+        <p className="text-[10px] text-gray-300 truncate select-text cursor-text">
+          <span className="font-mono select-text">{photo.photoID}</span>
           {photo.categories && photo.categories.length > 0 && (
-            <span> · {photo.categories.slice(0, 2).join(" · ")}</span>
+            <span className="select-text"> · {photo.categories.slice(0, 2).join(" · ")}</span>
           )}
         </p>
       </div>

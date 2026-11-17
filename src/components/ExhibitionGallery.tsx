@@ -100,14 +100,15 @@ export function ExhibitionGallery({
             {columnPhotos.map(({ photo, globalIndex }) => {
               const rawAr = photo.size?.aspectRatio || 1.5;
               const ar = Math.max(0.4, Math.min(4.0, rawAr));
+              const photoHref = `/photo/${photo.photoID}${
+                categoryName ? `?from=${encodeURIComponent(categoryName)}` : ""
+              }`;
 
               return (
-                <article key={photo.photoID} className="group">
+                <article key={photo.photoID} className="group space-y-3">
                   <Link
-                    href={`/photo/${photo.photoID}${
-                      categoryName ? `?from=${encodeURIComponent(categoryName)}` : ""
-                    }`}
-                    className="block space-y-3 cursor-pointer select-none"
+                    href={photoHref}
+                    className="block cursor-pointer select-none"
                     title={`${photo.title} (${photo.dateTaken?.year || ""})`}
                     onContextMenu={(e) => e.preventDefault()}
                   >
@@ -136,34 +137,46 @@ export function ExhibitionGallery({
                         withShield={true}
                       />
                     </div>
-
-                    {/* Exhibition Typography (Fine-Art Caption) */}
-                    <div className="pt-1 px-0.5 space-y-1">
-                      <div className="flex items-baseline justify-between gap-4">
-                        <h2 className="text-base sm:text-lg font-light text-foreground tracking-tight group-hover:text-accent transition-colors truncate">
-                          {photo.title}
-                        </h2>
-                        {photo.dateTaken?.year && (
-                          <span className="text-xs font-mono text-muted shrink-0">
-                            {photo.dateTaken.year}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Secondary Detail Line: ID and Album Memberships */}
-                      <div className="flex items-center space-x-2 text-xs text-muted font-light truncate">
-                        <span className="font-mono shrink-0">{photo.photoID}</span>
-                        {photo.categories && photo.categories.length > 0 && (
-                          <>
-                            <span>·</span>
-                            <span className="truncate text-muted/80">
-                              {photo.categories.join(", ")}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
                   </Link>
+
+                  {/* Exhibition Typography (Fine-Art Caption) */}
+                  <div className="pt-1 px-0.5 space-y-1 select-text">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <h2 className="text-base sm:text-lg font-light text-foreground tracking-tight transition-colors truncate select-text">
+                        <Link
+                          href={photoHref}
+                          draggable={false}
+                          onClick={(e) => {
+                            if (window.getSelection()?.toString()) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="hover:text-accent group-hover:text-accent transition-colors select-text cursor-pointer"
+                          title={`${photo.title} (${photo.dateTaken?.year || ""})`}
+                        >
+                          {photo.title}
+                        </Link>
+                      </h2>
+                      {photo.dateTaken?.year && (
+                        <span className="text-xs font-mono text-muted shrink-0 select-text cursor-text">
+                          {photo.dateTaken.year}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Secondary Detail Line: ID and Album Memberships */}
+                    <div className="flex items-center space-x-2 text-xs text-muted font-light truncate select-text cursor-text">
+                      <span className="font-mono shrink-0 select-text">{photo.photoID}</span>
+                      {photo.categories && photo.categories.length > 0 && (
+                        <>
+                          <span className="text-muted/60 select-none">·</span>
+                          <span className="truncate text-muted/80 select-text">
+                            {photo.categories.join(", ")}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </article>
               );
             })}

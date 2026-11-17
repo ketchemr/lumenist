@@ -174,6 +174,12 @@ export function JustifiedGallery({
                   width: `${width}px`,
                   height: `${height}px`,
                 }}
+                draggable={false}
+                onClick={(e) => {
+                  if (window.getSelection()?.toString()) {
+                    e.preventDefault();
+                  }
+                }}
                 className="relative block overflow-hidden group bg-surface dark:bg-black shrink-0 transition-transform duration-200 hover:z-10 select-none"
                 title={`${photo.title} (${photo.dateTaken.year || ""})`}
                 onContextMenu={(e) => e.preventDefault()}
@@ -200,14 +206,14 @@ export function JustifiedGallery({
 
                 {/* Subtle hover overlay with title */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors pointer-events-none" />
-                <div className="photo-overlay absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <p className="text-xs text-white truncate font-medium drop-shadow">
+                <div className="photo-overlay absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-auto select-text">
+                  <p className="text-xs text-white truncate font-medium drop-shadow select-text cursor-text">
                     {photo.title}
                   </p>
-                  <p className="text-[10px] text-gray-200 truncate">
-                    <span className="font-mono">{photo.photoID}</span>
+                  <p className="text-[10px] text-gray-200 truncate select-text cursor-text">
+                    <span className="font-mono select-text">{photo.photoID}</span>
                     {photo.categories && photo.categories.length > 0 && (
-                      <span> · {photo.categories.slice(0, 2).join(" · ")}</span>
+                      <span className="select-text"> · {photo.categories.slice(0, 2).join(" · ")}</span>
                     )}
                   </p>
                 </div>
