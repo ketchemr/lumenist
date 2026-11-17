@@ -34,6 +34,9 @@ Performs a dry-run test of the metadata parser script against sample images and 
 ### `npm run thumbnails:precache`
 Pre-generates and caches WebP thumbnails for every photograph in the catalog across all exhibition sizes (150px, 400px, 600px). Pre-caching ensures zero latency when visitors browse galleries and explore maps.
 
+### `npm run icons:generate`
+Regenerates all distribution favicon and application icons (`icon.svg`, multi-resolution `favicon.ico`, and `apple-icon.png`) using the canonical vector definition in `scripts/generate-favicons.js`.
+
 ### `npm run sync:remote`
 Executes an `rsync` transfer to synchronize local photo files to the remote production server target specified by `REMOTE_PHOTO_TARGET`.
 

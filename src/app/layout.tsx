@@ -23,7 +23,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: settings.siteTagline || siteConfig.tagline,
     icons: {
-      icon: "/favicon.ico",
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/favicon.ico" },
+      ],
+      apple: "/apple-icon.png",
     },
     openGraph: {
       title: settings.siteTitle || siteConfig.siteTitle,
