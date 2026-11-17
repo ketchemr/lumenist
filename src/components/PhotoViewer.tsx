@@ -221,15 +221,41 @@ export function PhotoViewer({
   // Navigate to adjacent photos
   const goToPrev = useCallback(() => {
     if (prevPhoto) {
-      router.push(`/photo/${prevPhoto.photoID}`);
+      if (isWindowFullscreen) {
+        router.replace(`/photo/${prevPhoto.photoID}`, { scroll: false });
+      } else {
+        router.push(`/photo/${prevPhoto.photoID}`);
+      }
     }
-  }, [prevPhoto, router]);
+  }, [prevPhoto, router, isWindowFullscreen]);
 
   const goToNext = useCallback(() => {
     if (nextPhoto) {
-      router.push(`/photo/${nextPhoto.photoID}`);
+      if (isWindowFullscreen) {
+        router.replace(`/photo/${nextPhoto.photoID}`, { scroll: false });
+      } else {
+        router.push(`/photo/${nextPhoto.photoID}`);
+      }
     }
-  }, [nextPhoto, router]);
+  }, [nextPhoto, router, isWindowFullscreen]);
+
+  // Preload adjacent photographs and Next.js route data for instant swiping & navigation
+  useEffect(() => {
+    if (nextPhoto) {
+      router.prefetch(`/photo/${nextPhoto.photoID}`);
+      if (nextPhoto.imageDesktop) {
+        const img = new Image();
+        img.src = nextPhoto.imageDesktop;
+      }
+    }
+    if (prevPhoto) {
+      router.prefetch(`/photo/${prevPhoto.photoID}`);
+      if (prevPhoto.imageDesktop) {
+        const img = new Image();
+        img.src = prevPhoto.imageDesktop;
+      }
+    }
+  }, [nextPhoto, prevPhoto, router]);
 
   // Keyboard navigation & shortcuts
   useEffect(() => {
@@ -447,6 +473,8 @@ export function PhotoViewer({
             <img
               src={photo.imageDesktop}
               alt={photo.title}
+              fetchPriority="high"
+              decoding="async"
               draggable={false}
               onContextMenu={(e) => e.preventDefault()}
               className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame select-none"
@@ -524,6 +552,8 @@ export function PhotoViewer({
               <img
                 src={photo.imageDesktop}
                 alt={photo.title}
+                fetchPriority="high"
+                decoding="async"
                 draggable={false}
                 onContextMenu={(e) => e.preventDefault()}
                 className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 cursor-pointer photo-frame select-none"

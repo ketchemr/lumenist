@@ -66,3 +66,28 @@ export function resetAllGalleryStates(): void {
     keysToRemove.forEach((key) => sessionStorage.removeItem(key));
   } catch {}
 }
+
+/**
+ * Resolves the destination URL for "Back to Gallery".
+ * Returns the originating gallery (if arrived from one), or the fallback category gallery,
+ * or "/galleries".
+ */
+export function getGalleryReturnUrl(fallbackCategory?: string): string {
+  if (typeof window !== "undefined") {
+    try {
+      const origin = sessionStorage.getItem(NAV_KEY);
+      if (origin) {
+        return origin.toLowerCase() === "all"
+          ? "/galleries/All"
+          : `/galleries/${encodeURIComponent(origin)}`;
+      }
+    } catch {}
+  }
+  if (fallbackCategory) {
+    return fallbackCategory.toLowerCase() === "all"
+      ? "/galleries/All"
+      : `/galleries/${encodeURIComponent(fallbackCategory)}`;
+  }
+  return "/galleries";
+}
+

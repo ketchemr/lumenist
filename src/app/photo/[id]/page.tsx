@@ -117,6 +117,15 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
 
   return (
     <div className="space-y-10 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-8">
+      {/* High-priority preloading of current photograph and adjacent photographs */}
+      <link rel="preload" as="image" href={photo.imageDesktop} fetchPriority="high" />
+      {next && (
+        <link rel="prefetch" as="image" href={next.imageDesktop} />
+      )}
+      {prev && (
+        <link rel="prefetch" as="image" href={prev.imageDesktop} />
+      )}
+
       {/* Schema.org Photograph Structured Data for Search Console & Google Images */}
       <script
         type="application/ld+json"
@@ -126,10 +135,11 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
       <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
         <div className="flex items-center space-x-3">
           <BackButton
+            fallbackCategory={photo.categories[0]}
             fallback={
               photo.categories[0]
                 ? `/galleries/${encodeURIComponent(photo.categories[0])}`
-                : "/"
+                : "/galleries"
             }
             label="Back to Gallery"
           />
