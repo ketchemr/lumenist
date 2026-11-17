@@ -6,56 +6,41 @@ const sharp = require('sharp');
 const rootDir = path.resolve(__dirname, '..');
 const appDir = path.join(rootDir, 'src', 'app');
 
-// Lumenist Sunset Camera Favicon & App Icon SVG
-// Centered camera with multi-coated optical glass (no HAL effect) set against a golden-hour sunset
+// Lumenist Prominent Camera Sunset Favicon & App Icon
+// Features an enlarged, bold platinum-silver camera body (~65% frame coverage)
+// with a large dark optical lens against a radiant sunset for maximum tab-bar visibility
 const lumenistSunsetSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
     <!-- Sunset sky gradient: twilight violet through crimson and amber to golden yellow -->
     <linearGradient id="sunsetSky" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#190F2A"/>
-      <stop offset="28%" stop-color="#4A154B"/>
-      <stop offset="55%" stop-color="#9F1239"/>
-      <stop offset="78%" stop-color="#EA580C"/>
+      <stop offset="0%" stop-color="#1A0E2B"/>
+      <stop offset="30%" stop-color="#551949"/>
+      <stop offset="60%" stop-color="#9F1239"/>
+      <stop offset="85%" stop-color="#EA580C"/>
       <stop offset="100%" stop-color="#FBBF24"/>
     </linearGradient>
 
     <!-- Radiant sun halo glow -->
     <radialGradient id="sunAura" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="35%" stop-color="#FEF08A"/>
-      <stop offset="70%" stop-color="#F59E0B" stop-opacity="0.85"/>
+      <stop offset="40%" stop-color="#FEF08A"/>
+      <stop offset="75%" stop-color="#F59E0B" stop-opacity="0.9"/>
       <stop offset="100%" stop-color="#EA580C" stop-opacity="0"/>
     </radialGradient>
 
-    <!-- Camera body: precision dark graphite with subtle gradient -->
-    <linearGradient id="camChassis" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#2D313A"/>
-      <stop offset="35%" stop-color="#1B1E24"/>
-      <stop offset="100%" stop-color="#0E1013"/>
+    <!-- Platinum / Silver Camera Body (High contrast against the sunset) -->
+    <linearGradient id="silverBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D1D5DB"/>
     </linearGradient>
 
-    <!-- Golden sunset rim light for camera edges -->
-    <linearGradient id="goldenRim" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FDE047"/>
-      <stop offset="50%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#F59E0B"/>
-    </linearGradient>
-
-    <!-- Multi-coated Optical Glass (Zeiss T* / Leica style cool sapphire & cyan reflection, NO HAL ORANGE) -->
+    <!-- Deep Optical Glass Well -->
     <radialGradient id="opticalGlass" cx="35%" cy="32%" r="65%">
       <stop offset="0%" stop-color="#1E293B"/>
-      <stop offset="35%" stop-color="#0F172A"/>
-      <stop offset="75%" stop-color="#090D16"/>
-      <stop offset="100%" stop-color="#030712"/>
+      <stop offset="45%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
     </radialGradient>
-
-    <!-- Antireflection coating sheen -->
-    <linearGradient id="coatingSheen" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.85"/>
-      <stop offset="50%" stop-color="#818CF8" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
-    </linearGradient>
 
     <clipPath id="squircleMask">
       <rect x="2" y="2" width="60" height="60" rx="14"/>
@@ -63,65 +48,61 @@ const lumenistSunsetSvg = `<?xml version="1.0" encoding="UTF-8"?>
   </defs>
 
   <!-- Frame Base: Sunset Sky clipped to squircle -->
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#sunsetSky)" stroke="#5C1D42" stroke-width="1.2"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#sunsetSky)" stroke="#50163B" stroke-width="1.2"/>
 
   <g clip-path="url(#squircleMask)">
     <!-- Sun corona radiance behind camera -->
-    <circle cx="32" cy="30" r="23" fill="url(#sunAura)"/>
+    <circle cx="32" cy="22" r="26" fill="url(#sunAura)"/>
 
-    <!-- Setting Sun Disc: Cresting behind the camera -->
-    <circle cx="32" cy="30" r="14.5" fill="#FFFDE7" stroke="#FEF08A" stroke-width="1.5"/>
+    <!-- Setting Sun Disc: Cresting high behind the camera viewfinder -->
+    <circle cx="32" cy="22" r="16" fill="#FFFDE7" stroke="#FEF08A" stroke-width="1.5"/>
 
-    <!-- Subtle atmospheric horizon mist -->
-    <ellipse cx="32" cy="46.5" rx="30" ry="5.5" fill="#FDE047" opacity="0.25"/>
+    <!-- Bottom horizon atmospheric glow -->
+    <ellipse cx="32" cy="54" rx="28" ry="6" fill="#FDE047" opacity="0.35"/>
 
-    <!-- ==================== CENTERED CAMERA ==================== -->
     <!-- Ambient Shadow under/behind camera -->
-    <rect x="10.5" y="22" width="43" height="23" rx="4" fill="#000000" opacity="0.4"/>
+    <rect x="5" y="18" width="54" height="33" rx="5" fill="#000000" opacity="0.45"/>
 
-    <!-- Pentaprism Viewfinder Housing (centered on optical axis x=32) -->
-    <path d="M24 22.5 L28 17 L36 17 L40 22.5 Z" fill="url(#camChassis)" stroke="url(#goldenRim)" stroke-width="0.8"/>
-
+    <!-- ==================== PROMINENT BIG CAMERA ==================== -->
+    <!-- Pentaprism Viewfinder Peak (Prominent, centered at x=32) -->
+    <path d="M21.5 19 L26.5 9.5 L37.5 9.5 L42.5 19 Z" fill="url(#silverBody)" stroke="#94A3B8" stroke-width="0.9"/>
     <!-- Hot Shoe Mount -->
-    <rect x="29.5" y="16" width="5" height="1.8" rx="0.5" fill="#111317" stroke="#FEF08A" stroke-width="0.5"/>
+    <rect x="28.5" y="7.5" width="7" height="2.5" rx="0.6" fill="#334155"/>
 
-    <!-- Shutter Button (Right) & Left Mode Dial -->
-    <rect x="43" y="18.5" width="5.5" height="3.5" rx="1" fill="#F59E0B" stroke="#FEF08A" stroke-width="0.6"/>
-    <rect x="15.5" y="19.5" width="4.5" height="2.5" rx="0.5" fill="#475569" stroke="#94A3B8" stroke-width="0.5"/>
+    <!-- Controls: Raised Golden Shutter Button (Right) & Left Mode Dial -->
+    <rect x="46.5" y="13" width="7.5" height="4.5" rx="1.2" fill="#F59E0B" stroke="#FEF08A" stroke-width="0.8"/>
+    <rect x="10" y="14.5" width="6.5" height="3.5" rx="0.8" fill="#94A3B8"/>
 
-    <!-- Main Camera Body -->
-    <rect x="11" y="22" width="42" height="22" rx="3.5" fill="url(#camChassis)" stroke="#383D48" stroke-width="1"/>
-
-    <!-- Top Plate Sunset Rim Light (Sun glinting on top edge of camera) -->
-    <line x1="13" y1="22.5" x2="51" y2="22.5" stroke="url(#goldenRim)" stroke-width="0.9" stroke-linecap="round"/>
+    <!-- Main Camera Body (Scaled to 52px width, 30px height!) -->
+    <rect x="6" y="18" width="52" height="30" rx="4.5" fill="url(#silverBody)" stroke="#94A3B8" stroke-width="1.1"/>
 
     <!-- Ergonomic Handgrip Detail (Left from front view) -->
-    <rect x="13.5" y="24" width="4" height="18" rx="1.5" fill="#13151A"/>
+    <rect x="8.5" y="21" width="5.5" height="24" rx="2" fill="#334155"/>
 
-    <!-- ==================== MULTI-COATED LENS OPTICS ==================== -->
-    <!-- Outer Metal Barrel Ring -->
-    <circle cx="32" cy="33" r="9" fill="#090A0D" stroke="#475569" stroke-width="1"/>
+    <!-- ==================== LARGE BOLD LENS ==================== -->
+    <!-- Outer Dark Metal Barrel Ring (Diameter 25px!) -->
+    <circle cx="32" cy="33" r="12.5" fill="#090A0D" stroke="#1E293B" stroke-width="1.2"/>
+
+    <!-- Outer Chrome Ring -->
+    <circle cx="32" cy="33" r="10.8" fill="#13151D" stroke="#E2E8F0" stroke-width="0.9"/>
 
     <!-- Aperture Guide Ring (Lumenist Periwinkle Accent #9999FF) -->
-    <circle cx="32" cy="33" r="7.5" fill="#111827" stroke="#9999FF" stroke-width="1"/>
+    <circle cx="32" cy="33" r="9.2" fill="#0F172A" stroke="#9999FF" stroke-width="1.4"/>
 
     <!-- Deep Optical Glass Well -->
-    <circle cx="32" cy="33" r="6" fill="url(#opticalGlass)"/>
+    <circle cx="32" cy="33" r="7.2" fill="url(#opticalGlass)"/>
 
-    <!-- Aperture Diaphragm Ring / Blades -->
-    <circle cx="32" cy="33" r="3.8" fill="#030712" stroke="#1E293B" stroke-width="0.8"/>
+    <!-- Multi-Coated Antireflective Sheen Arc (Cool Cyan) -->
+    <path d="M27.5 29.5 A 5.5 5.5 0 0 1 36.5 29.5" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.95"/>
 
-    <!-- Antireflective Multi-Coating Arc (Cool Cyan/Periwinkle Sheen) -->
-    <path d="M28 29.5 A 5 5 0 0 1 36 29.5" stroke="url(#coatingSheen)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-
-    <!-- Crisp Optical Glint / Specular Reflections -->
-    <circle cx="29.8" cy="31" r="1.2" fill="#FFFFFF"/>
-    <circle cx="34.2" cy="35.2" r="0.6" fill="#C7D2FE" opacity="0.8"/>
+    <!-- Specular Optical Glints -->
+    <circle cx="29.5" cy="30.5" r="1.6" fill="#FFFFFF"/>
+    <circle cx="34.8" cy="35.5" r="0.8" fill="#C7D2FE" opacity="0.8"/>
   </g>
 </svg>`;
 
 async function main() {
-  console.log('Generating Lumenist Multi-Coated Sunset Favicon & Icon assets...');
+  console.log('Generating Lumenist Prominent Sunset Favicon & Icon assets...');
 
   // 1. Write SVG to src/app/icon.svg
   fs.writeFileSync(path.join(appDir, 'icon.svg'), lumenistSunsetSvg.trim());
@@ -148,7 +129,7 @@ async function main() {
   execSync(`magick "${tempDir}/sunset_16.png" "${tempDir}/sunset_32.png" "${tempDir}/sunset_48.png" "${icoPath}"`);
   console.log('✓ Generated multi-resolution src/app/favicon.ico');
 
-  console.log('All Lumenist sunset favicon and app icon assets generated successfully.');
+  console.log('All Lumenist prominent sunset favicon and app icon assets generated successfully.');
 }
 
 main().catch(err => {
