@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPhotosByCategory, syncPhotoIfModified } from "@/lib/photos";
+import { getPhotosByCategory } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { PaginatedGallery } from "@/components/PaginatedGallery";
 import { Folder, Images } from "lucide-react";
@@ -78,8 +78,6 @@ export default async function CategoryPage({
     ? "Complete fine-art photography archive across all years and subjects."
     : `Photographs curated in the ${decodedCategory} collection.`;
 
-  const syncedPhotos = rawPhotos.map(syncPhotoIfModified);
-
   return (
     <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="border-b border-surface-border pb-4 space-y-2">
@@ -105,14 +103,14 @@ export default async function CategoryPage({
             <p className="text-xs text-muted pt-1">{description}</p>
           </div>
           <span className="text-xs text-muted font-mono self-start sm:self-auto">
-            {syncedPhotos.length}{" "}
-            {syncedPhotos.length === 1 ? "work" : "works"}
+            {rawPhotos.length}{" "}
+            {rawPhotos.length === 1 ? "work" : "works"}
           </span>
         </div>
       </div>
 
       <PaginatedGallery
-        photos={syncedPhotos}
+        photos={rawPhotos}
         categoryName={decodedCategory}
         pageSize={48}
         defaultView={settings.defaultGalleryView || "large"}
