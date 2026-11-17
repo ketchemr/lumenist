@@ -24,10 +24,10 @@ export async function generateMetadata(): Promise<Metadata> {
     description: settings.siteTagline || siteConfig.tagline,
     icons: {
       icon: [
-        { url: "/icon.svg", type: "image/svg+xml" },
-        { url: "/favicon.ico" },
+        { url: "/icon.svg?v=3", type: "image/svg+xml" },
+        { url: "/favicon.ico?v=3" },
       ],
-      apple: "/apple-icon.png",
+      apple: "/apple-icon.png?v=3",
     },
     openGraph: {
       title: settings.siteTitle || siteConfig.siteTitle,
