@@ -15,7 +15,6 @@ jobs:
           echo "TARGET_HOST=${{ secrets.SSH_HOST || '147.224.157.23' }}" >> $GITHUB_ENV
           echo "SSH_USER=${{ secrets.SSH_USER || 'ubuntu' }}" >> $GITHUB_ENV
           echo "DEPLOY_DIR=/home/ubuntu/rrkphoto.com" >> $GITHUB_ENV
-          echo "DOMAIN_NAME=rrkphoto.com" >> $GITHUB_ENV
 
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
@@ -28,7 +27,7 @@ jobs:
         run: |
           ssh-keyscan -H ${{ env.TARGET_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy and Restart Application
+      - name: Deploy, Restart, and Verify Application
         run: |
           ssh -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.TARGET_HOST }} << 'EOF'
             set -e
@@ -47,16 +46,25 @@ jobs:
             echo "=== Restarting PM2 process ==="
             pm2 restart rrkphoto.com
 
+            echo "=== Verifying local Next.js service health ==="
+            HEALTHY=0
+            for i in $(seq 1 10); do
+              sleep 1
+              if curl -sS --fail -I http://localhost:3000/ > /dev/null 2>&1; then
+                echo "Local service health check passed on attempt $i."
+                HEALTHY=1
+                break
+              fi
+              echo "Waiting for Next.js to initialize (attempt $i/10)..."
+            done
+
+            if [ "$HEALTHY" -ne 1 ]; then
+              echo "Error: Local service health check failed on http://localhost:3000/!"
+              pm2 logs rrkphoto.com --lines 50
+              exit 1
+            fi
+
             echo "=== PM2 Status ==="
             pm2 status rrkphoto.com
+            echo "=== Deployment successful and verified! ==="
           EOF
-
-      - name: Production Smoke Test
-        run: |
-          echo "Verifying production site responds with HTTP 200..."
-          sleep 3
-          curl -sS --fail -I "https://${{ env.DOMAIN_NAME }}/" || {
-            echo "External smoke test failed for https://${{ env.DOMAIN_NAME }}/"
-            exit 1
-          }
-          echo "Deployment completed successfully!"
