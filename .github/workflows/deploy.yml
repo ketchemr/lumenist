@@ -1,0 +1,62 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Environment Variables
+        run: |
+          echo "TARGET_HOST=${{ secrets.SSH_HOST || '147.224.157.23' }}" >> $GITHUB_ENV
+          echo "SSH_USER=${{ secrets.SSH_USER || 'ubuntu' }}" >> $GITHUB_ENV
+          echo "DEPLOY_DIR=/home/ubuntu/rrkphoto.com" >> $GITHUB_ENV
+          echo "DOMAIN_NAME=rrkphoto.com" >> $GITHUB_ENV
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: Scan Target Host Key
+        run: |
+          ssh-keyscan -H ${{ env.TARGET_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy and Restart Application
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.TARGET_HOST }} << 'EOF'
+            set -e
+            echo "=== Deploying rrkphoto.com ==="
+            cd /home/ubuntu/rrkphoto.com
+
+            echo "=== Pulling latest changes from main ==="
+            git pull origin main
+
+            echo "=== Installing dependencies ==="
+            npm install --prefer-offline --no-audit
+
+            echo "=== Building Next.js application ==="
+            npm run build
+
+            echo "=== Restarting PM2 process ==="
+            pm2 restart rrkphoto.com
+
+            echo "=== PM2 Status ==="
+            pm2 status rrkphoto.com
+          EOF
+
+      - name: Production Smoke Test
+        run: |
+          echo "Verifying production site responds with HTTP 200..."
+          sleep 3
+          curl -sS --fail -I "https://${{ env.DOMAIN_NAME }}/" || {
+            echo "External smoke test failed for https://${{ env.DOMAIN_NAME }}/"
+            exit 1
+          }
+          echo "Deployment completed successfully!"
