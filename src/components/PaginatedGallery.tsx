@@ -207,6 +207,7 @@ export function PaginatedGallery({
           gap={32}
           showWatermark={showWatermark}
           copyrightNotice={copyrightNotice}
+          categoryName={categoryName}
         />
       ) : (
         <JustifiedGallery
@@ -215,6 +216,7 @@ export function PaginatedGallery({
           gap={8}
           showWatermark={showWatermark}
           copyrightNotice={copyrightNotice}
+          categoryName={categoryName}
         />
       )}
 

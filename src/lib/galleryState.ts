@@ -67,6 +67,15 @@ export function resetAllGalleryStates(): void {
   } catch {}
 }
 
+export function getOriginGallery(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(NAV_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolves the destination URL for "Back to Gallery".
  * Returns the originating gallery (if arrived from one), or the fallback category gallery,

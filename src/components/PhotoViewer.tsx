@@ -20,6 +20,7 @@ interface PhotoViewerProps {
   nextPhoto: Photo | null;
   copyrightNotice?: string;
   showWatermark?: boolean;
+  fromGallery?: string;
 }
 
 export function PhotoViewer({
@@ -28,6 +29,7 @@ export function PhotoViewer({
   nextPhoto,
   copyrightNotice = "© Randal R. Ketchem",
   showWatermark = false,
+  fromGallery,
 }: PhotoViewerProps) {
   const router = useRouter();
 
@@ -218,44 +220,48 @@ export function PhotoViewer({
     };
   }, [isWindowFullscreen]);
 
-  // Navigate to adjacent photos
+  // Navigate to adjacent photos while honoring origin gallery
+  const fromQuery = fromGallery ? `?from=${encodeURIComponent(fromGallery)}` : "";
+
   const goToPrev = useCallback(() => {
     if (prevPhoto) {
+      const targetUrl = `/photo/${prevPhoto.photoID}${fromQuery}`;
       if (isWindowFullscreen) {
-        router.replace(`/photo/${prevPhoto.photoID}`, { scroll: false });
+        router.replace(targetUrl, { scroll: false });
       } else {
-        router.push(`/photo/${prevPhoto.photoID}`);
+        router.push(targetUrl);
       }
     }
-  }, [prevPhoto, router, isWindowFullscreen]);
+  }, [prevPhoto, router, isWindowFullscreen, fromQuery]);
 
   const goToNext = useCallback(() => {
     if (nextPhoto) {
+      const targetUrl = `/photo/${nextPhoto.photoID}${fromQuery}`;
       if (isWindowFullscreen) {
-        router.replace(`/photo/${nextPhoto.photoID}`, { scroll: false });
+        router.replace(targetUrl, { scroll: false });
       } else {
-        router.push(`/photo/${nextPhoto.photoID}`);
+        router.push(targetUrl);
       }
     }
-  }, [nextPhoto, router, isWindowFullscreen]);
+  }, [nextPhoto, router, isWindowFullscreen, fromQuery]);
 
   // Preload adjacent photographs and Next.js route data for instant swiping & navigation
   useEffect(() => {
     if (nextPhoto) {
-      router.prefetch(`/photo/${nextPhoto.photoID}`);
+      router.prefetch(`/photo/${nextPhoto.photoID}${fromQuery}`);
       if (nextPhoto.imageDesktop) {
         const img = new Image();
         img.src = nextPhoto.imageDesktop;
       }
     }
     if (prevPhoto) {
-      router.prefetch(`/photo/${prevPhoto.photoID}`);
+      router.prefetch(`/photo/${prevPhoto.photoID}${fromQuery}`);
       if (prevPhoto.imageDesktop) {
         const img = new Image();
         img.src = prevPhoto.imageDesktop;
       }
     }
-  }, [nextPhoto, prevPhoto, router]);
+  }, [nextPhoto, prevPhoto, router, fromQuery]);
 
   // Keyboard navigation & shortcuts
   useEffect(() => {

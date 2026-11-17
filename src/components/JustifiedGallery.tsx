@@ -11,6 +11,7 @@ interface JustifiedGalleryProps {
   gap?: number;
   showWatermark?: boolean;
   copyrightNotice?: string;
+  categoryName?: string;
 }
 
 interface CalculatedPhoto {
@@ -30,6 +31,7 @@ export function JustifiedGallery({
   gap = 8,
   showWatermark = false,
   copyrightNotice = "© Randal R. Ketchem",
+  categoryName,
 }: JustifiedGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Default to 1200px for SSR so initial HTML pre-renders real justified images
@@ -165,7 +167,9 @@ export function JustifiedGallery({
             {row.photos.map(({ photo, width, height }, photoIdx) => (
               <Link
                 key={photo.photoID}
-                href={`/photo/${photo.photoID}`}
+                href={`/photo/${photo.photoID}${
+                  categoryName ? `?from=${encodeURIComponent(categoryName)}` : ""
+                }`}
                 style={{
                   width: `${width}px`,
                   height: `${height}px`,

@@ -10,6 +10,7 @@ interface ExhibitionGalleryProps {
   gap?: number;
   showWatermark?: boolean;
   copyrightNotice?: string;
+  categoryName?: string;
 }
 
 export function ExhibitionGallery({
@@ -17,6 +18,7 @@ export function ExhibitionGallery({
   gap = 32,
   showWatermark = false,
   copyrightNotice = "© Randal R. Ketchem",
+  categoryName,
 }: ExhibitionGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(1200);
@@ -102,7 +104,9 @@ export function ExhibitionGallery({
               return (
                 <article key={photo.photoID} className="group">
                   <Link
-                    href={`/photo/${photo.photoID}`}
+                    href={`/photo/${photo.photoID}${
+                      categoryName ? `?from=${encodeURIComponent(categoryName)}` : ""
+                    }`}
                     className="block space-y-3 cursor-pointer select-none"
                     title={`${photo.title} (${photo.dateTaken?.year || ""})`}
                     onContextMenu={(e) => e.preventDefault()}

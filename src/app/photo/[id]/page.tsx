@@ -5,6 +5,7 @@ import { getPhotoById, getAdjacentPhotos } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { TechnicalDetails } from "@/components/TechnicalDetails";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { PhotoBreadcrumbs } from "@/components/PhotoBreadcrumbs";
 import { BackButton } from "@/components/BackButton";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { AdminPhotoControls } from "@/components/AdminPhotoControls";
@@ -15,6 +16,9 @@ export const dynamic = "force-dynamic";
 interface PhotoPageProps {
   params: Promise<{
     id: string;
+  }>;
+  searchParams?: Promise<{
+    from?: string;
   }>;
 }
 
@@ -66,8 +70,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function PhotoPage({ params }: PhotoPageProps) {
+export default async function PhotoPage({
+  params,
+  searchParams,
+}: PhotoPageProps) {
   const { id } = await params;
+  const { from } = (await searchParams) || {};
   const photo = getPhotoById(id);
 
   if (!photo) {
@@ -135,9 +143,11 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
       <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
         <div className="flex items-center space-x-3">
           <BackButton
-            fallbackCategory={photo.categories[0]}
+            fallbackCategory={from || photo.categories[0]}
             fallback={
-              photo.categories[0]
+              from
+                ? (from.toLowerCase() === "all" ? "/galleries/All" : `/galleries/${encodeURIComponent(from)}`)
+                : photo.categories[0]
                 ? `/galleries/${encodeURIComponent(photo.categories[0])}`
                 : "/galleries"
             }
@@ -145,18 +155,10 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
           />
           <span className="text-surface-border hidden sm:inline">|</span>
           <div className="hidden sm:block">
-            <Breadcrumbs
-              items={[
-                ...(photo.categories[0]
-                  ? [
-                      {
-                        label: photo.categories[0],
-                        href: `/galleries/${encodeURIComponent(photo.categories[0])}`,
-                      },
-                    ]
-                  : []),
-                { label: photo.title },
-              ]}
+            <PhotoBreadcrumbs
+              photoTitle={photo.title}
+              defaultCategory={photo.categories[0]}
+              fromParam={from}
             />
           </div>
         </div>
@@ -164,7 +166,7 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
         <div className="flex items-center space-x-4">
           {prev ? (
             <Link
-              href={`/photo/${prev.photoID}`}
+              href={`/photo/${prev.photoID}${from ? `?from=${encodeURIComponent(from)}` : ""}`}
               className="inline-flex items-center space-x-1 hover:text-accent transition-colors"
               title={`Previous: ${prev.title}`}
             >
@@ -182,7 +184,7 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
 
           {next ? (
             <Link
-              href={`/photo/${next.photoID}`}
+              href={`/photo/${next.photoID}${from ? `?from=${encodeURIComponent(from)}` : ""}`}
               className="inline-flex items-center space-x-1 hover:text-accent transition-colors"
               title={`Next: ${next.title}`}
             >
@@ -207,6 +209,7 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
         nextPhoto={next || null}
         copyrightNotice={copyrightNotice}
         showWatermark={settings.showWatermarkOverlay ?? false}
+        fromGallery={from}
       />
 
       {/* Story & Narrative */}
