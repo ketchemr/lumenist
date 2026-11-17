@@ -171,7 +171,23 @@ export function ExhibitionGallery({
                         <>
                           <span className="text-muted/60 select-none">·</span>
                           <span className="truncate text-muted/80 select-text">
-                            {photo.categories.join(", ")}
+                            {photo.categories.map((cat, idx) => (
+                              <span key={cat}>
+                                <Link
+                                  href={`/galleries/${encodeURIComponent(cat)}`}
+                                  draggable={false}
+                                  onClick={(e) => {
+                                    if (window.getSelection()?.toString()) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  className="hover:text-accent select-text cursor-pointer transition-colors underline decoration-transparent hover:decoration-accent/40"
+                                >
+                                  {cat}
+                                </Link>
+                                {idx < photo.categories.length - 1 && ", "}
+                              </span>
+                            ))}
                           </span>
                         </>
                       )}
