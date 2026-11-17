@@ -40,7 +40,7 @@ export default function GalleriesIndexPage() {
       <ResetGalleryScroll />
       {/* Header & Breadcrumb Trail */}
       <div className="border-b border-surface-border pb-4 space-y-2">
-        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Galleries" }]} />
+        <Breadcrumbs items={[{ label: "Galleries" }]} />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight flex items-center space-x-2.5">

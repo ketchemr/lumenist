@@ -10,6 +10,15 @@ export interface BreadcrumbItem {
 }
 
 export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
+  // Filter out any duplicate leading "Home" item since Breadcrumbs already renders the root Home icon & link
+  const sanitizedItems = items.filter(
+    (item, idx) =>
+      !(
+        idx === 0 &&
+        (item.href === "/" || item.label.trim().toLowerCase() === "home")
+      )
+  );
+
   return (
     <nav
       aria-label="Breadcrumb"
@@ -25,8 +34,8 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
         <span className="hidden sm:inline">Home</span>
       </Link>
 
-      {items.map((item, idx) => {
-        const isLast = idx === items.length - 1;
+      {sanitizedItems.map((item, idx) => {
+        const isLast = idx === sanitizedItems.length - 1;
         return (
           <div key={idx} className="flex items-center space-x-1.5">
             <ChevronRight className="w-3 h-3 text-muted/60 flex-shrink-0" />

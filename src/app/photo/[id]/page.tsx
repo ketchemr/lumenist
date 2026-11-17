@@ -147,7 +147,6 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
           <div className="hidden sm:block">
             <Breadcrumbs
               items={[
-                { label: "Home", href: "/" },
                 ...(photo.categories[0]
                   ? [
                       {
