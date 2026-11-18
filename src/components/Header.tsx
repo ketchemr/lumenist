@@ -49,8 +49,8 @@ export function Header({ settings }: HeaderProps) {
                 aria-current={isActive ? "page" : undefined}
                 className={`transition-colors font-medium py-0.5 sm:py-0 ${
                   isActive
-                    ? "text-foreground font-semibold"
-                    : "text-muted hover:text-foreground"
+                    ? "text-accent font-semibold"
+                    : "text-muted hover:text-accent"
                 }`}
               >
                 {item.label}

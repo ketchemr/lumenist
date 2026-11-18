@@ -387,7 +387,7 @@ export function RandomHeroSlideshow({
             onClick={advanceToPrev}
             aria-label="Previous photograph"
             title="Previous photograph (Left Arrow)"
-            className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs text-muted hover:text-foreground hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:text-accent hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Prev</span>
@@ -402,7 +402,7 @@ export function RandomHeroSlideshow({
             title={
               isPaused ? "Resume rotation (Space)" : "Pause rotation (Space)"
             }
-            className="p-1.5 rounded-full text-muted hover:text-foreground hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
+            className="p-1.5 rounded-full text-foreground hover:text-accent hover:bg-surface-hover active:scale-95 transition-all cursor-pointer"
           >
             {isPaused ? (
               <Play className="w-3.5 h-3.5 text-accent" />

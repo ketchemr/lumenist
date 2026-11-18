@@ -175,7 +175,7 @@ export function PaginatedGallery({
               className={`inline-flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs transition-all cursor-pointer ${
                 viewMode === "large"
                   ? "bg-surface-hover text-accent font-medium shadow-xs border border-surface-border/80"
-                  : "text-muted hover:text-foreground border border-transparent"
+                  : "text-muted hover:text-accent border border-transparent"
               }`}
             >
               <Columns2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
@@ -190,7 +190,7 @@ export function PaginatedGallery({
               className={`inline-flex items-center space-x-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs transition-all cursor-pointer ${
                 viewMode === "compact"
                   ? "bg-surface-hover text-accent font-medium shadow-xs border border-surface-border/80"
-                  : "text-muted hover:text-foreground border border-transparent"
+                  : "text-muted hover:text-accent border border-transparent"
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />

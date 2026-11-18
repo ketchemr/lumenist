@@ -125,7 +125,7 @@ export function Pagination({
     const className = `min-w-[32px] h-8 flex items-center justify-center rounded px-2.5 font-medium transition-all ${
       isCurrent
         ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-        : "bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground cursor-pointer"
+        : "bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 text-muted hover:text-accent cursor-pointer"
     }`;
 
     if (baseUrl) {
@@ -165,7 +165,7 @@ export function Pagination({
             1,
             "First page",
             <ChevronsLeft className="w-3.5 h-3.5" />,
-            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 text-muted hover:text-accent transition-colors"
           )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
@@ -179,7 +179,7 @@ export function Pagination({
             currentPage - 1,
             "Previous page",
             <ChevronLeft className="w-3.5 h-3.5" />,
-            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 text-muted hover:text-accent transition-colors"
           )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
@@ -212,7 +212,7 @@ export function Pagination({
             currentPage + 1,
             "Next page",
             <ChevronRight className="w-3.5 h-3.5" />,
-            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 text-muted hover:text-accent transition-colors"
           )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
@@ -226,7 +226,7 @@ export function Pagination({
             totalPages,
             "Last page",
             <ChevronsRight className="w-3.5 h-3.5" />,
-            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border text-muted hover:text-foreground transition-colors"
+            "p-2 rounded bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent/40 text-muted hover:text-accent transition-colors"
           )
         ) : (
           <span className="p-2 rounded bg-surface/50 border border-surface-border/50 text-muted/40 cursor-not-allowed">
