@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { siteConfig } from "@/config/site";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -48,6 +49,7 @@ export default function RootLayout({
   const settings = getSettings();
   const themeCss = getThemeCssVariables(settings);
   const isLight = isLightModeActive(settings);
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || "G-62W7T3TYLK";
 
   return (
     <html lang="en" className={isLight ? "light" : "dark"} data-theme={isLight ? "light" : "dark"}>
@@ -61,6 +63,7 @@ export default function RootLayout({
         </main>
         <Footer settings={settings} />
       </body>
+      {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }

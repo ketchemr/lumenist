@@ -16,6 +16,7 @@
     "sync:remote": "rsync -avz --progress --exclude '.DS_Store' \"${LOCAL_PHOTO_DIR:-public/photos/}\" \"${REMOTE_PHOTO_TARGET:-server:/var/www/photos/}\""
   },
   "dependencies": {
+    "@next/third-parties": "^15.5.29",
     "@types/leaflet": "^1.9.22",
     "exifr": "^7.1.3",
     "leaflet": "^1.9.4",
