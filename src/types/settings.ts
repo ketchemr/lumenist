@@ -23,6 +23,7 @@ export interface SiteSettings {
   copyrightText?: string;
   copyrightOverlay?: string;
   showWatermarkOverlay?: boolean;
+  googleAnalyticsId?: string;
 }
 
 export interface ThemePreset {
@@ -199,6 +200,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   copyrightText: "",
   copyrightOverlay: "© Randal R. Ketchem",
   showWatermarkOverlay: false,
+  googleAnalyticsId: "",
 };
 
 export function isLightBackground(hex?: string): boolean {

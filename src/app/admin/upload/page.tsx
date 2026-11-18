@@ -4265,6 +4265,27 @@ export default function AdminUploadPage() {
                 </p>
               </div>
 
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-xs font-medium text-foreground">
+                  Google Analytics 4 Measurement ID
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. G-62W7T3TYLK"
+                  value={settings.googleAnalyticsId || ""}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      googleAnalyticsId: e.target.value.trim(),
+                    }))
+                  }
+                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent font-mono"
+                />
+                <p className="text-[11px] text-muted">
+                  Your Google Analytics 4 Measurement ID (format: <code>G-XXXXXXXXXX</code>). Leave blank to disable tracking.
+                </p>
+              </div>
+
               {/* Photographic Copyright Overlay (On Images) */}
               <div className="space-y-3 sm:col-span-2 pt-4 border-t border-surface-border">
                 <div className="flex items-center justify-between">
