@@ -34,8 +34,9 @@ jobs:
             echo "=== Deploying rrkphoto.com ==="
             cd /home/ubuntu/rrkphoto.com
 
-            echo "=== Pulling latest changes from main ==="
-            git pull origin main
+            echo "=== Syncing latest changes from main ==="
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "=== Installing dependencies ==="
             npm install --prefer-offline --no-audit
