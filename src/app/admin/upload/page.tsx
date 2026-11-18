@@ -4271,7 +4271,7 @@ export default function AdminUploadPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. G-62W7T3TYLK"
+                  placeholder="G-XXXXXXXXXX"
                   value={settings.googleAnalyticsId || ""}
                   onChange={(e) =>
                     setSettings((prev) => ({
