@@ -49,7 +49,7 @@ export default function RootLayout({
   const settings = getSettings();
   const themeCss = getThemeCssVariables(settings);
   const isLight = isLightModeActive(settings);
-  const gaId = process.env.NEXT_PUBLIC_GA_ID || "G-62W7T3TYLK";
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
     <html lang="en" className={isLight ? "light" : "dark"} data-theme={isLight ? "light" : "dark"}>
@@ -63,7 +63,7 @@ export default function RootLayout({
         </main>
         <Footer settings={settings} />
       </body>
-      {gaId && <GoogleAnalytics gaId={gaId} />}
+      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }
