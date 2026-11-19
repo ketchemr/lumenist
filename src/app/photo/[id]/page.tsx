@@ -124,7 +124,7 @@ export default async function PhotoPage({
   };
 
   return (
-    <div className="space-y-10 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-8">
+    <div className="w-full pt-4 sm:pt-5 pb-8 space-y-5 sm:space-y-6">
       {/* High-priority preloading of current photograph and adjacent photographs */}
       <link rel="preload" as="image" href={photo.imageDesktop} fetchPriority="high" />
       {next && (
@@ -140,7 +140,8 @@ export default async function PhotoPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* Top Navigation & Breadcrumb Trail */}
-      <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-4">
+      <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between text-xs text-muted border-b border-surface-border pb-3">
         <div className="flex items-center space-x-3">
           <BackButton
             fallbackCategory={from || photo.categories[0]}
@@ -200,68 +201,73 @@ export default async function PhotoPage({
 
           <AdminPhotoControls photoID={photo.photoID} title={photo.title} />
         </div>
-      </div>
-
-      {/* Main Photographic Presentation with Fullscreen Controls */}
-      <PhotoViewer
-        photo={photo}
-        prevPhoto={prev || null}
-        nextPhoto={next || null}
-        copyrightNotice={copyrightNotice}
-        showWatermark={settings.showWatermarkOverlay ?? false}
-        fromGallery={from}
-      />
-
-      {/* Story & Narrative */}
-      <div className="space-y-4 max-w-3xl mx-auto text-center sm:text-left">
-        <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
-          {photo.title}
-        </h1>
-
-        {photo.description && (
-          <p className="text-muted leading-relaxed text-sm sm:text-base font-normal">
-            {photo.description}
-          </p>
-        )}
-
-        {/* Categories & Keywords (Alphabetically Sorted) */}
-        <div className="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-          {[...photo.categories]
-            .sort((a, b) =>
-              a.localeCompare(b, undefined, { sensitivity: "base" })
-            )
-            .map((cat) => (
-              <Link
-                key={cat}
-                href={`/galleries/${encodeURIComponent(cat)}`}
-                className="inline-flex items-center space-x-1 text-xs bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded text-accent transition-colors"
-              >
-                <Folder className="w-3 h-3" />
-                <span>{cat}</span>
-              </Link>
-            ))}
-
-          {[...photo.keywords]
-            .sort((a, b) =>
-              a.localeCompare(b, undefined, { sensitivity: "base" })
-            )
-            .map((kw) => (
-              <Link
-                key={kw}
-                href={`/explore?tag=${encodeURIComponent(kw)}`}
-                className="inline-flex items-center space-x-1 text-xs text-muted hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
-                title={`Explore other photographs tagged "${kw}"`}
-              >
-                <Tag className="w-2.5 h-2.5 text-muted/70 group-hover:text-accent transition-colors" />
-                <span>{kw}</span>
-              </Link>
-            ))}
         </div>
       </div>
 
-      {/* Deep Photographic Technical Details */}
-      <div className="pt-6">
-        <TechnicalDetails photo={photo} />
+      {/* Main Photographic Presentation with Fullscreen Controls */}
+      <div className="w-full px-1.5 sm:px-3">
+        <PhotoViewer
+          photo={photo}
+          prevPhoto={prev || null}
+          nextPhoto={next || null}
+          copyrightNotice={copyrightNotice}
+          showWatermark={settings.showWatermarkOverlay ?? false}
+          fromGallery={from}
+        />
+      </div>
+
+      <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 space-y-10 pt-4">
+        {/* Story & Narrative */}
+        <div className="space-y-4 max-w-3xl mx-auto text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight">
+            {photo.title}
+          </h1>
+
+          {photo.description && (
+            <p className="text-muted leading-relaxed text-sm sm:text-base font-normal">
+              {photo.description}
+            </p>
+          )}
+
+          {/* Categories & Keywords (Alphabetically Sorted) */}
+          <div className="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+            {[...photo.categories]
+              .sort((a, b) =>
+                a.localeCompare(b, undefined, { sensitivity: "base" })
+              )
+              .map((cat) => (
+                <Link
+                  key={cat}
+                  href={`/galleries/${encodeURIComponent(cat)}`}
+                  className="inline-flex items-center space-x-1 text-xs bg-surface hover:bg-surface-hover border border-surface-border px-2.5 py-1 rounded text-accent transition-colors"
+                >
+                  <Folder className="w-3 h-3" />
+                  <span>{cat}</span>
+                </Link>
+              ))}
+
+            {[...photo.keywords]
+              .sort((a, b) =>
+                a.localeCompare(b, undefined, { sensitivity: "base" })
+              )
+              .map((kw) => (
+                <Link
+                  key={kw}
+                  href={`/explore?tag=${encodeURIComponent(kw)}`}
+                  className="inline-flex items-center space-x-1 text-xs text-muted hover:text-accent bg-surface/50 hover:bg-surface border border-surface-border/50 hover:border-accent/40 px-2 py-0.5 rounded transition-all group"
+                  title={`Explore other photographs tagged "${kw}"`}
+                >
+                  <Tag className="w-2.5 h-2.5 text-muted/70 group-hover:text-accent transition-colors" />
+                  <span>{kw}</span>
+                </Link>
+              ))}
+          </div>
+        </div>
+
+        {/* Deep Photographic Technical Details */}
+        <div className="pt-6">
+          <TechnicalDetails photo={photo} />
+        </div>
       </div>
     </div>
   );

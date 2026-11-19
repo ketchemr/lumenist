@@ -473,17 +473,24 @@ export function PhotoViewer({
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
-      <div className="relative bg-surface dark:bg-black/90 rounded-sm p-2 sm:p-4 md:p-5 border border-surface-border overflow-hidden select-none">
+      <div className="relative w-full max-w-[calc(80rem+0.75rem+2px)] sm:max-w-[calc(80rem+1.5rem+2px)] mx-auto bg-surface dark:bg-black/90 rounded-sm p-1.5 sm:p-3 border border-surface-border overflow-hidden select-none">
         <div className="flex justify-center items-center">
           <div className="relative inline-flex items-center justify-center max-w-full">
             <img
               src={photo.imageDesktop}
               alt={photo.title}
+              width={photo.size?.width}
+              height={photo.size?.height}
+              style={
+                photo.size?.aspectRatio
+                  ? { aspectRatio: `${photo.size.aspectRatio}` }
+                  : undefined
+              }
               fetchPriority="high"
               decoding="async"
               draggable={false}
               onContextMenu={(e) => e.preventDefault()}
-              className="max-h-[82vh] w-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame select-none"
+              className="max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-9.5rem)] w-auto h-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame select-none"
             />
             {/* Transparent Click & Protection Shield */}
             <div
