@@ -287,6 +287,8 @@ export default function AdminUploadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [publishedResult, setPublishedResult] = useState<any>(null);
+  const [touchedTitle, setTouchedTitle] = useState(false);
+  const [touchedPhotoID, setTouchedPhotoID] = useState(false);
 
   // Settings states
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
@@ -304,6 +306,22 @@ export default function AdminUploadPage() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const photoIdInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const albumsSectionRef = useRef<HTMLDivElement>(null);
+  const tagsInputRef = useRef<HTMLInputElement>(null);
+  const locationSectionRef = useRef<HTMLDivElement>(null);
+
+  const jumpToField = (ref: React.RefObject<HTMLElement | null>) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => {
+      el.focus?.({ preventScroll: true });
+    }, 150);
+  };
 
   // Check auth and load metadata on mount
   useEffect(() => {
@@ -885,11 +903,20 @@ export default function AdminUploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setSubmitError("Please choose a photograph to upload");
+      setSubmitError("Please choose a photograph to upload first.");
+      jumpToField(dropzoneRef);
       return;
     }
     if (!title.trim()) {
-      setSubmitError("Please provide a photograph title");
+      setTouchedTitle(true);
+      setSubmitError("Please provide a photograph title.");
+      jumpToField(titleInputRef);
+      return;
+    }
+    if (!photoID.trim()) {
+      setTouchedPhotoID(true);
+      setSubmitError("Please provide a Photo ID.");
+      jumpToField(photoIdInputRef);
       return;
     }
 
@@ -1095,6 +1122,8 @@ export default function AdminUploadPage() {
     setDetectedCamera(null);
     setPublishedResult(null);
     setSubmitError("");
+    setTouchedTitle(false);
+    setTouchedPhotoID(false);
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -1404,9 +1433,181 @@ export default function AdminUploadPage() {
           )}
 
           {!publishedResult && (
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Upload Readiness & Quick-Jump Pointers Bar */}
+              {(() => {
+                const missingRequired = [
+                  !selectedFile && { label: "Photo File", ref: dropzoneRef },
+                  !title.trim() && { label: "Title", ref: titleInputRef },
+                  !photoID.trim() && { label: "Photo ID", ref: photoIdInputRef },
+                ].filter(Boolean) as {
+                  label: string;
+                  ref: React.RefObject<HTMLElement | null>;
+                }[];
+                const allRequiredDone = missingRequired.length === 0;
+                const tagCount = tagsInput
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter(Boolean).length;
+
+                return (
+                  <div className="upload-card rounded-sm p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                        {allRequiredDone ? (
+                          <span className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Ready to publish</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-accent font-semibold">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span>
+                              {missingRequired.length} required{" "}
+                              {missingRequired.length === 1 ? "field" : "fields"}{" "}
+                              left to fill
+                            </span>
+                          </span>
+                        )}
+                        <span className="text-[11px] text-muted hidden sm:inline">
+                          &bull; Click any item below to jump straight to it
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-muted">
+                        Empty fields have a{" "}
+                        <span className="inline-block w-2 h-2 rounded-full bg-accent align-middle mx-0.5" />{" "}
+                        left bar
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted mr-1">
+                        Required:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(dropzoneRef)}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition-colors cursor-pointer ${
+                          selectedFile
+                            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 font-medium"
+                            : "border-accent bg-accent/15 text-foreground font-semibold hover:bg-accent/25"
+                        }`}
+                      >
+                        {selectedFile ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-accent" />
+                        )}
+                        <span>1. Photo File</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(titleInputRef)}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition-colors cursor-pointer ${
+                          title.trim()
+                            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 font-medium"
+                            : "border-accent bg-accent/15 text-foreground font-semibold hover:bg-accent/25"
+                        }`}
+                      >
+                        {title.trim() ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-accent" />
+                        )}
+                        <span>2. Title</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(photoIdInputRef)}
+                        className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition-colors cursor-pointer ${
+                          photoID.trim()
+                            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 font-medium"
+                            : "border-accent bg-accent/15 text-foreground font-semibold hover:bg-accent/25"
+                        }`}
+                      >
+                        {photoID.trim() ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-accent" />
+                        )}
+                        <span>3. Photo ID</span>
+                      </button>
+
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted ml-2 mr-1">
+                        Optional:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(descriptionInputRef)}
+                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border transition-colors cursor-pointer ${
+                          description.trim()
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                            : "border-surface-border bg-surface-hover/50 text-muted hover:text-foreground hover:border-accent/50"
+                        }`}
+                      >
+                        {description.trim() && (
+                          <CheckCircle2 className="w-3 h-3" />
+                        )}
+                        <span>Description</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(albumsSectionRef)}
+                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border transition-colors cursor-pointer ${
+                          selectedCategories.length > 0
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                            : "border-surface-border bg-surface-hover/50 text-muted hover:text-foreground hover:border-accent/50"
+                        }`}
+                      >
+                        {selectedCategories.length > 0 && (
+                          <CheckCircle2 className="w-3 h-3" />
+                        )}
+                        <span>
+                          Albums
+                          {selectedCategories.length > 0
+                            ? ` (${selectedCategories.length})`
+                            : ""}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(tagsInputRef)}
+                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border transition-colors cursor-pointer ${
+                          tagCount > 0
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                            : "border-surface-border bg-surface-hover/50 text-muted hover:text-foreground hover:border-accent/50"
+                        }`}
+                      >
+                        {tagCount > 0 && <CheckCircle2 className="w-3 h-3" />}
+                        <span>Tags{tagCount > 0 ? ` (${tagCount})` : ""}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => jumpToField(locationSectionRef)}
+                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border transition-colors cursor-pointer ${
+                          latitude !== null && longitude !== null
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                            : "border-surface-border bg-surface-hover/50 text-muted hover:text-foreground hover:border-accent/50"
+                        }`}
+                      >
+                        {latitude !== null && longitude !== null && (
+                          <CheckCircle2 className="w-3 h-3" />
+                        )}
+                        <span>Location</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* File Dropzone */}
               <div
+                ref={dropzoneRef}
+                role="button"
+                tabIndex={0}
+                aria-label="Upload JPEG photograph (required)"
                 onDragOver={(e) => {
                   e.preventDefault();
                   setIsDragging(true);
@@ -1420,14 +1621,36 @@ export default function AdminUploadPage() {
                   }
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-all ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                className={`relative border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   isDragging
-                    ? "border-accent bg-accent/5 scale-[1.005]"
+                    ? "border-accent bg-accent/10 scale-[1.005]"
                     : selectedFile
-                    ? "border-surface-border bg-surface/50 hover:border-gray-600"
-                    : "border-surface-border hover:border-accent bg-surface/30"
+                    ? "border-emerald-500/60 bg-surface hover:border-accent"
+                    : "border-accent/75 bg-accent/[0.04] hover:border-accent hover:bg-accent/[0.08]"
                 }`}
               >
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                    Step 1 &mdash; Photograph File
+                  </span>
+                  {selectedFile ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/40">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Selected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/50">
+                      Required
+                    </span>
+                  )}
+                </div>
+
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1441,7 +1664,7 @@ export default function AdminUploadPage() {
                 />
 
                 {imagePreviewUrl ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
                     <div className="w-48 aspect-[3/2] bg-surface-hover/50 dark:bg-black rounded overflow-hidden border border-surface-border shadow-lg">
                       <img
                         src={imagePreviewUrl}
@@ -1468,8 +1691,8 @@ export default function AdminUploadPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3 py-6">
-                    <div className="inline-flex p-4 rounded-full bg-surface-hover border border-surface-border text-muted">
+                  <div className="space-y-3 py-6 pt-8">
+                    <div className="inline-flex p-4 rounded-full bg-surface border border-accent/50 text-accent">
                       <Upload className="w-6 h-6" />
                     </div>
                     <div>
@@ -1489,7 +1712,7 @@ export default function AdminUploadPage() {
 
               {/* Detected Technical Details Badge */}
               {detectedCamera && (
-                <div className="bg-surface border border-surface-border rounded-sm p-4 text-xs space-y-2">
+                <div className="upload-card rounded-sm p-4 text-xs space-y-2">
                   <div className="flex items-center space-x-2 text-accent font-medium uppercase tracking-wider text-[11px]">
                     <Camera className="w-3.5 h-3.5" />
                     <span>Auto-Detected Technical Metadata</span>
@@ -1533,56 +1756,152 @@ export default function AdminUploadPage() {
               )}
 
               {/* Title & Description */}
-              <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-foreground">
-                    Photograph Title <span className="text-accent">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Mingus Mill in Autumn"
-                    required
-                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
-                  />
+              <div className="space-y-5 upload-card p-6 rounded-sm">
+                <div className="flex items-center justify-between border-b border-surface-border pb-2.5">
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Step 2 &mdash; Core Details
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    Title &amp; Photo ID are required
+                  </span>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-foreground">
-                    Narrative Story / Description
-                  </label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="upload-title"
+                      className="block text-xs font-semibold text-foreground"
+                    >
+                      Photograph Title{" "}
+                      <span className="text-accent" aria-hidden="true">
+                        *
+                      </span>
+                    </label>
+                    {title.trim() ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/40">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Filled
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/50">
+                        Required
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    ref={titleInputRef}
+                    id="upload-title"
+                    name="title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onBlur={() => setTouchedTitle(true)}
+                    onInvalid={() => setTouchedTitle(true)}
+                    placeholder="e.g. Mingus Mill in Autumn"
+                    required
+                    data-needs-attention={!title.trim()}
+                    aria-invalid={touchedTitle && !title.trim() ? "true" : "false"}
+                    aria-describedby={
+                      touchedTitle && !title.trim()
+                        ? "upload-title-error"
+                        : undefined
+                    }
+                    className="upload-field-input w-full rounded px-3 py-2.5 text-sm text-foreground"
+                  />
+                  {touchedTitle && !title.trim() && (
+                    <p
+                      id="upload-title-error"
+                      className="text-xs text-red-500 font-medium"
+                    >
+                      Please enter a title for this photograph.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="upload-description"
+                      className="block text-xs font-semibold text-foreground"
+                    >
+                      Narrative Story / Description
+                    </label>
+                    <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
+                      {description.trim() ? "Added" : "Optional"}
+                    </span>
+                  </div>
                   <textarea
+                    ref={descriptionInputRef}
+                    id="upload-description"
+                    name="description"
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Describe the atmosphere, historical context, geology, or optical technique..."
-                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent leading-relaxed"
+                    data-needs-attention={!description.trim()}
+                    className="upload-field-input w-full rounded px-3 py-2.5 text-xs text-foreground leading-relaxed"
                   />
                 </div>
 
                 {/* Photo ID & Capture Date */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-medium text-foreground font-mono">
-                        Photo ID
+                    <div className="flex items-center justify-between gap-2">
+                      <label
+                        htmlFor="upload-photo-id"
+                        className="block text-xs font-semibold text-foreground font-mono"
+                      >
+                        Photo ID{" "}
+                        <span className="text-accent" aria-hidden="true">
+                          *
+                        </span>
                       </label>
-                      <span className="text-[10px] text-muted">
-                        Editable canonical ID
-                      </span>
+                      {photoID.trim() ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/40">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {idSourceNote && idSourceNote !== "Custom entry"
+                            ? "Auto-filled"
+                            : "Set"}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/50">
+                          Required
+                        </span>
+                      )}
                     </div>
                     <input
+                      ref={photoIdInputRef}
+                      id="upload-photo-id"
+                      name="photoID"
                       type="text"
                       value={photoID}
                       onChange={(e) => {
                         setPhotoID(e.target.value);
                         setIdSourceNote("Custom entry");
                       }}
-                      placeholder="e.g. d20261027151131 or s00000613"
+                      onBlur={() => setTouchedPhotoID(true)}
+                      onInvalid={() => setTouchedPhotoID(true)}
+                      placeholder="Auto-filled on file select (e.g. d20261027151131)"
                       required
-                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-accent focus:outline-none focus:border-accent"
+                      data-needs-attention={!photoID.trim()}
+                      aria-invalid={
+                        touchedPhotoID && !photoID.trim() ? "true" : "false"
+                      }
+                      aria-describedby={
+                        touchedPhotoID && !photoID.trim()
+                          ? "upload-photo-id-error"
+                          : undefined
+                      }
+                      className="upload-field-input w-full rounded px-3 py-2 text-xs font-mono text-accent"
                     />
+                    {touchedPhotoID && !photoID.trim() && (
+                      <p
+                        id="upload-photo-id-error"
+                        className="text-xs text-red-500 font-medium"
+                      >
+                        Please enter a Photo ID (or select a JPEG to auto-fill).
+                      </p>
+                    )}
                     {idSourceNote && (
                       <p className="text-[11px] text-muted flex items-center space-x-1">
                         <Sparkles className="w-3 h-3 text-accent" />
@@ -1592,30 +1911,41 @@ export default function AdminUploadPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-foreground">
-                      Capture Date & Time
-                    </label>
+                    <div className="flex items-center justify-between gap-2">
+                      <label
+                        htmlFor="upload-capture-date"
+                        className="block text-xs font-semibold text-foreground"
+                      >
+                        Capture Date &amp; Time
+                      </label>
+                      <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
+                        {captureDate ? "Set" : "Optional"}
+                      </span>
+                    </div>
                     <input
+                      id="upload-capture-date"
+                      name="captureDate"
                       type="datetime-local"
                       step="1"
                       value={captureDate}
                       onChange={(e) => setCaptureDate(e.target.value)}
-                      className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                      data-needs-attention={!captureDate}
+                      className="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground"
                     />
                   </div>
                 </div>
 
                 {/* Creation Date & Time (Year, Month, Day, Hour, Minute, Second) */}
-                <div className="space-y-3 pt-3 border-t border-surface-border">
+                <div className="space-y-3 pt-4 border-t border-surface-border">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <div className="flex items-center space-x-1.5">
                         <Clock className="w-3.5 h-3.5 text-accent" />
-                        <label className="text-xs font-medium text-foreground">
-                          Creation Date & Time
-                        </label>
+                        <span className="text-xs font-semibold text-foreground">
+                          Creation Date &amp; Time
+                        </span>
                         <span className="text-[11px] text-muted font-normal">
-                          (Determines &ldquo;Recently Added&rdquo; sort order)
+                          (Pre-filled &bull; determines &ldquo;Recently Added&rdquo; sort order)
                         </span>
                       </div>
                       <p className="text-[11px] text-muted mt-0.5">
@@ -1647,10 +1977,14 @@ export default function AdminUploadPage() {
                   {/* 6 Individual inputs: Year, Month, Day, Hour, Minute, Second */}
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     <div>
-                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                      <label
+                        htmlFor="upload-created-year"
+                        className="block text-[10px] text-muted uppercase font-mono mb-1"
+                      >
                         Year
                       </label>
                       <input
+                        id="upload-created-year"
                         type="number"
                         min="1970"
                         max="2100"
@@ -1665,15 +1999,19 @@ export default function AdminUploadPage() {
                             createdSecond
                           )
                         }
-                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        className="upload-field-input w-full rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground"
                         placeholder="YYYY"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                      <label
+                        htmlFor="upload-created-month"
+                        className="block text-[10px] text-muted uppercase font-mono mb-1"
+                      >
                         Month (1-12)
                       </label>
                       <input
+                        id="upload-created-month"
                         type="number"
                         min="1"
                         max="12"
@@ -1688,15 +2026,19 @@ export default function AdminUploadPage() {
                             createdSecond
                           )
                         }
-                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        className="upload-field-input w-full rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground"
                         placeholder="MM"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                      <label
+                        htmlFor="upload-created-day"
+                        className="block text-[10px] text-muted uppercase font-mono mb-1"
+                      >
                         Day (1-31)
                       </label>
                       <input
+                        id="upload-created-day"
                         type="number"
                         min="1"
                         max="31"
@@ -1711,15 +2053,19 @@ export default function AdminUploadPage() {
                             createdSecond
                           )
                         }
-                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        className="upload-field-input w-full rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground"
                         placeholder="DD"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                      <label
+                        htmlFor="upload-created-hour"
+                        className="block text-[10px] text-muted uppercase font-mono mb-1"
+                      >
                         Hour (0-23)
                       </label>
                       <input
+                        id="upload-created-hour"
                         type="number"
                         min="0"
                         max="23"
@@ -1734,15 +2080,19 @@ export default function AdminUploadPage() {
                             createdSecond
                           )
                         }
-                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        className="upload-field-input w-full rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground"
                         placeholder="HH"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                      <label
+                        htmlFor="upload-created-minute"
+                        className="block text-[10px] text-muted uppercase font-mono mb-1"
+                      >
                         Minute (0-59)
                       </label>
                       <input
+                        id="upload-created-minute"
                         type="number"
                         min="0"
                         max="59"
@@ -1757,15 +2107,19 @@ export default function AdminUploadPage() {
                             createdSecond
                           )
                         }
-                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        className="upload-field-input w-full rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground"
                         placeholder="MM"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-muted uppercase font-mono mb-1">
+                      <label
+                        htmlFor="upload-created-second"
+                        className="block text-[10px] text-muted uppercase font-mono mb-1"
+                      >
                         Second (0-59)
                       </label>
                       <input
+                        id="upload-created-second"
                         type="number"
                         min="0"
                         max="59"
@@ -1780,7 +2134,7 @@ export default function AdminUploadPage() {
                             e.target.value
                           )
                         }
-                        className="w-full bg-surface border border-surface-border rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground focus:outline-none focus:border-accent"
+                        className="upload-field-input w-full rounded px-2.5 py-1.5 text-xs text-center font-mono text-foreground"
                         placeholder="SS"
                       />
                     </div>
@@ -1794,7 +2148,8 @@ export default function AdminUploadPage() {
                         step="1"
                         value={createdDate}
                         onChange={(e) => handleCreatedDateChange(e.target.value)}
-                        className="bg-surface border border-surface-border rounded px-2.5 py-1 text-xs text-foreground focus:outline-none focus:border-accent cursor-pointer"
+                        aria-label="Creation date and time calendar picker"
+                        className="upload-field-input rounded px-2.5 py-1 text-xs text-foreground cursor-pointer"
                       />
                       <span className="text-[11px] text-muted hidden sm:inline">
                         Calendar picker
@@ -1816,15 +2171,24 @@ export default function AdminUploadPage() {
               </div>
 
               {/* Curated Albums (STRICTLY ALPHABETICAL) */}
-              <div className="space-y-3 bg-surface border border-surface-border p-6 rounded-sm">
+              <div
+                ref={albumsSectionRef}
+                tabIndex={-1}
+                className="space-y-3 upload-card p-6 rounded-sm focus:outline-none"
+              >
                 <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                  <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <Folder className="w-3.5 h-3.5 text-accent" />
-                    <span>Curated Albums (Alphabetical)</span>
+                    <span>Step 3 &mdash; Curated Albums (Alphabetical)</span>
                   </div>
-                  <span className="text-[11px] text-muted">
-                    {selectedCategories.length} selected
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted">
+                      {selectedCategories.length} selected
+                    </span>
+                    <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
+                      Optional
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-2">
@@ -1835,10 +2199,10 @@ export default function AdminUploadPage() {
                         type="button"
                         key={cat}
                         onClick={() => toggleCategory(cat)}
-                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
                           isSelected
                             ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
-                            : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground hover:border-accent/40"
+                            : "bg-surface hover:bg-surface-hover border-muted/50 text-foreground/80 hover:text-foreground hover:border-accent/60"
                         }`}
                       >
                         {cat}
@@ -1850,6 +2214,7 @@ export default function AdminUploadPage() {
                 {/* Add Custom Album */}
                 <div className="flex items-center space-x-2 pt-3">
                   <input
+                    id="upload-new-album"
                     type="text"
                     value={newCategoryInput}
                     onChange={(e) => setNewCategoryInput(e.target.value)}
@@ -1860,12 +2225,13 @@ export default function AdminUploadPage() {
                       }
                     }}
                     placeholder="Add new album name..."
-                    className="flex-1 bg-surface border border-surface-border rounded px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-accent"
+                    aria-label="Add new album name"
+                    className="upload-field-input flex-1 rounded px-3 py-1.5 text-xs text-foreground"
                   />
                   <button
                     type="button"
                     onClick={addCustomCategory}
-                    className="px-3 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border rounded text-xs text-foreground hover:text-accent hover:border-accent transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-surface hover:bg-surface-hover border border-muted/50 rounded text-xs text-foreground hover:text-accent hover:border-accent transition-colors cursor-pointer"
                   >
                     + Add Album
                   </button>
@@ -1873,30 +2239,39 @@ export default function AdminUploadPage() {
               </div>
 
               {/* Tags with Memory & Fast Popup Tray */}
-              <div className="space-y-3 bg-surface border border-surface-border p-6 rounded-sm">
+              <div className="space-y-3 upload-card p-6 rounded-sm">
                 <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                  <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <Tag className="w-3.5 h-3.5 text-accent" />
-                    <span>Keywords & Tags</span>
+                    <label htmlFor="upload-tags">Step 4 &mdash; Keywords &amp; Tags</label>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowTagTray(!showTagTray)}
-                    className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
-                  >
-                    <span>
-                      {showTagTray ? "Hide Tag Tray" : "+ Quick-Add Tags"}
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowTagTray(!showTagTray)}
+                      className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
+                    >
+                      <span>
+                        {showTagTray ? "Hide Tag Tray" : "+ Quick-Add Tags"}
+                      </span>
+                    </button>
+                    <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
+                      Optional
                     </span>
-                  </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <input
+                    ref={tagsInputRef}
+                    id="upload-tags"
+                    name="tags"
                     type="text"
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
                     placeholder="Type or paste comma-separated tags (e.g. Washington, Fall color, sunset, river, trees)..."
-                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
+                    data-needs-attention={!tagsInput.trim()}
+                    className="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground"
                   />
                   <p className="text-[11px] text-muted">
                     Paste comma-separated tags freely, or click popular chips
@@ -1974,107 +2349,143 @@ export default function AdminUploadPage() {
               </div>
 
               {/* Tripod & Availability */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface border border-surface-border p-6 rounded-sm">
-                {/* Tripod Setup with Memory */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-medium text-foreground">
-                      Tripod Setup
-                    </label>
-                    <span className="text-[10px] text-muted">
-                      Remembers last used
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    list="tripod-list"
-                    value={tripod}
-                    onChange={(e) => setTripod(e.target.value)}
-                    placeholder="e.g. Manfrotto Befree GT XPRO Carbon, 496 ball head, or None"
-                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
-                  />
-                  <datalist id="tripod-list">
-                    {metadata.commonTripods.map((t) => (
-                      <option key={t} value={t} />
-                    ))}
-                  </datalist>
-
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {[
-                      "None",
-                      "Manfrotto Befree GT XPRO Carbon, 496 ball head",
-                      "Gitzo GT3542XLS, Really Right Stuff BH-55",
-                    ].map((opt) => (
-                      <button
-                        type="button"
-                        key={opt}
-                        onClick={() => setTripod(opt)}
-                        className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                          tripod === opt
-                            ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
-                            : "bg-surface hover:bg-surface-hover border-surface-border text-muted hover:text-foreground"
-                        }`}
-                      >
-                        {opt.includes(",") ? opt.split(",")[0] : opt}
-                      </button>
-                    ))}
-                  </div>
+              <div className="space-y-4 upload-card p-6 rounded-sm">
+                <div className="flex items-center justify-between border-b border-surface-border pb-2">
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Step 5 &mdash; Support Gear &amp; Print Availability
+                  </span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
+                    Optional / Defaults Set
+                  </span>
                 </div>
 
-                {/* Print Availability */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-medium text-foreground">
-                    Print Order Availability
-                  </label>
-                  <select
-                    value={availability}
-                    onChange={(e) => setAvailability(e.target.value)}
-                    className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent cursor-pointer"
-                  >
-                    <option value="Available for Order">
-                      Available for Order
-                    </option>
-                    <option value="Special Edition / By Request">
-                      Special Edition / By Request
-                    </option>
-                    <option value="Archive Only / Not for Sale">
-                      Archive Only / Not for Sale
-                    </option>
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Tripod Setup with Memory */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="upload-tripod"
+                        className="block text-xs font-semibold text-foreground"
+                      >
+                        Tripod Setup
+                      </label>
+                      <span className="text-[10px] text-muted">
+                        Remembers last used
+                      </span>
+                    </div>
+                    <input
+                      id="upload-tripod"
+                      name="tripod"
+                      type="text"
+                      list="tripod-list"
+                      value={tripod}
+                      onChange={(e) => setTripod(e.target.value)}
+                      placeholder="e.g. Manfrotto Befree GT XPRO Carbon, 496 ball head, or None"
+                      data-needs-attention={!tripod.trim()}
+                      className="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground"
+                    />
+                    <datalist id="tripod-list">
+                      {metadata.commonTripods.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
+
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[
+                        "None",
+                        "Manfrotto Befree GT XPRO Carbon, 496 ball head",
+                        "Gitzo GT3542XLS, Really Right Stuff BH-55",
+                      ].map((opt) => (
+                        <button
+                          type="button"
+                          key={opt}
+                          onClick={() => setTripod(opt)}
+                          className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                            tripod === opt
+                              ? "bg-accent/20 border-accent text-accent font-medium shadow-sm"
+                              : "bg-surface hover:bg-surface-hover border-muted/50 text-muted hover:text-foreground"
+                          }`}
+                        >
+                          {opt.includes(",") ? opt.split(",")[0] : opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Print Availability */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="upload-availability"
+                      className="block text-xs font-semibold text-foreground"
+                    >
+                      Print Order Availability
+                    </label>
+                    <select
+                      id="upload-availability"
+                      name="availability"
+                      value={availability}
+                      onChange={(e) => setAvailability(e.target.value)}
+                      className="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground cursor-pointer"
+                    >
+                      <option value="Available for Order">
+                        Available for Order
+                      </option>
+                      <option value="Special Edition / By Request">
+                        Special Edition / By Request
+                      </option>
+                      <option value="Archive Only / Not for Sale">
+                        Archive Only / Not for Sale
+                      </option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
               {/* Geographic Location & Coordinates */}
-              <div className="space-y-4 bg-surface border border-surface-border p-6 rounded-sm">
+              <div
+                ref={locationSectionRef}
+                tabIndex={-1}
+                className="space-y-4 upload-card p-6 rounded-sm focus:outline-none"
+              >
                 <div className="flex items-center justify-between border-b border-surface-border pb-2.5">
-                  <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
+                  <div className="flex items-center space-x-2 text-xs font-semibold text-foreground uppercase tracking-wider">
                     <MapPin className="w-3.5 h-3.5 text-accent" />
-                    <span>Geographic Location & Coordinates</span>
+                    <span>Step 6 &mdash; Geographic Location &amp; Coordinates</span>
                   </div>
-                  {latitude !== null && longitude !== null ? (
-                    <span className="text-xs font-mono text-accent font-medium">
-                      {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                  <div className="flex items-center gap-2">
+                    {latitude !== null && longitude !== null ? (
+                      <span className="text-xs font-mono text-accent font-medium">
+                        {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">
+                        No coordinates set
+                      </span>
+                    )}
+                    <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
+                      Optional
                     </span>
-                  ) : (
-                    <span className="text-xs text-muted">
-                      No coordinates set
-                    </span>
-                  )}
+                  </div>
                 </div>
 
                 <p className="text-xs text-muted leading-relaxed">
-                  Enter coordinates manually, paste from Google Maps or GPS, or click anywhere on the dark map to position or refine the pin.
+                  Enter coordinates manually, paste from Google Maps or GPS, or click anywhere on the map to position or refine the pin.
                 </p>
 
                 {/* Unified Coordinates Input */}
                 <div className="space-y-1.5">
-                  <label className="block text-[11px] font-medium text-muted uppercase tracking-wider">
+                  <label
+                    htmlFor="upload-coordinates"
+                    className="block text-[11px] font-semibold text-muted uppercase tracking-wider"
+                  >
                     Coordinates (e.g. 35.799292, -82.954774 or 35°47&apos;57&quot;N 82°57&apos;17&quot;W)
                   </label>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <Compass className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
+                        id="upload-coordinates"
+                        name="coordinates"
                         type="text"
                         value={coordInput}
                         onChange={(e) => handleCoordInputChange(e.target.value)}
@@ -2086,13 +2497,14 @@ export default function AdminUploadPage() {
                           }
                         }}
                         placeholder="Enter or paste coordinates (lat, lon, DMS, or Google Maps URL)..."
-                        className="w-full pl-9 pr-3 py-2 bg-surface border border-surface-border rounded text-xs font-mono text-foreground placeholder-muted focus:outline-none focus:border-accent"
+                        data-needs-attention={!coordInput.trim() && latitude === null}
+                        className="upload-field-input w-full pl-9 pr-3 py-2 rounded text-xs font-mono text-foreground placeholder-muted"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleApplyCoordinates}
-                      className="px-3.5 py-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent text-foreground text-xs rounded font-medium transition-colors flex-shrink-0 cursor-pointer"
+                      className="px-3.5 py-2 bg-surface hover:bg-surface-hover border border-muted/50 hover:border-accent text-foreground text-xs rounded font-medium transition-colors flex-shrink-0 cursor-pointer"
                     >
                       Apply
                     </button>
@@ -2157,22 +2569,53 @@ export default function AdminUploadPage() {
               </div>
 
               {submitError && (
-                <div className="p-4 bg-red-950/40 border border-red-800 rounded text-red-300 text-xs">
-                  {submitError}
+                <div
+                  role="alert"
+                  className="p-4 bg-red-950/40 border border-red-800 rounded text-red-300 text-xs flex items-center gap-2"
+                >
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-red-400" />
+                  <span>{submitError}</span>
                 </div>
               )}
 
-              {/* Submit Button */}
-              <div className="pt-2">
+              {/* Submit Button & Live Readiness Summary */}
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedFile}
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    if (!selectedFile) {
+                      e.preventDefault();
+                      setSubmitError("Please choose a photograph to upload first.");
+                      jumpToField(dropzoneRef);
+                    }
+                  }}
                   className="w-full sm:w-auto px-8 py-3.5 bg-accent text-accent-contrast font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer"
                 >
                   {isSubmitting
                     ? "Publishing Photograph & Writing Records..."
                     : "Publish Photograph"}
                 </button>
+                {(() => {
+                  const remaining = [
+                    !selectedFile && "Photo File",
+                    !title.trim() && "Title",
+                    !photoID.trim() && "Photo ID",
+                  ].filter(Boolean) as string[];
+                  return remaining.length > 0 ? (
+                    <span className="text-xs text-muted">
+                      Still needed:{" "}
+                      <span className="text-foreground font-medium">
+                        {remaining.join(", ")}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-emerald-500 font-medium inline-flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      All required fields complete
+                    </span>
+                  );
+                })()}
               </div>
             </form>
           )}

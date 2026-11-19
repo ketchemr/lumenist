@@ -72,12 +72,82 @@ html.light textarea,
 html.light select {
   background-color: #ffffff;
   color: #0f172a;
-  border-color: var(--surface-border, #cbd5e1);
+  border-color: #64748b;
 }
 
 html.light input::placeholder,
 html.light textarea::placeholder {
-  color: #94a3b8;
+  color: #64748b;
+}
+
+/* High-contrast admin upload form inputs & cards (dark and light mode) */
+.upload-card {
+  background-color: var(--surface, #111111);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+html.light .upload-card {
+  background-color: var(--surface, #ffffff);
+  border: 1px solid #94a3b8;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.upload-field-input {
+  background-color: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.upload-field-input:hover:not(:focus) {
+  border-color: rgba(255, 255, 255, 0.48);
+}
+
+.upload-field-input:focus-visible {
+  outline: 2px solid transparent;
+  border-color: var(--accent, #f59e0b);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb, 245 158 11) / 0.3);
+}
+
+.upload-field-input[data-needs-attention="true"] {
+  border-left-width: 4px;
+  border-left-color: var(--accent, #f59e0b);
+}
+
+.upload-field-input:user-invalid {
+  border-color: #ef4444;
+  border-left-width: 4px;
+  border-left-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.22);
+}
+
+html.light .upload-field-input {
+  background-color: #ffffff;
+  border: 1.5px solid #475569;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.07);
+}
+
+html.light .upload-field-input:hover:not(:focus) {
+  border-color: #1e293b;
+}
+
+html.light .upload-field-input:focus-visible {
+  outline: 2px solid transparent;
+  border-color: var(--accent, #f59e0b);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb, 245 158 11) / 0.25);
+}
+
+html.light .upload-field-input[data-needs-attention="true"] {
+  border-left-width: 4px;
+  border-left-color: var(--accent, #f59e0b);
+  background-color: #fffbeb;
+}
+
+html.light .upload-field-input:user-invalid {
+  border-color: #dc2626;
+  border-left-width: 4px;
+  border-left-color: #dc2626;
+  background-color: #fef2f2;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.18);
 }
 
 /* Scrollbars in light mode */
