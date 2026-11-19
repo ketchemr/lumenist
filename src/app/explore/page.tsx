@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getAllPhotos, getAllCategories } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
+import { getShare } from "@/lib/shares";
 import { ExploreGallery } from "@/components/ExploreGallery";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function ExplorePage() {
+interface ExplorePageProps {
+  searchParams?: Promise<{
+    s?: string;
+  }>;
+}
+
+export default async function ExplorePage({ searchParams }: ExplorePageProps) {
+  const params = (await searchParams) || {};
+  const initialSharedState = params.s ? getShare(params.s) : null;
   const photos = getAllPhotos();
   const categories = getAllCategories();
   const settings = getSettings();
@@ -54,6 +63,7 @@ export default function ExplorePage() {
           categories={categories}
           showWatermark={settings.showWatermarkOverlay ?? false}
           copyrightNotice={copyrightNotice}
+          initialSharedState={initialSharedState}
         />
       </Suspense>
     </div>

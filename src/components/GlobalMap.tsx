@@ -17,17 +17,33 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+export type LayerMode = "dark" | "topo" | "satellite";
+
+export interface MapViewportState {
+  lat: number;
+  lng: number;
+  zoom: number;
+  layer: LayerMode;
+}
+
 interface GlobalMapProps {
   photos: Photo[];
   categories?: string[];
   showCategoryFilter?: boolean;
   className?: string;
   heightClassName?: string;
-  onFilterToCluster?: (photos: Photo[]) => void;
+  onFilterToCluster?: (photos: Photo[], clusterKey?: string) => void;
   filterByMapBounds?: boolean;
   onToggleFilterByMapBounds?: (enabled: boolean) => void;
   onVisiblePhotosChange?: (visiblePhotos: Photo[], zoom: number) => void;
   onLassoSelect?: (selectedPhotos: Photo[] | null) => void;
+  initialViewport?: { lat: number; lng: number; zoom: number } | null;
+  initialLayer?: LayerMode;
+  initialLassoVertices?: [number, number][] | null;
+  initialSelectedSiteKey?: string | null;
+  lassoClearSignal?: number;
+  onMapStateChange?: (state: MapViewportState) => void;
+  onLassoVerticesChange?: (vertices: [number, number][] | null) => void;
 }
 
 interface LocationCluster {
@@ -36,8 +52,6 @@ interface LocationCluster {
   longitude: number;
   photos: Photo[];
 }
-
-type LayerMode = "dark" | "topo" | "satellite";
 
 const LAYER_CONFIGS: Record<
   LayerMode,
@@ -110,6 +124,13 @@ export function GlobalMap({
   onToggleFilterByMapBounds,
   onVisiblePhotosChange,
   onLassoSelect,
+  initialViewport = null,
+  initialLayer = "dark",
+  initialLassoVertices = null,
+  initialSelectedSiteKey = null,
+  lassoClearSignal = 0,
+  onMapStateChange,
+  onLassoVerticesChange,
 }: GlobalMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -123,12 +144,20 @@ export function GlobalMap({
   const currentLassoPointsRef = useRef<any[]>([]);
   const currentPolygonLayerRef = useRef<any>(null);
   const onLassoSelectRef = useRef(onLassoSelect);
+  const onMapStateChangeRef = useRef(onMapStateChange);
+  const onLassoVerticesChangeRef = useRef(onLassoVerticesChange);
+  const initialViewportRef = useRef(initialViewport);
+  const initialLassoVerticesRef = useRef(initialLassoVertices);
+  const initialSelectedSiteKeyRef = useRef(initialSelectedSiteKey);
+  const prevClusterSignatureRef = useRef<string | null>(null);
+  const lastLassoClearSignalRef = useRef<number>(lassoClearSignal);
 
-  const [activeLayer, setActiveLayer] = useState<LayerMode>("dark");
+  const [activeLayer, setActiveLayer] = useState<LayerMode>(initialLayer);
+  const activeLayerRef = useRef<LayerMode>(initialLayer);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedCluster, setSelectedCluster] = useState<LocationCluster | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0);
-  const [mapZoom, setMapZoom] = useState<number>(4);
+  const [mapZoom, setMapZoom] = useState<number>(initialViewport?.zoom ?? 4);
   const [visiblePhotosInView, setVisiblePhotosInView] = useState<Photo[]>(() =>
     photos.filter((p) => p.location?.latitude && p.location?.longitude)
   );
@@ -140,6 +169,18 @@ export function GlobalMap({
   useEffect(() => {
     onLassoSelectRef.current = onLassoSelect;
   }, [onLassoSelect]);
+
+  useEffect(() => {
+    onMapStateChangeRef.current = onMapStateChange;
+  }, [onMapStateChange]);
+
+  useEffect(() => {
+    onLassoVerticesChangeRef.current = onLassoVerticesChange;
+  }, [onLassoVerticesChange]);
+
+  useEffect(() => {
+    activeLayerRef.current = activeLayer;
+  }, [activeLayer]);
 
   useEffect(() => {
     isLassoActiveRef.current = isLassoActive;
@@ -184,6 +225,7 @@ export function GlobalMap({
     (currentMap: any, photoList: Photo[]) => {
       if (!currentMap) return [];
       const bounds = currentMap.getBounds();
+      const center = currentMap.getCenter();
       const zoom = currentMap.getZoom();
       setMapZoom(zoom);
       const visible = photoList.filter((p) => {
@@ -192,6 +234,12 @@ export function GlobalMap({
       });
       setVisiblePhotosInView(visible);
       onVisiblePhotosChangeRef.current?.(visible, zoom);
+      onMapStateChangeRef.current?.({
+        lat: center.lat,
+        lng: center.lng,
+        zoom,
+        layer: activeLayerRef.current,
+      });
       return visible;
     },
     []
@@ -208,6 +256,7 @@ export function GlobalMap({
     setHasLassoShape(false);
     setLassoCount(0);
     onLassoSelectRef.current?.(null);
+    onLassoVerticesChangeRef.current?.(null);
 
     if (mapInstanceRef.current) {
       const map = mapInstanceRef.current;
@@ -220,6 +269,13 @@ export function GlobalMap({
     }
     setIsLassoActive(false);
   }, []);
+
+  useEffect(() => {
+    if (lassoClearSignal !== lastLassoClearSignalRef.current) {
+      lastLassoClearSignalRef.current = lassoClearSignal;
+      clearLasso();
+    }
+  }, [lassoClearSignal, clearLasso]);
 
   const toggleLassoMode = () => {
     if (isLassoActive) {
@@ -286,10 +342,11 @@ export function GlobalMap({
 
       leafletLibRef.current = L;
 
-      // Centered on North America by default
+      // Centered on shared viewport if provided, otherwise North America
+      const initView = initialViewportRef.current;
       const map = L.map(mapContainerRef.current, {
-        center: [39.8283, -98.5795],
-        zoom: 4,
+        center: initView ? [initView.lat, initView.lng] : [39.8283, -98.5795],
+        zoom: initView ? initView.zoom : 4,
         zoomControl: true,
         scrollWheelZoom: false, // Prevent wheel zoom hijacking vertical page scrolling
         maxZoom: 18,
@@ -424,6 +481,7 @@ export function GlobalMap({
           setHasLassoShape(true);
           setLassoCount(selected.length);
           onLassoSelectRef.current?.(selected);
+          onLassoVerticesChangeRef.current?.(vertices);
         } else {
           if (lassoLayerRef.current) {
             lassoLayerRef.current.clearLayers();
@@ -431,6 +489,7 @@ export function GlobalMap({
           activeLassoVerticesRef.current = null;
           setHasLassoShape(false);
           setLassoCount(0);
+          onLassoVerticesChangeRef.current?.(null);
         }
 
         setIsLassoActive(false);
@@ -468,7 +527,46 @@ export function GlobalMap({
 
       map.on("moveend", handleMoveEnd);
 
-      renderClusterMarkers(L, map, layerGroup, clusters);
+      const initialClusterSig = clusters.map((c) => c.key).join("|");
+      prevClusterSignatureRef.current = initialClusterSig;
+      renderClusterMarkers(L, map, layerGroup, clusters, !initView);
+
+      // Restore shared lasso polygon if provided
+      const initLasso = initialLassoVerticesRef.current;
+      if (initLasso && initLasso.length >= 3) {
+        activeLassoVerticesRef.current = initLasso;
+        const poly = L.polygon(initLasso, {
+          color: "#f59e0b",
+          weight: 2,
+          opacity: 0.95,
+          fillColor: "#f59e0b",
+          fillOpacity: 0.2,
+        }).addTo(lassoLayer);
+        currentPolygonLayerRef.current = poly;
+
+        const selected = geotaggedPhotosRef.current.filter((p) => {
+          if (!p.location?.latitude || !p.location?.longitude) return false;
+          return isPointInPolygon(
+            [p.location.latitude, p.location.longitude],
+            initLasso
+          );
+        });
+        setHasLassoShape(true);
+        setLassoCount(selected.length);
+        onLassoSelectRef.current?.(selected);
+        onLassoVerticesChangeRef.current?.(initLasso);
+      }
+
+      // Restore shared selected site cluster card if provided
+      const initSiteKey = initialSelectedSiteKeyRef.current;
+      if (initSiteKey) {
+        const matched = clusters.find((c) => c.key === initSiteKey);
+        if (matched) {
+          setSelectedCluster(matched);
+          setActivePhotoIndex(0);
+        }
+      }
+
       computeVisiblePhotos(map, geotaggedPhotosRef.current);
 
       let resizeObserver: ResizeObserver | null = null;
@@ -522,6 +620,7 @@ export function GlobalMap({
 
   const switchLayer = (newMode: LayerMode) => {
     setActiveLayer(newMode);
+    activeLayerRef.current = newMode;
     if (!mapInstanceRef.current || !leafletLibRef.current) return;
 
     const L = leafletLibRef.current;
@@ -535,13 +634,22 @@ export function GlobalMap({
     const newLayer = L.tileLayer(config.url, config.options).addTo(map);
     newLayer.bringToBack();
     tileLayerRef.current = newLayer;
+
+    const center = map.getCenter();
+    onMapStateChangeRef.current?.({
+      lat: center.lat,
+      lng: center.lng,
+      zoom: map.getZoom(),
+      layer: newMode,
+    });
   };
 
   const renderClusterMarkers = (
     L: any,
     map: any,
     layerGroup: any,
-    clusterList: LocationCluster[]
+    clusterList: LocationCluster[],
+    autoFit = true
   ) => {
     layerGroup.clearLayers();
     if (clusterList.length === 0) return;
@@ -674,10 +782,12 @@ export function GlobalMap({
       layerGroup.addLayer(marker);
     });
 
-    if (clusterList.length === 1) {
-      map.setView([clusterList[0].latitude, clusterList[0].longitude], 11);
-    } else if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    if (autoFit) {
+      if (clusterList.length === 1) {
+        map.setView([clusterList[0].latitude, clusterList[0].longitude], 11);
+      } else if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+      }
     }
   };
 
@@ -687,7 +797,13 @@ export function GlobalMap({
     const map = mapInstanceRef.current;
     const layerGroup = markersLayerRef.current;
     if (L && map && layerGroup) {
-      renderClusterMarkers(L, map, layerGroup, clusters);
+      const nextSig = clusters.map((c) => c.key).join("|");
+      const didClustersChange =
+        prevClusterSignatureRef.current !== null &&
+        prevClusterSignatureRef.current !== nextSig;
+      prevClusterSignatureRef.current = nextSig;
+
+      renderClusterMarkers(L, map, layerGroup, clusters, didClustersChange);
       computeVisiblePhotos(map, geotaggedPhotos);
     }
   }, [clusters, computeVisiblePhotos, geotaggedPhotos]);
@@ -1052,7 +1168,12 @@ export function GlobalMap({
                         {onFilterToCluster && (
                           <button
                             type="button"
-                            onClick={() => onFilterToCluster(selectedCluster.photos)}
+                            onClick={() =>
+                              onFilterToCluster(
+                                selectedCluster.photos,
+                                selectedCluster.key
+                              )
+                            }
                             className="inline-flex items-center space-x-1 text-xs text-muted hover:text-accent font-medium cursor-pointer transition-colors"
                           >
                             <span>

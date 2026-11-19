@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Photo } from "@/types/photo";
 import { JustifiedGallery } from "@/components/JustifiedGallery";
 import { ExhibitionGallery } from "@/components/ExhibitionGallery";
 import { Pagination } from "@/components/Pagination";
+import { ShareButton } from "@/components/ShareButton";
+import type { LayerMode, MapViewportState } from "@/components/GlobalMap";
+import {
+  parseExploreParams,
+  buildExploreShareUrl,
+  type ExploreShareState,
+  type MapViewport,
+} from "@/lib/exploreUrl";
 import { sortPhotos } from "@/lib/photoSort";
 import {
   Search,
@@ -41,23 +49,7 @@ interface ExploreGalleryProps {
   categories: { name: string; count: number }[];
   showWatermark?: boolean;
   copyrightNotice?: string;
-}
-
-function parseTagsFromParams(params: URLSearchParams): string[] {
-  const raw = params.getAll("tag");
-  const tags: string[] = [];
-  for (const item of raw) {
-    for (const piece of item.split(",")) {
-      const trimmed = piece.trim();
-      if (
-        trimmed &&
-        !tags.some((t) => t.toLowerCase() === trimmed.toLowerCase())
-      ) {
-        tags.push(trimmed);
-      }
-    }
-  }
-  return tags;
+  initialSharedState?: ExploreShareState | null;
 }
 
 export function ExploreGallery({
@@ -65,48 +57,89 @@ export function ExploreGallery({
   categories,
   showWatermark = false,
   copyrightNotice = "© Randal R. Ketchem",
+  initialSharedState = null,
 }: ExploreGalleryProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const urlQuery = searchParams.get("q") || "";
-  const urlCategory = searchParams.get("category") || "All";
-
-  const [selectedTags, setSelectedTags] = useState<string[]>(() =>
-    parseTagsFromParams(searchParams)
+  const initialParsedRef = useRef(
+    initialSharedState
+      ? {
+          searchQuery: initialSharedState.searchQuery,
+          selectedCategory: initialSharedState.selectedCategory,
+          selectedTags: initialSharedState.selectedTags,
+          filmFilter: initialSharedState.filmFilter,
+          photoSort: initialSharedState.photoSort,
+          viewMode: initialSharedState.viewMode,
+          currentPage: initialSharedState.currentPage,
+          showMap: initialSharedState.showMap,
+          filterByMapBounds: initialSharedState.filterByMapBounds,
+          mapLayer: initialSharedState.mapLayer,
+          mapViewport: initialSharedState.mapViewport,
+          lassoVertices: initialSharedState.lassoVertices,
+          selectedSiteKey: initialSharedState.selectedSiteKey,
+        }
+      : parseExploreParams(searchParams)
   );
-  const [searchQuery, setSearchQuery] = useState(urlQuery);
-  const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory);
-  const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">("All");
+  const init = initialParsedRef.current;
+
+  const [selectedTags, setSelectedTags] = useState<string[]>(init.selectedTags);
+  const [searchQuery, setSearchQuery] = useState(init.searchQuery);
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    init.selectedCategory
+  );
+  const [filmFilter, setFilmFilter] = useState<"All" | "Film" | "Digital">(
+    init.filmFilter
+  );
   const [tagSort, setTagSort] = useState<"alpha" | "count">("alpha");
   const [tagSearch, setTagSearch] = useState("");
   const [showTagCloud, setShowTagCloud] = useState(true);
   const [showAllTags, setShowAllTags] = useState(true);
-  const [showMap, setShowMap] = useState(true);
-  const [locationClusterPhotos, setLocationClusterPhotos] = useState<Photo[] | null>(null);
+  const [showMap, setShowMap] = useState(init.showMap);
+  const [selectedSiteKey, setSelectedSiteKey] = useState<string | null>(
+    init.selectedSiteKey
+  );
   const [lassoedPhotos, setLassoedPhotos] = useState<Photo[] | null>(null);
-  const [filterByMapBounds, setFilterByMapBounds] = useState(true);
+  const [lassoVertices, setLassoVertices] = useState<[number, number][] | null>(
+    init.lassoVertices
+  );
+  const [lassoClearSignal, setLassoClearSignal] = useState(0);
+  const [filterByMapBounds, setFilterByMapBounds] = useState(
+    init.filterByMapBounds
+  );
   const [mapVisiblePhotos, setMapVisiblePhotos] = useState<Photo[] | null>(null);
-  const [mapZoom, setMapZoom] = useState<number>(4);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<"large" | "compact">("large");
-  const [photoSort, setPhotoSort] = useState<string>("date-desc");
+  const [mapZoom, setMapZoom] = useState<number>(init.mapViewport?.zoom ?? 4);
+  const [mapLayer, setMapLayer] = useState<LayerMode>(init.mapLayer);
+  const [mapViewport, setMapViewport] = useState<MapViewport | null>(
+    init.mapViewport
+  );
+  const [currentPage, setCurrentPage] = useState(init.currentPage);
+  const [viewMode, setViewMode] = useState<"large" | "compact">(
+    init.viewMode ?? "large"
+  );
+  const [photoSort, setPhotoSort] = useState<string>(
+    init.photoSort ?? "date-desc"
+  );
   const pageSize = 48;
 
-  // Load persistent user preference from localStorage
+  // Load persistent user preference from localStorage (URL params take precedence)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("lumenist_gallery_view");
-      if (saved === "compact" || saved === "large") {
-        setViewMode(saved);
+      if (!init.viewMode) {
+        const saved = localStorage.getItem("lumenist_gallery_view");
+        if (saved === "compact" || saved === "large") {
+          setViewMode(saved);
+        }
       }
-      const savedSort = localStorage.getItem("lumenist_preferred_sort");
-      if (savedSort) {
-        setPhotoSort(savedSort);
+      if (!init.photoSort) {
+        const savedSort = localStorage.getItem("lumenist_preferred_sort");
+        if (savedSort) {
+          setPhotoSort(savedSort);
+        }
       }
     } catch {}
-  }, []);
+  }, [init.viewMode, init.photoSort]);
 
   const handleViewChange = (mode: "large" | "compact") => {
     setViewMode(mode);
@@ -123,35 +156,98 @@ export function ExploreGallery({
     } catch {}
   };
 
-  // Sync state when URL params change (e.g. from clicking photo tags or browser back/forward)
+  // Sync state when URL params change after mount (e.g. clicking photo tags or browser back/forward)
+  const prevSearchStringRef = useRef(searchParams.toString());
   useEffect(() => {
-    const tags = parseTagsFromParams(searchParams);
-    const currentQ = searchParams.get("q") || "";
-    const currentCat = searchParams.get("category") || "All";
+    const nextSearchString = searchParams.toString();
+    if (nextSearchString === prevSearchStringRef.current) return;
+    prevSearchStringRef.current = nextSearchString;
 
-    setSelectedTags(tags);
-    if (tags.length > 0) {
+    const parsed = parseExploreParams(searchParams);
+    setSelectedTags(parsed.selectedTags);
+    if (parsed.selectedTags.length > 0) {
       setShowTagCloud(true);
     }
-    setSearchQuery(currentQ);
-    setSelectedCategory(currentCat);
-    setCurrentPage(1);
+    setSearchQuery(parsed.searchQuery);
+    setSelectedCategory(parsed.selectedCategory);
+    setFilmFilter(parsed.filmFilter);
+    setCurrentPage(parsed.currentPage);
   }, [searchParams]);
 
   const updateUrlParams = useCallback(
-    (tags: string[], q: string, cat: string) => {
+    (
+      tags: string[],
+      q: string,
+      cat: string,
+      medium: "All" | "Film" | "Digital" = filmFilter
+    ) => {
       const params = new URLSearchParams();
       if (tags.length > 0) {
         params.set("tag", tags.join(","));
       }
       if (q.trim()) params.set("q", q.trim());
       if (cat && cat !== "All") params.set("category", cat);
+      if (medium !== "All") params.set("medium", medium.toLowerCase());
 
       const qs = params.toString();
+      prevSearchStringRef.current = qs;
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [pathname, router]
+    [pathname, router, filmFilter]
   );
+
+  const getShareUrl = useCallback(async () => {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const state: ExploreShareState = {
+      searchQuery,
+      selectedCategory,
+      selectedTags,
+      filmFilter,
+      photoSort,
+      viewMode,
+      currentPage,
+      showMap,
+      filterByMapBounds,
+      mapLayer,
+      mapViewport,
+      lassoVertices,
+      selectedSiteKey,
+    };
+
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { id?: string };
+        if (data.id) {
+          return `${origin.replace(/\/+$/, "")}${pathname}?s=${encodeURIComponent(data.id)}`;
+        }
+      }
+    } catch {
+      // Fall back to direct query-param URL if the share API is unavailable
+    }
+
+    return buildExploreShareUrl(origin, pathname, state);
+  }, [
+    pathname,
+    searchQuery,
+    selectedCategory,
+    selectedTags,
+    filmFilter,
+    photoSort,
+    viewMode,
+    currentPage,
+    showMap,
+    filterByMapBounds,
+    mapLayer,
+    mapViewport,
+    lassoVertices,
+    selectedSiteKey,
+  ]);
 
   // Compute tag frequencies across all photos, focusing on meaningful keywords
   const allKeywords = useMemo(() => {
@@ -263,6 +359,18 @@ export function ExploreGallery({
     ).length;
   }, [filteredPhotos]);
 
+  const locationClusterPhotos = useMemo(() => {
+    if (!selectedSiteKey) return null;
+    const matched = filteredPhotos.filter(
+      (p) =>
+        p.location?.latitude &&
+        p.location?.longitude &&
+        `${p.location.latitude.toFixed(4)},${p.location.longitude.toFixed(4)}` ===
+          selectedSiteKey
+    );
+    return matched.length > 0 ? matched : null;
+  }, [selectedSiteKey, filteredPhotos]);
+
   const photosForGallery = useMemo(() => {
     if (locationClusterPhotos) {
       return locationClusterPhotos;
@@ -295,14 +403,14 @@ export function ExploreGallery({
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setCurrentPage(1);
     updateUrlParams(selectedTags, val, selectedCategory);
   };
 
   const handleCategoryChange = (val: string) => {
     setSelectedCategory(val);
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setCurrentPage(1);
     updateUrlParams(selectedTags, searchQuery, val);
   };
@@ -316,7 +424,7 @@ export function ExploreGallery({
       : [...selectedTags, tag];
 
     setSelectedTags(nextTags);
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setCurrentPage(1);
     updateUrlParams(nextTags, searchQuery, selectedCategory);
   };
@@ -326,22 +434,29 @@ export function ExploreGallery({
       (t) => t.toLowerCase() !== tag.toLowerCase()
     );
     setSelectedTags(nextTags);
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setCurrentPage(1);
     updateUrlParams(nextTags, searchQuery, selectedCategory);
   };
 
   const handleClearAllTags = () => {
     setSelectedTags([]);
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setCurrentPage(1);
     updateUrlParams([], searchQuery, selectedCategory);
   };
 
   const handleFilmChange = (val: "All" | "Film" | "Digital") => {
     setFilmFilter(val);
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setCurrentPage(1);
+    updateUrlParams(selectedTags, searchQuery, selectedCategory, val);
+  };
+
+  const handleClearLasso = () => {
+    setLassoedPhotos(null);
+    setLassoVertices(null);
+    setLassoClearSignal((n) => n + 1);
   };
 
   const clearAllFilters = () => {
@@ -349,10 +464,13 @@ export function ExploreGallery({
     setSelectedCategory("All");
     setSelectedTags([]);
     setFilmFilter("All");
-    setLocationClusterPhotos(null);
+    setSelectedSiteKey(null);
     setLassoedPhotos(null);
+    setLassoVertices(null);
+    setLassoClearSignal((n) => n + 1);
     setFilterByMapBounds(true);
     setCurrentPage(1);
+    prevSearchStringRef.current = "";
     router.replace(pathname, { scroll: false });
   };
 
@@ -386,7 +504,7 @@ export function ExploreGallery({
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Tag Cloud Toggle */}
             <button
               type="button"
@@ -463,6 +581,14 @@ export function ExploreGallery({
                 <span>Film</span>
               </button>
             </div>
+
+            {/* Share Current Explore State */}
+            <ShareButton
+              getUrl={getShareUrl}
+              title="Explore Archive"
+              tooltip="Copy a link to this exact search, tags, filters, and map view"
+              variant="button"
+            />
           </div>
         </div>
 
@@ -723,6 +849,11 @@ export function ExploreGallery({
             showCategoryFilter={false}
             heightClassName="h-[360px] sm:h-[440px]"
             filterByMapBounds={filterByMapBounds}
+            initialViewport={init.mapViewport}
+            initialLayer={init.mapLayer}
+            initialLassoVertices={init.lassoVertices}
+            initialSelectedSiteKey={init.selectedSiteKey}
+            lassoClearSignal={lassoClearSignal}
             onToggleFilterByMapBounds={(enabled) => {
               setFilterByMapBounds(enabled);
               setCurrentPage(1);
@@ -731,12 +862,23 @@ export function ExploreGallery({
               setMapVisiblePhotos(visible);
               setMapZoom(zoom);
             }}
+            onMapStateChange={(state: MapViewportState) => {
+              setMapViewport({
+                lat: state.lat,
+                lng: state.lng,
+                zoom: state.zoom,
+              });
+              setMapLayer(state.layer);
+            }}
             onLassoSelect={(photos) => {
               setLassoedPhotos(photos);
               setCurrentPage(1);
             }}
-            onFilterToCluster={(clusterPhotos) => {
-              setLocationClusterPhotos(clusterPhotos);
+            onLassoVerticesChange={(vertices) => {
+              setLassoVertices(vertices);
+            }}
+            onFilterToCluster={(_clusterPhotos, clusterKey) => {
+              setSelectedSiteKey(clusterKey || null);
               setCurrentPage(1);
               const el = document.getElementById("gallery-results");
               if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -785,7 +927,7 @@ export function ExploreGallery({
               <span>Map Site ({locationClusterPhotos.length})</span>
               <button
                 type="button"
-                onClick={() => setLocationClusterPhotos(null)}
+                onClick={() => setSelectedSiteKey(null)}
                 className="hover:text-foreground cursor-pointer ml-0.5"
                 title="Clear site location filter"
               >
@@ -799,7 +941,7 @@ export function ExploreGallery({
               <span>Drawn Area ({photosForGallery.length})</span>
               <button
                 type="button"
-                onClick={() => setLassoedPhotos(null)}
+                onClick={handleClearLasso}
                 className="hover:text-foreground cursor-pointer ml-0.5"
                 title="Clear drawn lasso filter"
               >
@@ -955,7 +1097,7 @@ export function ExploreGallery({
           <div className="flex items-center justify-center gap-3 pt-1">
             {lassoedPhotos !== null && (
               <button
-                onClick={() => setLassoedPhotos(null)}
+                onClick={handleClearLasso}
                 className="text-accent text-xs underline cursor-pointer"
               >
                 Clear drawn area

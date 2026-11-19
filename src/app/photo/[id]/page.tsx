@@ -9,6 +9,7 @@ import { PhotoBreadcrumbs } from "@/components/PhotoBreadcrumbs";
 import { BackButton } from "@/components/BackButton";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { AdminPhotoControls } from "@/components/AdminPhotoControls";
+import { ShareButton } from "@/components/ShareButton";
 import { ChevronLeft, ChevronRight, Tag, Folder } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -164,7 +165,17 @@ export default async function PhotoPage({
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <ShareButton
+            path={`/photo/${photo.photoID}`}
+            title={photo.title}
+            text={photo.description || undefined}
+            variant="ghost"
+            tooltip="Copy link to this photograph"
+          />
+
+          <span className="text-surface-border">|</span>
+
           {prev ? (
             <Link
               href={`/photo/${prev.photoID}${from ? `?from=${encodeURIComponent(from)}` : ""}`}
