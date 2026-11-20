@@ -229,7 +229,20 @@ Organize your photo files by year or category (e.g. `public/photos/2026/my_photo
 
 ### Step 5: Ingest Existing Photo Catalog & Metadata
 
-If you have existing images or companion `.txt` metadata files (Piwigo/IPTC format):
+If you have existing images with companion `.txt` metadata files, place each `.txt` file alongside its matching JPEG in a subfolder under `public/photos/` using the same base filename (e.g. `public/photos/2026/autumn_trail.jpg` and `public/photos/2026/autumn_trail.txt`).
+
+Because dimensions, capture date/time, camera, lens, exposure settings, and GPS coordinates are automatically extracted from the JPEG's EXIF/XMP headers, a **minimal companion `.txt` file** only needs your curated fields (`key:value`, one per line; lines starting with `#` are ignored):
+
+```txt
+title:Autumn Forest Trail
+description:Morning mist drifting through maples along the ridge trail.
+albums:Fall Color, Landscapes
+tags:autumn, forest, mist, trail
+```
+
+> **Optional fields:** `albums` (or `category`) and `tags` (or `keyword`) are comma-separated. For scanned film or non-geotagged photos without EXIF, you can also include fields such as `location:44.3386,-68.2733`, `year:2026`, `month:10`, `day:15`, `film:Fuji Velvia 50`, `camera:Hasselblad 500C/M`, `tripod:Gitzo Systematic`, or `availability:Available for Order`.
+
+Run the importer to build your unified catalog in `data/photos.json`:
 
 ```bash
 npm run import:all
