@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSettings, saveSettings, SiteSettings } from "@/lib/settings";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 
@@ -18,6 +19,12 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const updated = saveSettings(body as Partial<SiteSettings>);
+
+    try {
+      revalidatePath("/", "layout");
+    } catch (e) {
+      console.warn("Settings revalidation warning:", e);
+    }
 
     return NextResponse.json({ success: true, settings: updated });
   } catch (err: any) {
