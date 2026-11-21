@@ -9,33 +9,125 @@ if (!fs.existsSync(THUMB_CACHE_DIR)) {
   fs.mkdirSync(THUMB_CACHE_DIR, { recursive: true });
 }
 
+const ALLOWED_IMAGE_EXTS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".avif",
+  ".gif",
+  ".tif",
+  ".tiff",
+]);
+
+const ALLOWED_WIDTHS = [150, 300, 400, 600, 800, 1200, 1600];
+
+function snapToAllowedWidth(rawWidth: number): number {
+  const clamped = Math.min(1600, Math.max(100, rawWidth || 600));
+  let best = ALLOWED_WIDTHS[0];
+  let bestDiff = Math.abs(clamped - best);
+  for (const w of ALLOWED_WIDTHS) {
+    const diff = Math.abs(clamped - w);
+    if (diff < bestDiff) {
+      best = w;
+      bestDiff = diff;
+    }
+  }
+  return best;
+}
+
+function getAllowedImageRoots(): string[] {
+  const rawRoots = [
+    path.join(process.cwd(), "public", "photos"),
+    process.env.PHOTOS_DIR,
+    process.env.LOCAL_PHOTO_DIR,
+    process.env.PHOTOS_SOURCE_DIR,
+  ].filter((d): d is string => Boolean(d));
+
+  const resolved: string[] = [];
+  for (const root of rawRoots) {
+    try {
+      if (fs.existsSync(root)) {
+        resolved.push(fs.realpathSync(root));
+      }
+    } catch {
+      resolved.push(path.resolve(root));
+    }
+  }
+  return Array.from(new Set(resolved));
+}
+
+function resolveSafeImagePath(rawSrc: string): { fullPath: string; cleanSrc: string } | null {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawSrc);
+  } catch {
+    return null;
+  }
+
+  // Strip query string and leading slashes; reject null bytes, backslashes, or traversal segments
+  const cleanSrc = decoded.split("?")[0].replace(/^\/+/, "");
+  if (!cleanSrc || cleanSrc.includes("\0") || cleanSrc.includes("\\")) {
+    return null;
+  }
+
+  const segments = cleanSrc.split("/").filter(Boolean);
+  if (segments.length === 0 || segments.some((s) => s === "." || s === "..")) {
+    return null;
+  }
+
+  // Only allow image files to prevent file-existence oracle on non-image files
+  const ext = path.extname(segments[segments.length - 1]).toLowerCase();
+  if (!ALLOWED_IMAGE_EXTS.has(ext)) {
+    return null;
+  }
+
+  const allowedRoots = getAllowedImageRoots();
+  if (allowedRoots.length === 0) return null;
+
+  // Strip optional leading "photos/" prefix when checking against photos roots
+  const subSegments = segments[0] === "photos" ? segments.slice(1) : segments;
+  if (subSegments.length === 0) return null;
+  const subPath = path.join(...subSegments);
+
+  for (const root of allowedRoots) {
+    const candidate = path.resolve(root, subPath);
+    if (!candidate.startsWith(root + path.sep)) {
+      continue;
+    }
+    try {
+      if (fs.existsSync(candidate)) {
+        const realCandidate = fs.realpathSync(candidate);
+        if (
+          realCandidate.startsWith(root + path.sep) &&
+          fs.statSync(realCandidate).isFile()
+        ) {
+          return { fullPath: realCandidate, cleanSrc: `photos/${subSegments.join("/")}` };
+        }
+      }
+    } catch {
+      // Try next allowed root
+    }
+  }
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const src = searchParams.get("src");
   const widthStr = searchParams.get("w") || "600";
-  const width = Math.min(1600, Math.max(100, parseInt(widthStr, 10) || 600));
+  const width = snapToAllowedWidth(parseInt(widthStr, 10));
 
   if (!src) {
     return new NextResponse("Missing src parameter", { status: 400 });
   }
 
-  // Resolve path to the source image
-  // src is e.g. "/photos/2026/d20261026125756_desktop.jpg" (or with ?v=... cache buster)
-  let cleanSrc = decodeURIComponent(src).replace(/^\/+/, "").split("?")[0];
-  let fullPath = path.join(process.cwd(), "public", cleanSrc);
-
-  // If symlink or path doesn't exist in public, check configured external photo dir directly
-  if (!fs.existsSync(fullPath)) {
-    const externalDir =
-      process.env.LOCAL_PHOTO_DIR || process.env.PHOTOS_SOURCE_DIR;
-    if (externalDir) {
-      fullPath = path.join(externalDir, cleanSrc);
-    }
-  }
-
-  if (!fs.existsSync(fullPath)) {
+  const resolved = resolveSafeImagePath(src);
+  if (!resolved) {
     return new NextResponse("Image not found", { status: 404 });
   }
+  const { fullPath, cleanSrc } = resolved;
 
   try {
     const stats = fs.statSync(fullPath);

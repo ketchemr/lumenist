@@ -37,7 +37,6 @@ function findMediaFile(slug: string[]): string | null {
   const candidates = [
     path.join(process.cwd(), "public", "photos", subPath),
     path.join(resolvePhotosDir(), subPath),
-    path.join("/home/ubuntu/photos", subPath),
   ];
 
   for (const cand of candidates) {

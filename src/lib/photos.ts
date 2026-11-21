@@ -33,7 +33,6 @@ export function resolvePhotoDiskPath(
   const candidates: { path: string; webSubpath: string }[] = [
     { path: path.join(photosDir, cleanPath), webSubpath: cleanPath },
     { path: path.join(process.cwd(), "public", "photos", cleanPath), webSubpath: cleanPath },
-    { path: path.join("/home/ubuntu/photos", cleanPath), webSubpath: cleanPath },
   ];
 
   const baseFilename = path.basename(cleanPath);
@@ -41,13 +40,11 @@ export function resolvePhotoDiskPath(
     const yearSub = `${photo.dateTaken.year}/${baseFilename}`;
     candidates.push({ path: path.join(photosDir, yearSub), webSubpath: yearSub });
     candidates.push({ path: path.join(process.cwd(), "public", "photos", yearSub), webSubpath: yearSub });
-    candidates.push({ path: path.join("/home/ubuntu/photos", yearSub), webSubpath: yearSub });
   }
 
   const filmSub = `Film/${baseFilename}`;
   candidates.push({ path: path.join(photosDir, filmSub), webSubpath: filmSub });
   candidates.push({ path: path.join(process.cwd(), "public", "photos", filmSub), webSubpath: filmSub });
-  candidates.push({ path: path.join("/home/ubuntu/photos", filmSub), webSubpath: filmSub });
 
   let best: { filePath: string; mtimeSec: number; webSubpath: string } | null = null;
   const seenPaths = new Set<string>();

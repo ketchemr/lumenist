@@ -145,7 +145,8 @@ export async function POST(req: NextRequest) {
     const exifDate: Date | undefined = exifData.DateTimeOriginal || exifData.CreateDate;
     const dateObj = exifDate instanceof Date && !isNaN(exifDate.getTime()) ? exifDate : now;
 
-    const year = parseInt(formData.get("year") as string, 10) || dateObj.getFullYear();
+    const rawYear = parseInt(formData.get("year") as string, 10) || dateObj.getFullYear();
+    const year = rawYear >= 1900 && rawYear <= 2100 ? rawYear : dateObj.getFullYear();
     const month = parseInt(formData.get("month") as string, 10) || dateObj.getMonth() + 1;
     const day = parseInt(formData.get("day") as string, 10) || dateObj.getDate();
     const hour = parseInt(formData.get("hour") as string, 10) || dateObj.getHours();
@@ -157,14 +158,24 @@ export async function POST(req: NextRequest) {
     let photoID = passedPhotoID;
     if (!photoID) {
       const sourceName = file?.name || videoFile?.name || videoFilenameRaw || "";
-      const baseName = sourceName.replace(/\.[^.]+$/, "").replace(/_desktop$/, "");
-      if (/^[dsv]\d+/i.test(baseName)) {
+      const baseName = path
+        .basename(sourceName)
+        .replace(/\.[^.]+$/, "")
+        .replace(/_desktop$/, "");
+      if (/^[dsv]\d[a-zA-Z0-9_-]*$/i.test(baseName)) {
         photoID = baseName;
       } else {
         const pad = (n: number) => String(n).padStart(2, "0");
         const prefix = isVideo ? "v" : "d";
         photoID = `${prefix}${year}${pad(month)}${pad(day)}${pad(hour)}${pad(minute)}${pad(second)}`;
       }
+    }
+
+    if (!/^[a-zA-Z0-9_-]{1,120}$/.test(photoID)) {
+      return NextResponse.json(
+        { error: "Photo ID may only contain letters, numbers, hyphens, and underscores." },
+        { status: 400 }
+      );
     }
 
     // Location coordinates

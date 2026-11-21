@@ -92,15 +92,23 @@ export function hexToRgb(hex: string): string {
   return `${r} ${g} ${b}`;
 }
 
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+function sanitizeHexColor(value: string | undefined, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return HEX_COLOR_RE.test(trimmed) ? trimmed : fallback;
+}
+
 export function getThemeCssVariables(settings: SiteSettings): string {
-  const bg = settings.themeBackground || "#000000";
+  const bg = sanitizeHexColor(settings.themeBackground, "#000000");
   const bgRgb = hexToRgb(bg);
 
   const isLight = isLightModeActive(settings);
 
   // Dynamic surface & border with smart light/dark adaptation
-  let surface = settings.themeSurface;
-  let border = settings.themeBorder;
+  let surface = sanitizeHexColor(settings.themeSurface, isLight ? "#ffffff" : "#111111");
+  let border = sanitizeHexColor(settings.themeBorder, isLight ? "#cbd5e1" : "#262626");
 
   if (isLight) {
     if (!surface || !isLightBackground(surface)) {
@@ -119,9 +127,9 @@ export function getThemeCssVariables(settings: SiteSettings): string {
   }
 
   // Accent color contrast adaptation (e.g. silver on white becomes rich slate, pitch black on OLED black becomes silver)
-  let accent = settings.themeAccent;
-  let accentLight = settings.themeAccentLight;
-  let accentDark = settings.themeAccentDark;
+  let accent = sanitizeHexColor(settings.themeAccent, DEFAULT_SETTINGS.themeAccent);
+  let accentLight = sanitizeHexColor(settings.themeAccentLight, DEFAULT_SETTINGS.themeAccentLight);
+  let accentDark = sanitizeHexColor(settings.themeAccentDark, DEFAULT_SETTINGS.themeAccentDark);
 
   if (isLight) {
     const cleanAccent = accent.replace("#", "").trim();

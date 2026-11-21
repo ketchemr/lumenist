@@ -3,17 +3,32 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 function getBaseUrl(request: NextRequest): string {
-  const host =
-    request.headers.get("x-forwarded-host") || request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") || "https";
-  if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
-    return `${proto}://${host}`;
-  }
-  return (
+  const configured = (
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.SITE_URL ||
-    "https://rrkphoto.com"
-  ).replace(/\/+$/, "");
+    ""
+  ).trim();
+  if (configured) {
+    return configured.replace(/\/+$/, "");
+  }
+
+  const host = (request.headers.get("host") || "").trim();
+  const protoHeader = (request.headers.get("x-forwarded-proto") || "https")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  const proto = protoHeader === "http" ? "http" : "https";
+
+  if (
+    host &&
+    /^[a-zA-Z0-9.-]+(?::\d{1,5})?$/.test(host) &&
+    !host.startsWith("localhost") &&
+    !host.startsWith("127.0.0.1")
+  ) {
+    return `${proto}://${host}`;
+  }
+
+  return request.nextUrl.origin;
 }
 
 export async function GET(request: NextRequest) {

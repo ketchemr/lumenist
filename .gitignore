@@ -47,3 +47,10 @@ yarn-error.log*
 *.swp
 *.swo
 *.log
+
+# Local Agent Instructions & Personal/One-Off Migration Scripts
+AGENTS.md
+scripts/batch-resize-photos.py
+scripts/generate-favicons.js
+scripts/sync-with-piwigo.ts
+scripts/update-structures.js

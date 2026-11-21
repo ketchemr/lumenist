@@ -12,7 +12,7 @@ const DEFAULT_SOURCE_DIR =
 const DEFAULT_FULLSIZE_DIR =
   process.env.PHOTOS_FULLSIZE_DIR ||
   process.env.FULLSIZE_DIR ||
-  "/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/Photography/rrkphoto/RRKPhoto_fullsize";
+  "";
 
 function indexFullsize(dir: string): Map<string, string> {
   const map = new Map<string, string>();

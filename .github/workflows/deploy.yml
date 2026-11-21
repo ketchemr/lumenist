@@ -12,9 +12,14 @@ jobs:
     steps:
       - name: Set Environment Variables
         run: |
-          echo "TARGET_HOST=${{ secrets.SSH_HOST || '147.224.157.23' }}" >> $GITHUB_ENV
-          echo "SSH_USER=${{ secrets.SSH_USER || 'ubuntu' }}" >> $GITHUB_ENV
-          echo "DEPLOY_DIR=/home/ubuntu/rrkphoto.com" >> $GITHUB_ENV
+          if [ -z "${{ secrets.SSH_HOST }}" ] || [ -z "${{ secrets.SSH_USER }}" ] || [ -z "${{ secrets.DEPLOY_DIR }}" ]; then
+            echo "Error: Required GitHub Secrets (SSH_HOST, SSH_USER, DEPLOY_DIR) are not configured."
+            exit 1
+          fi
+          echo "TARGET_HOST=${{ secrets.SSH_HOST }}" >> $GITHUB_ENV
+          echo "SSH_USER=${{ secrets.SSH_USER }}" >> $GITHUB_ENV
+          echo "DEPLOY_DIR=${{ secrets.DEPLOY_DIR }}" >> $GITHUB_ENV
+          echo "PM2_APP_NAME=${{ secrets.PM2_APP_NAME || 'lumenist' }}" >> $GITHUB_ENV
 
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
@@ -28,11 +33,15 @@ jobs:
           ssh-keyscan -H ${{ env.TARGET_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy, Restart, and Verify Application
+        env:
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+          PM2_APP_NAME: ${{ env.PM2_APP_NAME }}
         run: |
-          ssh -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.TARGET_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=accept-new ${{ env.SSH_USER }}@${{ env.TARGET_HOST }} \
+            "DEPLOY_DIR='$DEPLOY_DIR' PM2_APP_NAME='$PM2_APP_NAME' bash -s" << 'EOF'
             set -e
-            echo "=== Deploying rrkphoto.com ==="
-            cd /home/ubuntu/rrkphoto.com
+            echo "=== Deploying $PM2_APP_NAME ==="
+            cd "$DEPLOY_DIR"
 
             echo "=== Syncing latest changes from main ==="
             git fetch origin main
@@ -45,7 +54,7 @@ jobs:
             npm run build
 
             echo "=== Restarting PM2 process ==="
-            pm2 restart rrkphoto.com
+            pm2 restart "$PM2_APP_NAME"
 
             echo "=== Verifying local Next.js service health ==="
             HEALTHY=0
@@ -61,11 +70,11 @@ jobs:
 
             if [ "$HEALTHY" -ne 1 ]; then
               echo "Error: Local service health check failed on http://localhost:3000/!"
-              pm2 logs rrkphoto.com --lines 50
+              pm2 logs "$PM2_APP_NAME" --lines 50
               exit 1
             fi
 
             echo "=== PM2 Status ==="
-            pm2 status rrkphoto.com
+            pm2 status "$PM2_APP_NAME"
             echo "=== Deployment successful and verified! ==="
           EOF
