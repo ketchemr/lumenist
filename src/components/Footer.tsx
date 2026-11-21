@@ -8,6 +8,8 @@ interface FooterProps {
 
 export function Footer({ settings }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "0.1.0";
+  const revDate = process.env.NEXT_PUBLIC_APP_REV_DATE || "";
   const artistName = settings?.artistName || siteConfig.artistName;
   const copyrightText = settings?.copyrightText
     ? settings.copyrightText.replace(/{year}/g, String(currentYear))
@@ -21,24 +23,29 @@ export function Footer({ settings }: FooterProps) {
           All photographs on this site are protected by United States and international copyright laws.
           Unauthorized use or reproduction without express written consent is prohibited.
         </p>
-        <p className="pt-2 text-[10px] text-muted/70 flex items-center justify-center space-x-3">
-          <span>
-            Powered by{" "}
-            <a
-              href="https://github.com/ketchemr/lumenist"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted hover:text-foreground font-medium transition-colors underline-offset-2 hover:underline"
-            >
-              Lumenist
-            </a>{" "}
-            — The Open-Source Fine-Art Photography CMS
-          </span>
-          <span>·</span>
-          <Link href="/admin/upload" className="hover:text-foreground transition-colors">
-            Admin
-          </Link>
-        </p>
+        <div className="pt-2 space-y-1 text-[10px] text-muted/70">
+          <p className="flex items-center justify-center space-x-3">
+            <span>
+              Powered by{" "}
+              <a
+                href="https://github.com/ketchemr/lumenist"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted hover:text-foreground font-medium transition-colors underline-offset-2 hover:underline"
+              >
+                Lumenist
+              </a>{" "}
+              — The Open-Source Fine-Art Photography CMS
+            </span>
+            <span>·</span>
+            <Link href="/admin/upload" className="hover:text-foreground transition-colors">
+              Admin
+            </Link>
+          </p>
+          <p className="font-mono text-[10px] text-muted/55">
+            v{appVersion}{revDate ? ` rev. ${revDate}` : ""}
+          </p>
+        </div>
       </div>
     </footer>
   );
