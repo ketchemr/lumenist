@@ -16,15 +16,15 @@ export function Footer({ settings }: FooterProps) {
     : `© ${currentYear} ${artistName}. All rights reserved.`;
 
   return (
-    <footer className="border-t border-surface-border bg-background mt-20 py-12 text-center text-xs text-muted">
-      <div className="max-w-7xl mx-auto px-4 space-y-3">
+    <footer className="border-t border-surface-border bg-background mt-16 py-7 text-center text-xs text-muted">
+      <div className="max-w-7xl mx-auto px-4 space-y-1.5 leading-snug">
         <p className="tracking-wide">{copyrightText}</p>
         <p className="text-[11px] text-muted">
           All photographs on this site are protected by United States and international copyright laws.
           Unauthorized use or reproduction without express written consent is prohibited.
         </p>
-        <div className="pt-2 space-y-1 text-[10px] text-muted/70">
-          <p className="flex items-center justify-center space-x-3">
+        <div className="pt-1 space-y-0.5 text-[10px] text-muted/70">
+          <p className="flex items-center justify-center space-x-2">
             <span>
               Powered by{" "}
               <a
