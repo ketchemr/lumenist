@@ -40,6 +40,11 @@ import {
   Filter,
   Compass,
   Columns2,
+  Film,
+  Link2,
+  Copy,
+  Check,
+  Terminal,
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import { EditPhotoModal } from "@/components/EditPhotoModal";
@@ -47,6 +52,14 @@ import {
   parseCoordinates,
   formatDMS,
 } from "@/lib/coordinates";
+import {
+  IMAGE_ACCEPT_ATTR,
+  VIDEO_ACCEPT_ATTR,
+  isSupportedImageFilename,
+  isSupportedVideoFilename,
+  parseVideoEmbed,
+  buildGenericVideoCliScript,
+} from "@/lib/media";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
   THEME_PRESETS,
@@ -158,9 +171,16 @@ export default function AdminUploadPage() {
   const [showTagTray, setShowTagTray] = useState(false);
 
   // Upload & File states
+  const [mediaType, setMediaType] = useState<"photo" | "video">("photo");
+  const [videoMode, setVideoMode] = useState<"self-hosted" | "embed">("self-hosted");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+  const [syncedVideoFilename, setSyncedVideoFilename] = useState("");
+  const [videoEmbedUrl, setVideoEmbedUrl] = useState("");
+  const [copiedCliScript, setCopiedCliScript] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Form & EXIF states
   const [photoID, setPhotoID] = useState("");
@@ -751,8 +771,9 @@ export default function AdminUploadPage() {
 
   // Process dropped or selected image file
   const handleFileSelect = async (file: File) => {
-    if (!file.type.includes("jpeg") && !file.type.includes("jpg")) {
-      alert("Please upload a JPEG photograph (.jpg or .jpeg)");
+    const isImageMime = file.type.startsWith("image/");
+    if (!isImageMime && !isSupportedImageFilename(file.name)) {
+      alert("Please upload a supported image file (.jpg, .jpeg, .png, .webp, .avif, .gif, or .tiff)");
       return;
     }
 
@@ -765,8 +786,8 @@ export default function AdminUploadPage() {
       .replace(/\.[^/.]+$/, "")
       .replace(/_desktop|_original/i, "");
 
-    // 1. Check if filename matches standard photoID format (e.g. d20261027151131 or s00000613)
-    const isConvention = /^[ds]\d+/i.test(baseName);
+    // 1. Check if filename matches standard photoID format (e.g. d20261027151131, s00000613, v20261121103000)
+    const isConvention = /^[dsv]\d+/i.test(baseName);
 
     // Extract EXIF in browser
     try {
@@ -900,22 +921,69 @@ export default function AdminUploadPage() {
     }
   };
 
+  const handleVideoFileSelect = (file: File) => {
+    if (!file.type.startsWith("video/") && !isSupportedVideoFilename(file.name)) {
+      alert("Please select a supported video file (.mp4, .webm, .mov, or .m4v)");
+      return;
+    }
+    setSelectedVideoFile(file);
+    setSyncedVideoFilename("");
+    setSubmitError("");
+    setPublishedResult(null);
+
+    if (!photoID.trim()) {
+      const baseName = file.name.replace(/\.[^/.]+$/, "");
+      if (/^[dsv]\d+/i.test(baseName)) {
+        setPhotoID(baseName);
+        setIdSourceNote("Matched video filename");
+      } else {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setPhotoID(
+          `v${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+        );
+        setIdSourceNote("Generated video ID");
+      }
+    }
+  };
+
+  const isMediaStepComplete = () => {
+    if (mediaType === "photo") return Boolean(selectedFile);
+    if (videoMode === "embed") return Boolean(parseVideoEmbed(videoEmbedUrl));
+    return Boolean(selectedVideoFile || syncedVideoFilename.trim());
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) {
-      setSubmitError("Please choose a photograph to upload first.");
+    if (mediaType === "photo" && !selectedFile) {
+      setSubmitError("Please choose an image file to upload first.");
+      jumpToField(dropzoneRef);
+      return;
+    }
+    if (mediaType === "video" && videoMode === "embed" && !parseVideoEmbed(videoEmbedUrl)) {
+      setSubmitError("Please enter a valid YouTube or Vimeo URL.");
+      jumpToField(dropzoneRef);
+      return;
+    }
+    if (
+      mediaType === "video" &&
+      videoMode === "self-hosted" &&
+      !selectedVideoFile &&
+      !syncedVideoFilename.trim()
+    ) {
+      setSubmitError("Please select a video file or enter the CLI-synced video filename.");
       jumpToField(dropzoneRef);
       return;
     }
     if (!title.trim()) {
       setTouchedTitle(true);
-      setSubmitError("Please provide a photograph title.");
+      setSubmitError("Please provide a title.");
       jumpToField(titleInputRef);
       return;
     }
     if (!photoID.trim()) {
       setTouchedPhotoID(true);
-      setSubmitError("Please provide a Photo ID.");
+      setSubmitError("Please provide a Photo / Media ID.");
       jumpToField(photoIdInputRef);
       return;
     }
@@ -924,7 +992,23 @@ export default function AdminUploadPage() {
     setSubmitError("");
 
     const formData = new FormData();
-    formData.append("file", selectedFile);
+    formData.append("mediaType", mediaType);
+    if (selectedFile) {
+      formData.append("file", selectedFile);
+    }
+    if (mediaType === "video") {
+      formData.append("videoMode", videoMode);
+      if (videoMode === "embed") {
+        formData.append("videoEmbedUrl", videoEmbedUrl.trim());
+      } else {
+        if (selectedVideoFile) {
+          formData.append("videoFile", selectedVideoFile);
+        }
+        if (syncedVideoFilename.trim()) {
+          formData.append("videoFilename", syncedVideoFilename.trim());
+        }
+      }
+    }
     formData.append("photoID", photoID.trim());
     formData.append("title", title.trim());
     formData.append("description", description.trim());
@@ -1108,6 +1192,11 @@ export default function AdminUploadPage() {
   const handleResetForm = () => {
     setSelectedFile(null);
     setImagePreviewUrl(null);
+    setSelectedVideoFile(null);
+    setSyncedVideoFilename("");
+    setVideoEmbedUrl("");
+    if (videoInputRef.current) videoInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setPhotoID("");
     setIdSourceNote("");
     setTitle("");
@@ -1436,8 +1525,10 @@ export default function AdminUploadPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Upload Readiness & Quick-Jump Pointers Bar */}
               {(() => {
+                const mediaReady = isMediaStepComplete();
+                const mediaStepLabel = mediaType === "video" ? "Video Source" : "Photo File";
                 const missingRequired = [
-                  !selectedFile && { label: "Photo File", ref: dropzoneRef },
+                  !mediaReady && { label: mediaStepLabel, ref: dropzoneRef },
                   !title.trim() && { label: "Title", ref: titleInputRef },
                   !photoID.trim() && { label: "Photo ID", ref: photoIdInputRef },
                 ].filter(Boolean) as {
@@ -1488,17 +1579,17 @@ export default function AdminUploadPage() {
                         type="button"
                         onClick={() => jumpToField(dropzoneRef)}
                         className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition-colors cursor-pointer ${
-                          selectedFile
+                          mediaReady
                             ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 font-medium"
                             : "border-accent bg-accent/15 text-foreground font-semibold hover:bg-accent/25"
                         }`}
                       >
-                        {selectedFile ? (
+                        {mediaReady ? (
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         ) : (
                           <span className="w-2 h-2 rounded-full bg-accent" />
                         )}
-                        <span>1. Photo File</span>
+                        <span>1. {mediaStepLabel}</span>
                       </button>
 
                       <button
@@ -1602,12 +1693,255 @@ export default function AdminUploadPage() {
                 );
               })()}
 
-              {/* File Dropzone */}
+              {/* Media Type Selector */}
+              <div className="upload-card rounded-sm p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                    Media Type
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    Upload still photographs, self-hosted videos, or YouTube / Vimeo embeds
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMediaType("photo");
+                      setSubmitError("");
+                    }}
+                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-medium transition-colors cursor-pointer ${
+                      mediaType === "photo"
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-surface-border bg-surface hover:border-accent/50 text-muted hover:text-foreground"
+                    }`}
+                  >
+                    <ImageIcon className="w-4 h-4 text-accent" />
+                    <span>Photograph (JPG, PNG, WebP…)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMediaType("video");
+                      setVideoMode("self-hosted");
+                      setSubmitError("");
+                      if (!photoID.trim()) {
+                        const now = new Date();
+                        const pad = (n: number) => String(n).padStart(2, "0");
+                        setPhotoID(
+                          `v${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+                        );
+                        setIdSourceNote("Generated video ID");
+                      }
+                    }}
+                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-medium transition-colors cursor-pointer ${
+                      mediaType === "video" && videoMode === "self-hosted"
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-surface-border bg-surface hover:border-accent/50 text-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Film className="w-4 h-4 text-accent" />
+                    <span>Video (Self-Hosted MP4/WebM)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMediaType("video");
+                      setVideoMode("embed");
+                      setSubmitError("");
+                      if (!photoID.trim()) {
+                        const now = new Date();
+                        const pad = (n: number) => String(n).padStart(2, "0");
+                        setPhotoID(
+                          `v${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+                        );
+                        setIdSourceNote("Generated video ID");
+                      }
+                    }}
+                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded border text-xs font-medium transition-colors cursor-pointer ${
+                      mediaType === "video" && videoMode === "embed"
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-surface-border bg-surface hover:border-accent/50 text-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Link2 className="w-4 h-4 text-accent" />
+                    <span>Video (YouTube / Vimeo)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Video Source Panel (when Video mode is selected) */}
+              {mediaType === "video" && videoMode === "embed" && (
+                <div
+                  ref={dropzoneRef}
+                  className="upload-card rounded-sm p-5 space-y-3 border border-accent/50"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-accent" />
+                      Step 1 &mdash; YouTube or Vimeo Video URL
+                    </span>
+                    {parseVideoEmbed(videoEmbedUrl) ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/40">
+                        <CheckCircle2 className="w-3 h-3" />
+                        {parseVideoEmbed(videoEmbedUrl)?.provider === "youtube" ? "YouTube Detected" : "Vimeo Detected"}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/50">
+                        Required
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={videoEmbedUrl}
+                    onChange={(e) => setVideoEmbedUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-accent"
+                  />
+                  <p className="text-xs text-muted">
+                    Supports YouTube (<code className="font-mono">youtube.com</code>, <code className="font-mono">youtu.be</code>, Shorts) and Vimeo links. For YouTube videos, a poster thumbnail is fetched automatically if you leave the custom poster image below blank.
+                  </p>
+                </div>
+              )}
+
+              {mediaType === "video" && videoMode === "self-hosted" && (
+                <div
+                  ref={dropzoneRef}
+                  className="upload-card rounded-sm p-5 space-y-4 border border-accent/50"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5 text-accent" />
+                      Step 1 &mdash; Self-Hosted Video File
+                    </span>
+                    {selectedVideoFile || syncedVideoFilename.trim() ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/40">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Ready
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/50">
+                        Required
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Direct browser upload for smaller clips */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept={VIDEO_ACCEPT_ATTR}
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleVideoFileSelect(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      className="px-4 py-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent text-foreground text-xs font-medium rounded transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-accent" />
+                      <span>
+                        {selectedVideoFile
+                          ? `Selected: ${selectedVideoFile.name} (${(selectedVideoFile.size / 1024 / 1024).toFixed(1)} MB)`
+                          : "Choose Video File (.mp4, .webm, .mov)"}
+                      </span>
+                    </button>
+                    {selectedVideoFile && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedVideoFile(null);
+                          if (videoInputRef.current) videoInputRef.current.value = "";
+                        }}
+                        className="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Or reference an already-synced large video file */}
+                  <div className="space-y-1.5 pt-2 border-t border-surface-border/60">
+                    <label className="block text-xs font-medium text-foreground">
+                      Or reference a large video already synced via CLI / rsync
+                    </label>
+                    <input
+                      type="text"
+                      value={syncedVideoFilename}
+                      onChange={(e) => {
+                        setSyncedVideoFilename(e.target.value);
+                        if (e.target.value.trim()) setSelectedVideoFile(null);
+                      }}
+                      placeholder={`e.g. ${photoID || "v20261121103000"}.mp4`}
+                      className="w-full sm:w-80 bg-surface border border-surface-border rounded px-3 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-accent"
+                    />
+                    <p className="text-[11px] text-muted">
+                      Enter just the filename placed in <code className="font-mono">photos/{captureDate ? new Date(captureDate).getFullYear() : new Date().getFullYear()}/</code>.
+                    </p>
+                  </div>
+
+                  {/* Generic CLI Upload & Optimization Script Helper */}
+                  {(() => {
+                    const scriptYear = captureDate && !isNaN(new Date(captureDate).getTime())
+                      ? new Date(captureDate).getFullYear()
+                      : new Date().getFullYear();
+                    const cliScript = buildGenericVideoCliScript({
+                      photoID: photoID.trim() || undefined,
+                      year: scriptYear,
+                    });
+                    return (
+                      <div className="rounded border border-surface-border bg-black/40 p-3.5 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-accent flex items-center gap-1.5">
+                            <Terminal className="w-3.5 h-3.5" />
+                            Generic CLI Helper (For Large Videos)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(cliScript);
+                              setCopiedCliScript(true);
+                              setTimeout(() => setCopiedCliScript(false), 2000);
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded bg-surface hover:bg-surface-hover border border-surface-border text-foreground transition-colors cursor-pointer"
+                          >
+                            {copiedCliScript ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3 text-accent" />
+                                <span>Copy Script</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-muted">
+                          For videos larger than your reverse proxy&apos;s upload limit (e.g. Nginx/Cloudflare), optimize with <code className="font-mono">ffmpeg</code> and sync directly with <code className="font-mono">rsync</code>:
+                        </p>
+                        <pre className="text-[11px] leading-relaxed font-mono text-gray-200 bg-black/60 border border-white/10 rounded p-3 overflow-x-auto select-text">
+                          {cliScript}
+                        </pre>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* File Dropzone (Main Image for Photo mode, Poster Image for Video mode) */}
               <div
-                ref={dropzoneRef}
+                ref={mediaType === "photo" ? dropzoneRef : undefined}
                 role="button"
                 tabIndex={0}
-                aria-label="Upload JPEG photograph (required)"
+                aria-label={mediaType === "video" ? "Upload video poster image (optional for YouTube or ffmpeg)" : "Upload photograph (required)"}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setIsDragging(true);
@@ -1632,17 +1966,25 @@ export default function AdminUploadPage() {
                     ? "border-accent bg-accent/10 scale-[1.005]"
                     : selectedFile
                     ? "border-emerald-500/60 bg-surface hover:border-accent"
+                    : mediaType === "video"
+                    ? "border-surface-border bg-surface hover:border-accent"
                     : "border-accent/75 bg-accent/[0.04] hover:border-accent hover:bg-accent/[0.08]"
                 }`}
               >
                 <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                    Step 1 &mdash; Photograph File
+                    {mediaType === "video"
+                      ? "Poster / Cover Image (For Gallery Grids & Map)"
+                      : "Step 1 \u2014 Photograph File"}
                   </span>
                   {selectedFile ? (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/40">
                       <CheckCircle2 className="w-3 h-3" />
                       Selected
+                    </span>
+                  ) : mediaType === "video" ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-surface-hover text-muted border border-surface-border">
+                      {videoMode === "embed" ? "Auto for YouTube / Optional" : "Optional if ffmpeg or CLI poster exists"}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-accent/20 text-accent border border-accent/50">
@@ -1654,7 +1996,7 @@ export default function AdminUploadPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg"
+                  accept={IMAGE_ACCEPT_ATTR}
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files?.[0]) {
@@ -1684,8 +2026,7 @@ export default function AdminUploadPage() {
                       <p className="text-accent flex items-center space-x-1 pt-1">
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>
-                          EXIF extracted &bull; Click or drop another image to
-                          replace
+                          Click or drop another image to replace
                         </span>
                       </p>
                     </div>
@@ -1697,13 +2038,13 @@ export default function AdminUploadPage() {
                     </div>
                     <div>
                       <p className="text-sm text-foreground font-medium">
-                        Drag and drop your high-resolution JPEG here, or click to
-                        browse
+                        {mediaType === "video"
+                          ? "Drag and drop a poster image here, or click to browse"
+                          : "Drag and drop your image here, or click to browse"}
                       </p>
                       <p className="text-xs text-muted pt-1">
-                        Supports full-size camera captures (.jpg / .jpeg).
-                        EXIF, GPS, and optical specs are extracted
-                        automatically.
+                        Supports common image formats (.jpg, .jpeg, .png, .webp, .avif, .gif, .tiff).
+                        EXIF, GPS, and optical specs are extracted automatically when present.
                       </p>
                     </div>
                   </div>
@@ -2584,21 +2925,31 @@ export default function AdminUploadPage() {
                   type="submit"
                   disabled={isSubmitting}
                   onClick={(e) => {
-                    if (!selectedFile) {
+                    if (!isMediaStepComplete()) {
                       e.preventDefault();
-                      setSubmitError("Please choose a photograph to upload first.");
+                      setSubmitError(
+                        mediaType === "video"
+                          ? videoMode === "embed"
+                            ? "Please enter a valid YouTube or Vimeo URL first."
+                            : "Please choose a video file or enter a CLI-synced video filename first."
+                          : "Please choose an image file to upload first."
+                      );
                       jumpToField(dropzoneRef);
                     }
                   }}
                   className="w-full sm:w-auto px-8 py-3.5 bg-accent text-accent-contrast font-semibold text-xs uppercase tracking-wider rounded hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer"
                 >
                   {isSubmitting
-                    ? "Publishing Photograph & Writing Records..."
+                    ? mediaType === "video"
+                      ? "Publishing Video & Writing Records..."
+                      : "Publishing Photograph & Writing Records..."
+                    : mediaType === "video"
+                    ? "Publish Video"
                     : "Publish Photograph"}
                 </button>
                 {(() => {
                   const remaining = [
-                    !selectedFile && "Photo File",
+                    !isMediaStepComplete() && (mediaType === "video" ? "Video Source" : "Photo File"),
                     !title.trim() && "Title",
                     !photoID.trim() && "Photo ID",
                   ].filter(Boolean) as string[];

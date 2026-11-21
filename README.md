@@ -45,13 +45,14 @@ Named after the 19th-century **Luminism** art movement—which celebrated the po
   - *Exhibition Quick-Cards & List Sync*: Clicking any map pin reveals photo preview cards with exhibition details and lets you isolate and view those photographs in the gallery list below.
   - *Clean Route Redirect*: Direct navigation to `/map` automatically redirects to `/explore`.
 
-### 🔍 Deep Technical Photo Viewer (`/photo/[id]`)
+### 🔍 Deep Technical Photo & Video Viewer (`/photo/[id]`)
 
 <p align="center">
   <img src="docs/images/Lumenist-Image.png" alt="Lumenist Deep Technical Photo Viewer and Exposure Drawer" width="100%" />
 </p>
 
 - **Adaptive Framing & Lightbox**: Pure OLED black or custom exhibition matting that fits horizontal, vertical, and panoramic orientations without clipping.
+- **Native Video & External Embed Playback**: Supports both **self-hosted videos** (`.mp4`, `.webm`, `.mov`, `.m4v` streamed via HTTP `Range` requests with native HTML5 playback controls) and **privacy-enhanced external embeds** (YouTube via `youtube-nocookie.com` and Vimeo with `dnt=1`). Videos display a discreet play badge in gallery grids and automatically use a poster frame for thumbnails and map pins.
 - **Keyboard & Touch Gestures**: Full keyboard navigation (Left/Right arrows for adjacent works, `F` for fullscreen, `Esc` to close) and mobile swipe gestures.
 - **Discreet Copyright & Watermark Badge**: Configurable semi-transparent copyright overlay with an optional frosted shield in the corner of master previews.
 - **Exposure Pyramid & Technical Drawer**: First-class display of:
@@ -90,9 +91,20 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
   <img src="docs/images/Lumenist-Upload.png" alt="Lumenist Admin Upload Suite with Client-Side EXIF and Map Pin Picker" width="100%" />
 </p>
 
-- **Drag-and-Drop Publishing**: Upload high-resolution TIFF, JPEG, or WebP photographs directly into the live site.
-- **Automated Client-Side EXIF Extraction**: Automatically extracts camera make/model, lens, focal length, aperture, shutter speed, ISO, exposure compensation, Kelvin white balance, capture timestamp, and GPS coordinates before upload.
-- **Smart ID Generation**: Creates standardized photo IDs (`dYYYYMMDDHHMMSS`) derived from original shutter timestamps.
+- **Multi-Format Image Publishing**: Drag and drop photographs in common formats (`.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`, `.gif`, `.tif`/`.tiff`) directly into the live site. PNG transparency and GIF animation are preserved, and TIFFs are automatically converted to web-ready JPEGs.
+- **Video Publishing (Self-Hosted & Embeds)**: Switch between **Photograph**, **Video (Self-Hosted MP4/WebM)**, and **Video (YouTube / Vimeo)** right in the upload form:
+  - *Self-Hosted*: Upload `.mp4`, `.webm`, `.mov`, or `.m4v` clips directly in the browser, or reference a large file synced via CLI. Includes a copyable **Generic CLI Helper** (`ffmpeg` H.264 `+faststart` optimization, poster frame extraction, and `rsync` commands) for large videos that exceed reverse-proxy upload limits.
+  - *YouTube / Vimeo Embeds*: Paste any YouTube or Vimeo link; YouTube poster thumbnails are fetched automatically if no custom cover image is uploaded.
+
+<p align="center">
+  <img src="docs/images/Lumenist-Upload-Video-File.png" alt="Lumenist Self-Hosted Video Upload with Generic CLI Helper" width="64%" />
+</p>
+
+<p align="center">
+  <img src="docs/images/Lumenist-Upload-Video-Link.png" alt="Lumenist YouTube and Vimeo Video Embed Upload" width="64%" />
+</p>
+- **Automated Client-Side EXIF Extraction**: Automatically extracts camera make/model, lens, focal length, aperture, shutter speed, ISO, exposure compensation, Kelvin white balance, capture timestamp, and GPS coordinates when present.
+- **Smart ID Generation**: Creates standardized IDs (`dYYYYMMDDHHMMSS` for photos, `vYYYYMMDDHHMMSS` for videos) derived from original timestamps.
 - **Album Assignment**: Check existing albums or create new categories on the fly.
 - **Interactive GPS Pin Picker**: Click or drag a pin on a built-in Leaflet map to set or fine-tune coordinates, or click *Clear Location* to remove GPS data.
 - **Support Gear & Film Selectors**: Quick-pick dropdowns for tripod setups and film emulsions.
@@ -145,13 +157,12 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
 
 ## Technical Architecture & Pipeline
 
-### ⚡ On-Demand WebP Image Pipeline (`/api/thumbnail`)
-- Powered by high-speed **Sharp** native C++ image bindings with Lanczos3 resampling.
-- Dynamic query parameters: `/api/thumbnail?src=/photos/2026/image.jpg&w=1200&fmt=webp&q=85`.
-- **Two-Tier Caching**:
-  1. Processed WebP images are cached to `.thumbnails/` on disk for sub-5ms subsequent delivery.
-  2. Public HTTP responses include `Cache-Control: public, max-age=2592000, immutable` headers.
-- **Batch Pre-caching CLI**: Pre-render all exhibition thumbnails before launching major portfolios using `npm run thumbnails:precache`.
+### ⚡ On-Demand WebP Image & Video Streaming Pipeline
+- **On-Demand Thumbnailer (`/api/thumbnail`)**: Powered by high-speed **Sharp** native C++ image bindings with Lanczos3 resampling across JPG, PNG, WebP, AVIF, and GIF sources.
+  - Dynamic query parameters: `/api/thumbnail?src=/photos/2026/image.jpg&w=1200&fmt=webp&q=85`.
+  - **Two-Tier Caching**: Processed WebP images are cached to `.thumbnails/` on disk for sub-5ms subsequent delivery with `Cache-Control: public, max-age=31536000, immutable` headers.
+  - **Batch Pre-caching CLI**: Pre-render all exhibition thumbnails before launching major portfolios using `npm run thumbnails:precache`.
+- **HTTP Range Video Streaming (`/photos/[...slug]`)**: Serves images and streams self-hosted videos (`.mp4`, `.webm`, `.mov`, `.m4v`) via `fs.createReadStream` with `Accept-Ranges: bytes`, `HEAD`, and `206 Partial Content` support for instant seeking and Safari/mobile playback without buffering large videos in RAM.
 
 ### 🔒 Security & Persistence
 - **Zero Database Lock-in**: All portfolio metadata is maintained in transparent, versionable JSON files in `data/` (`photos.json`, `settings.json`, `auth.json`).
@@ -169,6 +180,7 @@ This guide covers installing and deploying Lumenist on an Ubuntu/Debian Linux se
 - **Node.js 20+ or 22 LTS**
 - **Nginx** (reverse proxy & SSL termination)
 - **PM2** (process manager for zero-downtime restarts)
+- **FFmpeg** *(optional)* — enables automatic server-side poster frame extraction when uploading self-hosted videos without a custom cover image
 - A registered domain name pointing to your server's public IP
 
 ```bash
@@ -229,9 +241,9 @@ Organize your photo files by year or category (e.g. `public/photos/2026/my_photo
 
 ### Step 5: Ingest Existing Photo Catalog & Metadata
 
-If you have existing images with companion `.txt` metadata files, place each `.txt` file alongside its matching JPEG in a subfolder under `public/photos/` using the same base filename (e.g. `public/photos/2026/autumn_trail.jpg` and `public/photos/2026/autumn_trail.txt`).
+If you have existing images or videos with companion `.txt` metadata files, place each `.txt` file alongside its matching image (`.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`, `.gif`)—and optional self-hosted video (`.mp4`, `.webm`, `.mov`, `.m4v`)—in a subfolder under `public/photos/` using the same base filename (e.g. `public/photos/2026/autumn_trail.jpg` and `public/photos/2026/autumn_trail.txt`).
 
-Because dimensions, capture date/time, camera, lens, exposure settings, and GPS coordinates are automatically extracted from the JPEG's EXIF/XMP headers, a **minimal companion `.txt` file** only needs your curated fields (`key:value`, one per line; lines starting with `#` are ignored):
+Because dimensions, capture date/time, camera, lens, exposure settings, and GPS coordinates are automatically extracted from the image's EXIF/XMP headers, a **minimal companion `.txt` file** only needs your curated fields (`key:value`, one per line; lines starting with `#` are ignored):
 
 ```txt
 title:Autumn Forest Trail
@@ -240,7 +252,7 @@ albums:Fall Color, Landscapes
 tags:autumn, forest, mist, trail
 ```
 
-> **Optional fields:** `albums` (or `category`) and `tags` (or `keyword`) are comma-separated. For scanned film or non-geotagged photos without EXIF, you can also include fields such as `location:44.3386,-68.2733`, `year:2026`, `month:10`, `day:15`, `film:Fuji Velvia 50`, `camera:Hasselblad 500C/M`, `tripod:Gitzo Systematic`, or `availability:Available for Order`.
+> **Optional fields:** `albums` (or `category`) and `tags` (or `keyword`) are comma-separated. For scanned film or non-geotagged photos without EXIF, you can also include fields such as `location:44.3386,-68.2733`, `year:2026`, `month:10`, `day:15`, `film:Fuji Velvia 50`, `camera:Hasselblad 500C/M`, `tripod:Gitzo Systematic`, or `availability:Available for Order`. For videos, include `mediaType:video` with either `videoSrc:/photos/2026/my_clip.mp4` (auto-detected if a matching video file sits alongside the `.txt`) or `videoEmbedUrl:https://www.youtube.com/watch?v=...`.
 
 Run the importer to build your unified catalog in `data/photos.json`:
 
@@ -337,9 +349,10 @@ Lumenist exposes clean, typed Next.js App Router API endpoints:
 
 | Endpoint | Method | Auth | Description |
 | :--- | :--- | :--- | :--- |
+| `/photos/[...slug]` | `GET` / `HEAD` | Public | Serves images and streams self-hosted videos with HTTP `Range` (`206 Partial Content`) support. |
 | `/api/thumbnail` | `GET` | Public | Generates and serves cached, optimized WebP thumbnails. |
 | `/api/admin/auth` | `POST` / `DELETE` | Public / Cookie | Verifies admin passphrase, creates session cookie, or logs out. |
-| `/api/admin/upload` | `POST` | Admin | Receives image binary and metadata payload, writes to disk and catalog. |
+| `/api/admin/upload` | `POST` | Admin | Receives image/video binaries, embed URLs, and metadata payloads; writes to disk and catalog. |
 | `/api/admin/photos` | `GET` | Admin | Retrieves paginated and filtered catalog records for admin table. |
 | `/api/admin/photo/[id]` | `PUT` / `DELETE` | Admin | Updates or deletes an individual photo record. |
 | `/api/admin/photos/bulk` | `POST` | Admin | Executes bulk actions (`addAlbums`, `removeAlbums`, `addTags`, `removeTags`, `delete`). |
@@ -394,9 +407,12 @@ export interface Photo {
   aspectRatio: number;          // e.g. 1.777
   orientation: "horizontal" | "vertical" | "square";
 
-  // File Paths (System Managed)
-  imageDesktop: string;         // Relative URL to master display image (/photos/...)
+  // File Paths & Video Support (System Managed / Optional)
+  imageDesktop: string;         // Relative URL to master display image or video poster (/photos/...)
   imageThumb: string;           // On-demand thumbnail endpoint (/api/thumbnail?src=...)
+  mediaType?: "photo" | "video";// Defaults to "photo"
+  videoSrc?: string;            // Self-hosted video path (e.g. "/photos/2026/v20261121.mp4")
+  videoEmbedUrl?: string;       // External YouTube or Vimeo URL
 }
 ```
 

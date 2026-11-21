@@ -57,10 +57,15 @@ export interface Photo {
   size?: PhotoSize;
   
   // Image Paths / URLs
-  imageDesktop: string;         // Path or URL to desktop-optimized display file
+  imageDesktop: string;         // Path or URL to desktop-optimized display file (or video poster)
   imageThumbnail?: string;      // Thumbnail
   imageFullsize?: string;       // Master high-res
-  
+
+  // Video Support (optional; omitted or "photo" for still images)
+  mediaType?: 'photo' | 'video';
+  videoSrc?: string;            // Self-hosted video path (e.g., "/photos/2026/v20261121.mp4")
+  videoEmbedUrl?: string;       // External video URL (YouTube / Vimeo)
+
   // Raw / custom fields fallback
   rawFields?: Record<string, string>;
 }

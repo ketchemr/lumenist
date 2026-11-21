@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Photo } from "@/types/photo";
 import { WatermarkBadge } from "@/components/WatermarkBadge";
+import { VideoPlayBadge } from "@/components/VideoPlayBadge";
+import { isVideoPhoto } from "@/lib/media";
 
 interface PhotoCardProps {
   photo: Photo;
@@ -43,6 +45,9 @@ export function PhotoCard({
         className="absolute inset-0 z-10 select-none cursor-pointer"
         onContextMenu={(e) => e.preventDefault()}
       />
+
+      {/* Video indicator */}
+      {isVideoPhoto(photo) && <VideoPlayBadge size="sm" />}
 
       {/* Copyright watermark badge */}
       <WatermarkBadge

@@ -6,6 +6,16 @@ import sharp from "sharp";
 import exifr from "exifr";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 import { Photo, PhotoSize } from "@/types/photo";
+import {
+  isSupportedVideoFilename,
+  parseVideoEmbed,
+  SUPPORTED_VIDEO_EXTENSIONS,
+} from "@/lib/media";
+import {
+  saveUploadedImage,
+  extractVideoPosterWithFfmpeg,
+  fetchRemotePosterImage,
+} from "@/lib/mediaServer";
 
 function cleanCameraName(make?: string, model?: string): string {
   if (!model && !make) return "Unknown Camera";
@@ -51,29 +61,74 @@ export async function POST(req: NextRequest) {
     }
 
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const rawMediaType = ((formData.get("mediaType") as string) || "photo").trim().toLowerCase();
+    const isVideo = rawMediaType === "video";
+    const videoMode = ((formData.get("videoMode") as string) || "").trim().toLowerCase(); // "self-hosted" | "embed"
 
-    if (!file) {
+    const file = formData.get("file") as File | null;
+    const videoFile = formData.get("videoFile") as File | null;
+    const videoFilenameRaw = ((formData.get("videoFilename") as string) || "").trim();
+    const videoEmbedUrlRaw = ((formData.get("videoEmbedUrl") as string) || "").trim();
+
+    if (!isVideo && (!file || file.size === 0)) {
       return NextResponse.json(
         { error: "No image file provided" },
         { status: 400 }
       );
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let parsedEmbed = videoEmbedUrlRaw ? parseVideoEmbed(videoEmbedUrlRaw) : null;
+    if (isVideo && (videoMode === "embed" || videoEmbedUrlRaw)) {
+      if (!parsedEmbed) {
+        return NextResponse.json(
+          { error: "Please enter a valid YouTube or Vimeo URL." },
+          { status: 400 }
+        );
+      }
+    }
 
-    // Extract EXIF data from buffer
+    if (isVideo && videoMode !== "embed" && !parsedEmbed) {
+      const hasUploadedVideo = Boolean(videoFile && videoFile.size > 0);
+      const hasSyncedVideo = Boolean(videoFilenameRaw);
+      if (!hasUploadedVideo && !hasSyncedVideo) {
+        return NextResponse.json(
+          { error: "Please upload a video file (.mp4, .webm, .mov) or provide a CLI-synced video filename." },
+          { status: 400 }
+        );
+      }
+      if (hasUploadedVideo && videoFile && !isSupportedVideoFilename(videoFile.name)) {
+        return NextResponse.json(
+          { error: `Unsupported video format. Supported formats: ${SUPPORTED_VIDEO_EXTENSIONS.join(", ")}` },
+          { status: 400 }
+        );
+      }
+      if (hasSyncedVideo && !isSupportedVideoFilename(videoFilenameRaw)) {
+        return NextResponse.json(
+          { error: `Synced video filename must end with one of: ${SUPPORTED_VIDEO_EXTENSIONS.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    let imageBuffer: Buffer | null = null;
+    if (file && file.size > 0) {
+      const arrayBuffer = await file.arrayBuffer();
+      imageBuffer = Buffer.from(arrayBuffer);
+    }
+
+    // Extract EXIF data from image buffer if present
     let exifData: any = {};
-    try {
-      exifData = (await exifr.parse(buffer, {
-        tiff: true,
-        xmp: true,
-        icc: false,
-        gps: true,
-      })) || {};
-    } catch (e) {
-      console.warn("Could not parse EXIF from buffer:", e);
+    if (imageBuffer) {
+      try {
+        exifData = (await exifr.parse(imageBuffer, {
+          tiff: true,
+          xmp: true,
+          icc: false,
+          gps: true,
+        })) || {};
+      } catch (e) {
+        console.warn("Could not parse EXIF from buffer:", e);
+      }
     }
 
     // Read form fields
@@ -97,20 +152,22 @@ export async function POST(req: NextRequest) {
     const minute = parseInt(formData.get("minute") as string, 10) || dateObj.getMinutes();
     const second = parseInt(formData.get("second") as string, 10) || dateObj.getSeconds();
 
-    // Generate canonical photoID if not passed (e.g. d20261027151131 or filename ID)
+    // Generate canonical photoID if not passed
     const passedPhotoID = (formData.get("photoID") as string)?.trim();
     let photoID = passedPhotoID;
     if (!photoID) {
-      const baseName = (file.name || "").replace(/\.[^.]+$/, "").replace(/_desktop$/, "");
-      if (/^[ds]\d+/i.test(baseName)) {
+      const sourceName = file?.name || videoFile?.name || videoFilenameRaw || "";
+      const baseName = sourceName.replace(/\.[^.]+$/, "").replace(/_desktop$/, "");
+      if (/^[dsv]\d+/i.test(baseName)) {
         photoID = baseName;
       } else {
         const pad = (n: number) => String(n).padStart(2, "0");
-        photoID = `d${year}${pad(month)}${pad(day)}${pad(hour)}${pad(minute)}${pad(second)}`;
+        const prefix = isVideo ? "v" : "d";
+        photoID = `${prefix}${year}${pad(month)}${pad(day)}${pad(hour)}${pad(minute)}${pad(second)}`;
       }
     }
 
-    // Location coordinates (form input overrides EXIF, explicit empty/false disables location)
+    // Location coordinates
     let latitude: number | null = null;
     let longitude: number | null = null;
     const hasLocation = formData.get("hasLocation");
@@ -155,31 +212,20 @@ export async function POST(req: NextRequest) {
 
     // Camera & Lens Details
     const camera = cleanCameraName(exifData.Make, exifData.Model);
-    const lens = (exifData.LensModel || exifData.Lens || "").trim() || "Unknown Lens";
-    const focalLength = exifData.FocalLength ? `${Math.round(exifData.FocalLength)} mm` : "Unknown";
+    const lens = (exifData.LensModel || exifData.Lens || "").trim() || (isVideo ? "" : "Unknown Lens");
+    const focalLength = exifData.FocalLength ? `${Math.round(exifData.FocalLength)} mm` : (isVideo ? "" : "Unknown");
     const shutterSpeed = exifData.ExposureTime
       ? exifData.ExposureTime >= 1
         ? `${exifData.ExposureTime}s`
         : `1/${Math.round(1 / exifData.ExposureTime)} ss`
-      : "Unknown";
-    const aperture = exifData.FNumber ? `f${exifData.FNumber}` : "Unknown";
-    const iso = exifData.ISO ? `ISO ${exifData.ISO}` : "Unknown";
+      : (isVideo ? "" : "Unknown");
+    const aperture = exifData.FNumber ? `f${exifData.FNumber}` : (isVideo ? "" : "Unknown");
+    const iso = exifData.ISO ? `ISO ${exifData.ISO}` : (isVideo ? "" : "Unknown");
     const exposureComp =
       exifData.ExposureCompensation !== undefined
         ? `${exifData.ExposureCompensation} Ev`
         : "0 Ev";
     const whiteBalance = exifData.WhiteBalance || "Auto";
-
-    // Dimensions & Geometry
-    const sharpInstance = sharp(buffer);
-    const imgMeta = await sharpInstance.metadata();
-    const width = imgMeta.width || 1600;
-    const height = imgMeta.height || 1067;
-    const sizeStr = `${width}x${height}`;
-    const orientation: "horizontal" | "vertical" | "square" =
-      width === height ? "square" : height > width ? "vertical" : "horizontal";
-    const aspectRatio = parseFloat((width / height).toFixed(3));
-    const photoSize: PhotoSize = { width, height, aspectRatio, orientation };
 
     // Target folder on disk
     const photosRoot = resolvePhotosDir();
@@ -188,18 +234,116 @@ export async function POST(req: NextRequest) {
       fs.mkdirSync(targetFolder, { recursive: true });
     }
 
-    // Save image (resize if > 2400px wide for optimal web delivery)
-    const desktopFilename = `${photoID}.jpg`;
-    const targetImagePath = path.join(targetFolder, desktopFilename);
+    // Handle self-hosted video file saving or CLI-synced path
+    let savedVideoSrc: string | undefined;
+    let savedVideoDiskPath: string | undefined;
+    let savedVideoEmbedUrl: string | undefined;
 
-    if (width > 2400) {
-      await sharpInstance
-        .resize({ width: 2400, withoutEnlargement: true })
-        .jpeg({ quality: 92, mozjpeg: true })
-        .toFile(targetImagePath);
-    } else {
-      fs.writeFileSync(targetImagePath, buffer);
+    if (isVideo) {
+      if (parsedEmbed) {
+        savedVideoEmbedUrl = parsedEmbed.canonicalUrl;
+      } else if (videoFile && videoFile.size > 0) {
+        const videoExt = path.extname(videoFile.name).toLowerCase() || ".mp4";
+        const videoOutName = `${photoID}${videoExt}`;
+        const videoDiskPath = path.join(targetFolder, videoOutName);
+        const videoBuf = Buffer.from(await videoFile.arrayBuffer());
+        fs.writeFileSync(videoDiskPath, videoBuf);
+        savedVideoDiskPath = videoDiskPath;
+        savedVideoSrc = `/photos/${year}/${videoOutName}`;
+      } else if (videoFilenameRaw) {
+        const safeVideoName = path.basename(videoFilenameRaw);
+        savedVideoDiskPath = path.join(targetFolder, safeVideoName);
+        savedVideoSrc = `/photos/${year}/${safeVideoName}`;
+      }
     }
+
+    // Save still image or video poster image
+    let desktopFilename = `${photoID}.jpg`;
+    let photoSize: PhotoSize = {
+      width: 1920,
+      height: 1080,
+      aspectRatio: 1.778,
+      orientation: "horizontal",
+    };
+
+    if (imageBuffer && file) {
+      const saved = await saveUploadedImage({
+        buffer: imageBuffer,
+        originalName: file.name,
+        mimeType: file.type,
+        photoID,
+        targetFolder,
+      });
+      desktopFilename = saved.filename;
+      photoSize = saved.size;
+    } else if (isVideo && parsedEmbed && parsedEmbed.thumbnailUrl) {
+      // Auto-fetch YouTube thumbnail as poster image
+      const fetched = await fetchRemotePosterImage(
+        [parsedEmbed.thumbnailUrl, parsedEmbed.fallbackThumbnailUrl || ""],
+        photoID,
+        targetFolder
+      );
+      if (fetched) {
+        desktopFilename = fetched.filename;
+        photoSize = fetched.size;
+      } else {
+        return NextResponse.json(
+          { error: "Could not automatically fetch a poster thumbnail for this video URL. Please upload a poster image." },
+          { status: 400 }
+        );
+      }
+    } else if (isVideo && savedVideoDiskPath && fs.existsSync(savedVideoDiskPath)) {
+      // Attempt to extract a poster frame with ffmpeg if installed
+      const posterPath = path.join(targetFolder, `${photoID}.jpg`);
+      const extracted = await extractVideoPosterWithFfmpeg(savedVideoDiskPath, posterPath);
+      if (extracted) {
+        desktopFilename = `${photoID}.jpg`;
+        try {
+          const meta = await sharp(posterPath).metadata();
+          if (meta.width && meta.height) {
+            const w = meta.width;
+            const h = meta.height;
+            photoSize = {
+              width: w,
+              height: h,
+              aspectRatio: parseFloat((w / h).toFixed(3)),
+              orientation: w === h ? "square" : h > w ? "vertical" : "horizontal",
+            };
+          }
+        } catch {}
+      } else {
+        return NextResponse.json(
+          { error: "No poster image was provided and ffmpeg is not available on this server to auto-extract one. Please upload a poster image (JPG/PNG/WebP)." },
+          { status: 400 }
+        );
+      }
+    } else if (isVideo) {
+      // Check if a poster already exists on disk (e.g. synced via CLI script)
+      const existingPoster = path.join(targetFolder, `${photoID}.jpg`);
+      if (fs.existsSync(existingPoster)) {
+        desktopFilename = `${photoID}.jpg`;
+        try {
+          const meta = await sharp(existingPoster).metadata();
+          if (meta.width && meta.height) {
+            const w = meta.width;
+            const h = meta.height;
+            photoSize = {
+              width: w,
+              height: h,
+              aspectRatio: parseFloat((w / h).toFixed(3)),
+              orientation: w === h ? "square" : h > w ? "vertical" : "horizontal",
+            };
+          }
+        } catch {}
+      } else {
+        return NextResponse.json(
+          { error: "Please upload a poster image (JPG, PNG, or WebP) for this video." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const sizeStr = `${photoSize.width}x${photoSize.height}`;
 
     // Formatted created timestamp for upload sorting (YYYYMMDDHHMMSS)
     const pad = (n: number | string) => String(n).padStart(2, "0");
@@ -237,6 +381,9 @@ export async function POST(req: NextRequest) {
       `photoID:${photoID}`,
       `title:${title}`,
       `created:${createdTimestamp}`,
+      isVideo ? `mediaType:video` : "",
+      savedVideoSrc ? `videoSrc:${savedVideoSrc}` : "",
+      savedVideoEmbedUrl ? `videoEmbedUrl:${savedVideoEmbedUrl}` : "",
       description ? `description:${description}` : "",
       latitude !== null && longitude !== null ? `location:${latitude.toFixed(6)},${longitude.toFixed(6)}` : "",
       categories.length > 0 ? `albums:${categories.join(",")}` : "",
@@ -249,6 +396,7 @@ export async function POST(req: NextRequest) {
     fs.writeFileSync(targetTxtPath, txtLines.join("\n") + "\n", "utf-8");
 
     // Construct Photo object for JSON database
+    const nowUnix = Math.floor(Date.now() / 1000);
     const newPhoto: Photo = {
       photoID,
       title,
@@ -265,9 +413,12 @@ export async function POST(req: NextRequest) {
         second,
         iso: dateObj.toISOString(),
       },
-      updatedAt: Math.floor(Date.now() / 1000),
-      imageDesktop: `/photos/${year}/${desktopFilename}?v=${Math.floor(Date.now() / 1000)}`,
+      updatedAt: nowUnix,
+      imageDesktop: `/photos/${year}/${desktopFilename}?v=${nowUnix}`,
       imageFullsize: `/photos/${year}/${desktopFilename}`,
+      ...(isVideo ? { mediaType: "video" as const } : {}),
+      ...(savedVideoSrc ? { videoSrc: savedVideoSrc } : {}),
+      ...(savedVideoEmbedUrl ? { videoEmbedUrl: savedVideoEmbedUrl } : {}),
       size: photoSize,
       camera,
       lens,
@@ -279,7 +430,7 @@ export async function POST(req: NextRequest) {
       whiteBalance,
       toneCompensation: "Auto",
       hueAdjustment: 0,
-      film: "Digital",
+      film: isVideo ? "Video" : "Digital",
       tripod,
       availability,
       location:
@@ -324,7 +475,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error("Upload error:", err);
     return NextResponse.json(
-      { error: err.message || "Failed to process photo upload" },
+      { error: err.message || "Failed to process upload" },
       { status: 500 }
     );
   }

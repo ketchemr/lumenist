@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 import { Photo, PhotoLocation, PhotoSize } from "@/types/photo";
 import {
   resolvePhotosDir,
   findCandidateFilesToDelete,
 } from "@/lib/adminCatalog";
+import {
+  isSupportedVideoFilename,
+  parseVideoEmbed,
+  SUPPORTED_VIDEO_EXTENSIONS,
+} from "@/lib/media";
+import { saveUploadedImage } from "@/lib/mediaServer";
 
 export const dynamic = "force-dynamic";
 
@@ -140,39 +145,40 @@ export async function PUT(
     };
     let updatedSize: PhotoSize = photo.size || defaultSize;
     let imageReplaced = false;
+    let replacedDesktopFilename: string | null = null;
 
     if (replacementFile && replacementFile.size > 0) {
       const arrayBuffer = await replacementFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      const sharpInstance = sharp(buffer);
-      const imgMeta = await sharpInstance.metadata();
-      const width = imgMeta.width || updatedSize.width;
-      const height = imgMeta.height || updatedSize.height;
-      const orientation: "horizontal" | "vertical" | "square" =
-        width === height ? "square" : height > width ? "vertical" : "horizontal";
-      const aspectRatio = parseFloat((width / height).toFixed(3));
-      updatedSize = { width, height, aspectRatio, orientation };
+      const saved = await saveUploadedImage({
+        buffer,
+        originalName: replacementFile.name,
+        mimeType: replacementFile.type,
+        photoID: targetPhotoID,
+        targetFolder,
+      });
 
-      const desktopFilename = `${targetPhotoID}.jpg`;
-      const targetImagePath = path.join(targetFolder, desktopFilename);
+      updatedSize = saved.size;
+      replacedDesktopFilename = saved.filename;
+      const targetImagePath = saved.filePath;
 
-      if (width > 2400) {
-        await sharpInstance
-          .resize({ width: 2400, withoutEnlargement: true })
-          .jpeg({ quality: 92, mozjpeg: true })
-          .toFile(targetImagePath);
-      } else {
-        fs.writeFileSync(targetImagePath, buffer);
-      }
-
-      // If ID changed and old desktop image exists under a different name, clean it up
-      if (idChanged) {
-        const oldImagePath = path.join(targetFolder, `${id}.jpg`);
-        if (fs.existsSync(oldImagePath) && oldImagePath !== targetImagePath) {
+      // Clean up old image files if extension or ID changed
+      const oldExts = [".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"];
+      for (const ext of oldExts) {
+        const oldPath = path.join(targetFolder, `${id}${ext}`);
+        if (fs.existsSync(oldPath) && oldPath !== targetImagePath) {
           try {
-            fs.unlinkSync(oldImagePath);
+            fs.unlinkSync(oldPath);
           } catch {}
+        }
+        if (idChanged) {
+          const oldTargetPath = path.join(targetFolder, `${targetPhotoID}${ext}`);
+          if (fs.existsSync(oldTargetPath) && oldTargetPath !== targetImagePath) {
+            try {
+              fs.unlinkSync(oldTargetPath);
+            } catch {}
+          }
         }
       }
 
@@ -180,11 +186,13 @@ export async function PUT(
       const publicTargetFolder = path.join(process.cwd(), "public", "photos", String(year));
       if (fs.existsSync(publicTargetFolder) && publicTargetFolder !== targetFolder) {
         try {
-          fs.copyFileSync(targetImagePath, path.join(publicTargetFolder, desktopFilename));
+          fs.copyFileSync(targetImagePath, path.join(publicTargetFolder, saved.filename));
           if (idChanged) {
-            const oldPublicImg = path.join(publicTargetFolder, `${id}.jpg`);
-            if (fs.existsSync(oldPublicImg)) {
-              fs.unlinkSync(oldPublicImg);
+            for (const ext of oldExts) {
+              const oldPublicImg = path.join(publicTargetFolder, `${id}${ext}`);
+              if (fs.existsSync(oldPublicImg) && oldPublicImg !== path.join(publicTargetFolder, saved.filename)) {
+                fs.unlinkSync(oldPublicImg);
+              }
             }
           }
         } catch {}
@@ -192,11 +200,19 @@ export async function PUT(
 
       imageReplaced = true;
     } else if (idChanged) {
-      // No replacement file uploaded, but photoID was renamed: rename disk image files
+      // No replacement file uploaded, but photoID was renamed: rename disk media files
       const suffixes = [
         ".jpg",
         "_desktop.jpg",
         ".jpeg",
+        ".png",
+        ".webp",
+        ".avif",
+        ".gif",
+        ".mp4",
+        ".webm",
+        ".mov",
+        ".m4v",
         "_gallery.jpg",
         "_home.jpg",
         "_tn.jpg",
@@ -209,7 +225,7 @@ export async function PUT(
           try {
             fs.renameSync(oldFile, newFile);
           } catch (e) {
-            console.warn(`Could not rename image file ${oldFile} to ${newFile}:`, e);
+            console.warn(`Could not rename media file ${oldFile} to ${newFile}:`, e);
           }
         }
       }
@@ -228,11 +244,15 @@ export async function PUT(
         }
       }
 
-      // Check fullsize archive locations if present
+      // Check fullsize archive locations if present (driven by env var if configured)
       const possibleFullsizeDirs = [
-        path.join(photosRoot, "..", "..", "Photography", "rrkphoto", "RRKPhoto_fullsize", String(year)),
-        path.join("/Users/ketchemr/Library/CloudStorage/GoogleDrive-ketchemr@gmail.com/My Drive/Photography/rrkphoto/RRKPhoto_fullsize", String(year)),
-      ];
+        process.env.PHOTOS_FULLSIZE_DIR
+          ? path.join(process.env.PHOTOS_FULLSIZE_DIR, String(year))
+          : null,
+        process.env.FULLSIZE_DIR
+          ? path.join(process.env.FULLSIZE_DIR, String(year))
+          : null,
+      ].filter((d): d is string => Boolean(d));
       for (const fDir of possibleFullsizeDirs) {
         if (fs.existsSync(fDir)) {
           const oldFs = path.join(fDir, `${id}_fullsize.jpg`);
@@ -327,6 +347,50 @@ export async function PUT(
       }
     }
 
+    // Video metadata & optional replacement video file
+    const rawMediaType = formData.get("mediaType") as string | null;
+    const rawVideoSrc = formData.get("videoSrc") as string | null;
+    const rawVideoEmbedUrl = formData.get("videoEmbedUrl") as string | null;
+    const replacementVideoFile = formData.get("videoFile") as File | null;
+
+    let updatedVideoSrc = rawVideoSrc !== null ? (rawVideoSrc.trim() || undefined) : photo.videoSrc;
+    let updatedVideoEmbedUrl = rawVideoEmbedUrl !== null ? (rawVideoEmbedUrl.trim() || undefined) : photo.videoEmbedUrl;
+
+    if (updatedVideoEmbedUrl) {
+      const parsed = parseVideoEmbed(updatedVideoEmbedUrl);
+      if (!parsed) {
+        return NextResponse.json(
+          { error: "Please enter a valid YouTube or Vimeo URL." },
+          { status: 400 }
+        );
+      }
+      updatedVideoEmbedUrl = parsed.canonicalUrl;
+    }
+
+    if (replacementVideoFile && replacementVideoFile.size > 0) {
+      if (!isSupportedVideoFilename(replacementVideoFile.name)) {
+        return NextResponse.json(
+          { error: `Unsupported video format. Supported formats: ${SUPPORTED_VIDEO_EXTENSIONS.join(", ")}` },
+          { status: 400 }
+        );
+      }
+      const vExt = path.extname(replacementVideoFile.name).toLowerCase() || ".mp4";
+      const vFilename = `${targetPhotoID}${vExt}`;
+      const vPath = path.join(targetFolder, vFilename);
+      const vBuf = Buffer.from(await replacementVideoFile.arrayBuffer());
+      fs.writeFileSync(vPath, vBuf);
+      updatedVideoSrc = `/photos/${year}/${vFilename}`;
+    } else if (idChanged && updatedVideoSrc && updatedVideoSrc.includes(`/${id}.`)) {
+      updatedVideoSrc = updatedVideoSrc.replace(`/${id}.`, `/${targetPhotoID}.`);
+    }
+
+    const isVideo =
+      rawMediaType === "video" ||
+      (rawMediaType === null && photo.mediaType === "video") ||
+      Boolean(updatedVideoSrc) ||
+      Boolean(updatedVideoEmbedUrl);
+    const updatedMediaType: "photo" | "video" | undefined = isVideo ? "video" : undefined;
+
     // Write updated .txt file
     const txtFilename = `${targetPhotoID}.txt`;
     const targetTxtPath = path.join(targetFolder, txtFilename);
@@ -336,6 +400,9 @@ export async function PUT(
       `photoID:${targetPhotoID}`,
       `title:${title}`,
       createdVal ? `created:${createdVal}` : "",
+      isVideo ? `mediaType:video` : "",
+      updatedVideoSrc ? `videoSrc:${updatedVideoSrc}` : "",
+      updatedVideoEmbedUrl ? `videoEmbedUrl:${updatedVideoEmbedUrl}` : "",
       description ? `description:${description}` : "",
       newLocation ? `location:${newLocation.latitude.toFixed(6)},${newLocation.longitude.toFixed(6)}` : "",
       categories.length > 0 ? `albums:${categories.join(",")}` : "",
@@ -375,12 +442,18 @@ export async function PUT(
       ? Math.floor(Date.now() / 1000)
       : (photo.updatedAt || (photo.imageDesktop?.includes("?v=") ? parseInt(photo.imageDesktop.split("?v=")[1], 10) : Math.floor(Date.now() / 1000)));
 
-    let baseDesktop = (photo.imageDesktop || `/photos/${year}/${id}.jpg`).split("?")[0];
-    if (idChanged) {
+    let baseDesktop = replacedDesktopFilename
+      ? `/photos/${year}/${replacedDesktopFilename}`
+      : (photo.imageDesktop || `/photos/${year}/${id}.jpg`).split("?")[0];
+    if (!replacedDesktopFilename && idChanged) {
       baseDesktop = baseDesktop
         .replace(`/${id}.jpg`, `/${targetPhotoID}.jpg`)
         .replace(`/${id}_desktop.jpg`, `/${targetPhotoID}_desktop.jpg`)
-        .replace(`/${id}.jpeg`, `/${targetPhotoID}.jpeg`);
+        .replace(`/${id}.jpeg`, `/${targetPhotoID}.jpeg`)
+        .replace(`/${id}.png`, `/${targetPhotoID}.png`)
+        .replace(`/${id}.webp`, `/${targetPhotoID}.webp`)
+        .replace(`/${id}.avif`, `/${targetPhotoID}.avif`)
+        .replace(`/${id}.gif`, `/${targetPhotoID}.gif`);
       if (!baseDesktop.includes(targetPhotoID)) {
         baseDesktop = `/photos/${year}/${targetPhotoID}.jpg`;
       }
@@ -412,6 +485,9 @@ export async function PUT(
       location: newLocation,
       updatedAt: updatedMtime,
       imageDesktop: `${baseDesktop}?v=${updatedMtime}`,
+      mediaType: updatedMediaType,
+      videoSrc: updatedVideoSrc,
+      videoEmbedUrl: updatedVideoEmbedUrl,
       ...(imageFullsize ? { imageFullsize } : {}),
       rawFields: {
         ...(photo.rawFields || {}),

@@ -16,6 +16,7 @@ import {
   Tag,
   Folder,
   Sliders,
+  Film,
 } from "lucide-react";
 import { Photo } from "@/types/photo";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
@@ -23,6 +24,11 @@ import {
   parseCoordinates,
   formatDMS,
 } from "@/lib/coordinates";
+import {
+  IMAGE_ACCEPT_ATTR,
+  VIDEO_ACCEPT_ATTR,
+  isVideoPhoto,
+} from "@/lib/media";
 
 interface EditPhotoModalProps {
   photoID: string;
@@ -81,6 +87,13 @@ export function EditPhotoModal({
   const [replacementPreview, setReplacementPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Video fields
+  const [isVideoEntry, setIsVideoEntry] = useState(false);
+  const [videoSrcInput, setVideoSrcInput] = useState("");
+  const [videoEmbedUrlInput, setVideoEmbedUrlInput] = useState("");
+  const [replacementVideoFile, setReplacementVideoFile] = useState<File | null>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
+
   // Submission
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -109,6 +122,11 @@ export function EditPhotoModal({
     setIso(p.sensitivity || (p as any).iso || "");
     setExposureComp(p.exposureCompensation || "");
     setWhiteBalance(p.whiteBalance || "");
+
+    setIsVideoEntry(isVideoPhoto(p));
+    setVideoSrcInput(p.videoSrc || "");
+    setVideoEmbedUrlInput(p.videoEmbedUrl || "");
+    setReplacementVideoFile(null);
 
     if (p.location && typeof p.location.latitude === "number" && typeof p.location.longitude === "number") {
       setLatitude(p.location.latitude);
@@ -301,6 +319,19 @@ export function EditPhotoModal({
         formData.append("file", replacementFile);
       }
 
+      if (isVideoEntry || videoSrcInput.trim() || videoEmbedUrlInput.trim() || replacementVideoFile) {
+        formData.append("mediaType", "video");
+        formData.append("videoSrc", videoSrcInput.trim());
+        formData.append("videoEmbedUrl", videoEmbedUrlInput.trim());
+        if (replacementVideoFile) {
+          formData.append("videoFile", replacementVideoFile);
+        }
+      } else {
+        formData.append("mediaType", "photo");
+        formData.append("videoSrc", "");
+        formData.append("videoEmbedUrl", "");
+      }
+
       const res = await fetch(`/api/admin/photo/${encodeURIComponent(photoID)}`, {
         method: "PUT",
         body: formData,
@@ -379,7 +410,7 @@ export function EditPhotoModal({
           {/* Section: Image & Replacement */}
           <div className="space-y-3 bg-surface border border-surface-border p-4 rounded-sm">
             <label className="block text-xs font-medium text-foreground uppercase tracking-wider">
-              Photograph Image File
+              {isVideoEntry ? "Video Poster Image File" : "Photograph Image File"}
             </label>
             <div className="flex flex-col sm:flex-row items-start gap-4">
               <div className="relative w-32 h-24 bg-surface-hover/50 dark:bg-black border border-surface-border rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
@@ -407,7 +438,7 @@ export function EditPhotoModal({
                       Replacement file chosen: {replacementFile.name} ({(replacementFile.size / 1024 / 1024).toFixed(2)} MB)
                     </span>
                   ) : (
-                    "Upload a replacement image file to overwrite the desktop JPEG and regenerate optimized thumbnails."
+                    "Upload a replacement image file (JPG, PNG, WebP, AVIF, GIF, or TIFF) and regenerate optimized thumbnails."
                   )}
                 </p>
 
@@ -415,7 +446,7 @@ export function EditPhotoModal({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept={IMAGE_ACCEPT_ATTR}
                     className="hidden"
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
@@ -449,6 +480,79 @@ export function EditPhotoModal({
               </div>
             </div>
           </div>
+
+          {/* Section: Video Source (when video or toggled) */}
+          {isVideoEntry && (
+            <div className="space-y-3 bg-surface border border-surface-border p-4 rounded-sm">
+              <div className="flex items-center space-x-2 text-xs font-medium text-foreground uppercase tracking-wider">
+                <Film className="w-3.5 h-3.5 text-accent" />
+                <span>Video Source</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs text-muted">
+                    YouTube / Vimeo Embed URL
+                  </label>
+                  <input
+                    type="url"
+                    value={videoEmbedUrlInput}
+                    onChange={(e) => setVideoEmbedUrlInput(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs text-muted">
+                    Self-Hosted Video Path
+                  </label>
+                  <input
+                    type="text"
+                    value={videoSrcInput}
+                    onChange={(e) => setVideoSrcInput(e.target.value)}
+                    placeholder="/photos/2026/v20261121.mp4"
+                    className="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 pt-1">
+                <input
+                  ref={videoFileInputRef}
+                  type="file"
+                  accept={VIDEO_ACCEPT_ATTR}
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      setReplacementVideoFile(e.target.files[0]);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => videoFileInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border hover:border-accent text-foreground text-xs rounded transition-colors flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5 text-accent" />
+                  <span>
+                    {replacementVideoFile
+                      ? `Video: ${replacementVideoFile.name}`
+                      : "Upload Replacement Video (.mp4/.webm/.mov)"}
+                  </span>
+                </button>
+                {replacementVideoFile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplacementVideoFile(null);
+                      if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+                    }}
+                    className="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Section: Title & Description */}
           <div className="space-y-4 bg-surface border border-surface-border p-4 rounded-sm">

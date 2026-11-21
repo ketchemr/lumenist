@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Photo } from "@/types/photo";
 import { WatermarkBadge } from "@/components/WatermarkBadge";
+import { VideoPlayBadge } from "@/components/VideoPlayBadge";
+import { isVideoPhoto } from "@/lib/media";
 
 interface ExhibitionGalleryProps {
   photos: Photo[];
@@ -129,6 +131,8 @@ export function ExhibitionGallery({
                         onContextMenu={(e) => e.preventDefault()}
                         className="w-full h-full block object-contain transition-transform duration-500 ease-out group-hover:scale-[1.012] pointer-events-none select-none"
                       />
+                      {/* Video indicator */}
+                      {isVideoPhoto(photo) && <VideoPlayBadge size="md" />}
                       {/* Copyright watermark & protection shield */}
                       <WatermarkBadge
                         show={showWatermark}

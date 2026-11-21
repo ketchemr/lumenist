@@ -32,21 +32,39 @@ export function findTxtPath(photo: Photo, photosRoot: string): string | null {
 
 export function findCandidateFilesToDelete(photo: Photo, photosRoot: string): string[] {
   const files: string[] = [];
+  const mediaExts = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".avif",
+    ".gif",
+    ".mp4",
+    ".webm",
+    ".mov",
+    ".m4v",
+  ];
   if (photo.imageDesktop && photo.imageDesktop.startsWith("/photos/")) {
     const relPath = photo.imageDesktop.replace(/^\/photos\//, "").split("?")[0];
     const fullDesktopPath = path.join(photosRoot, relPath);
     files.push(fullDesktopPath);
     const dirName = path.dirname(fullDesktopPath);
     files.push(path.join(dirName, `${photo.photoID}.txt`));
-    files.push(path.join(dirName, `${photo.photoID}.jpg`));
-    files.push(path.join(dirName, `${photo.photoID}.jpeg`));
+    for (const ext of mediaExts) {
+      files.push(path.join(dirName, `${photo.photoID}${ext}`));
+    }
+  }
+  if (photo.videoSrc && photo.videoSrc.startsWith("/photos/")) {
+    const relVideo = photo.videoSrc.replace(/^\/photos\//, "").split("?")[0];
+    files.push(path.join(photosRoot, relVideo));
   }
   if (photo.dateTaken?.year) {
     const yearDir = path.join(photosRoot, String(photo.dateTaken.year));
     files.push(path.join(yearDir, `${photo.photoID}.txt`));
     files.push(path.join(yearDir, `${photo.photoID}_desktop.jpg`));
-    files.push(path.join(yearDir, `${photo.photoID}.jpg`));
-    files.push(path.join(yearDir, `${photo.photoID}.jpeg`));
+    for (const ext of mediaExts) {
+      files.push(path.join(yearDir, `${photo.photoID}${ext}`));
+    }
   }
   return Array.from(new Set(files));
 }

@@ -106,18 +106,48 @@ async function main() {
     for (const txtFile of txtFiles) {
       const filePath = path.join(subPath, txtFile);
       const baseName = path.parse(txtFile).name;
-      let imagePath = path.join(subPath, `${baseName}.jpg`);
-      if (!fs.existsSync(imagePath)) {
-        imagePath = path.join(subPath, `${baseName}_desktop.jpg`);
+      const imageCandidates = [
+        `${baseName}.jpg`,
+        `${baseName}.jpeg`,
+        `${baseName}.png`,
+        `${baseName}.webp`,
+        `${baseName}.avif`,
+        `${baseName}.gif`,
+        `${baseName}_desktop.jpg`,
+      ];
+      let imageFilename = `${baseName}.jpg`;
+      let imagePath = path.join(subPath, imageFilename);
+      for (const cand of imageCandidates) {
+        const candPath = path.join(subPath, cand);
+        if (fs.existsSync(candPath)) {
+          imageFilename = cand;
+          imagePath = candPath;
+          break;
+        }
       }
+
+      const videoCandidates = [
+        `${baseName}.mp4`,
+        `${baseName}.webm`,
+        `${baseName}.mov`,
+        `${baseName}.m4v`,
+      ];
+      let videoFilename: string | null = null;
+      for (const cand of videoCandidates) {
+        if (fs.existsSync(path.join(subPath, cand))) {
+          videoFilename = cand;
+          break;
+        }
+      }
+
       try {
         const content = fs.readFileSync(filePath, "utf-8");
         const photo = parseTxtMetadata(content, baseName, imagePath);
 
-        // Adjust image path to preserve folder structure and attach file mtime version
-        const imageFilename = fs.existsSync(path.join(subPath, `${baseName}.jpg`))
-          ? `${photo.photoID}.jpg`
-          : `${photo.photoID}_desktop.jpg`;
+        if (videoFilename) {
+          photo.mediaType = "video";
+          photo.videoSrc = photo.videoSrc || `/photos/${sub}/${videoFilename}`;
+        }
 
         if (fs.existsSync(imagePath)) {
           try {

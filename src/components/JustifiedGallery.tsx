@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Photo } from "@/types/photo";
 import { WatermarkBadge } from "@/components/WatermarkBadge";
+import { VideoPlayBadge } from "@/components/VideoPlayBadge";
+import { isVideoPhoto } from "@/lib/media";
 
 interface JustifiedGalleryProps {
   photos: Photo[];
@@ -195,6 +197,9 @@ export function JustifiedGallery({
                   onContextMenu={(e) => e.preventDefault()}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] select-none pointer-events-none"
                 />
+
+                {/* Video indicator */}
+                {isVideoPhoto(photo) && <VideoPlayBadge size="sm" />}
 
                 {/* Copyright watermark badge & protection shield */}
                 <WatermarkBadge

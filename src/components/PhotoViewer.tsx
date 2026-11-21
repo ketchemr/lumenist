@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Photo } from "@/types/photo";
 import { WatermarkBadge } from "@/components/WatermarkBadge";
+import { isVideoPhoto, parseVideoEmbed } from "@/lib/media";
 
 interface PhotoViewerProps {
   photo: Photo;
@@ -459,7 +460,12 @@ export function PhotoViewer({
       if (Date.now() - openedAtRef.current < 250) return;
 
       const target = e.target as HTMLElement;
-      if (target.closest("button") || target.closest(".photo-info-drawer")) {
+      if (
+        target.closest("button") ||
+        target.closest(".photo-info-drawer") ||
+        target.closest("video") ||
+        target.closest("iframe")
+      ) {
         return;
       }
 
@@ -469,46 +475,85 @@ export function PhotoViewer({
   );
 
   const isPhoneOnlyPicture = isPhone || isMonitorFullscreen;
+  const isVideo = isVideoPhoto(photo);
+  const parsedEmbed = photo.videoEmbedUrl ? parseVideoEmbed(photo.videoEmbedUrl) : null;
+  const videoAspectRatio = photo.size?.aspectRatio || 16 / 9;
 
   return (
     <>
       {/* 1. Normal In-Page Presentation Frame */}
       <div className="relative w-full max-w-[calc(80rem+0.75rem+2px)] sm:max-w-[calc(80rem+1.5rem+2px)] mx-auto bg-surface dark:bg-black/90 rounded-sm p-1.5 sm:p-3 border border-surface-border overflow-hidden select-none">
         <div className="flex justify-center items-center">
-          <div className="relative inline-flex items-center justify-center max-w-full">
-            <img
-              src={photo.imageDesktop}
-              alt={photo.title}
-              width={photo.size?.width}
-              height={photo.size?.height}
-              style={
-                photo.size?.aspectRatio
-                  ? { aspectRatio: `${photo.size.aspectRatio}` }
-                  : undefined
-              }
-              fetchPriority="high"
-              decoding="async"
-              draggable={false}
-              onContextMenu={(e) => e.preventDefault()}
-              className="max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-9.5rem)] w-auto h-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame select-none"
-            />
-            {/* Transparent Click & Protection Shield */}
+          {isVideo && parsedEmbed ? (
             <div
-              className="absolute inset-0 z-10 cursor-pointer select-none"
-              onClick={(e) => {
-                e.stopPropagation();
-                openWindowFullscreen();
+              className="relative w-full max-w-5xl mx-auto rounded-sm overflow-hidden shadow-2xl bg-black"
+              style={{
+                aspectRatio: `${videoAspectRatio}`,
+                maxHeight: "calc(100dvh - 9.5rem)",
               }}
-              onContextMenu={(e) => e.preventDefault()}
-              title="Click to view full screen (Shortcut: W, Monitor: F)"
-            />
-            {/* Elegant Copyright Watermark Overlay (Toggleable via Admin Settings) */}
-            <WatermarkBadge
-              show={showWatermark}
-              notice={copyrightNotice}
-              size="lg"
-            />
-          </div>
+            >
+              <iframe
+                src={parsedEmbed.embedUrl}
+                title={photo.title}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          ) : isVideo && photo.videoSrc ? (
+            <div className="relative inline-flex items-center justify-center max-w-full w-full">
+              <video
+                src={photo.videoSrc}
+                poster={photo.imageDesktop}
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-9.5rem)] w-auto h-auto max-w-full mx-auto rounded-sm shadow-2xl bg-black"
+                style={
+                  photo.size?.aspectRatio
+                    ? { aspectRatio: `${photo.size.aspectRatio}` }
+                    : undefined
+                }
+              >
+                Your browser does not support HTML5 video playback.
+              </video>
+            </div>
+          ) : (
+            <div className="relative inline-flex items-center justify-center max-w-full">
+              <img
+                src={photo.imageDesktop}
+                alt={photo.title}
+                width={photo.size?.width}
+                height={photo.size?.height}
+                style={
+                  photo.size?.aspectRatio
+                    ? { aspectRatio: `${photo.size.aspectRatio}` }
+                    : undefined
+                }
+                fetchPriority="high"
+                decoding="async"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                className="max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-9.5rem)] w-auto h-auto max-w-full object-contain mx-auto rounded-sm shadow-2xl photo-frame select-none"
+              />
+              {/* Transparent Click & Protection Shield */}
+              <div
+                className="absolute inset-0 z-10 cursor-pointer select-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openWindowFullscreen();
+                }}
+                onContextMenu={(e) => e.preventDefault()}
+                title="Click to view full screen (Shortcut: W, Monitor: F)"
+              />
+              {/* Elegant Copyright Watermark Overlay (Toggleable via Admin Settings) */}
+              <WatermarkBadge
+                show={showWatermark}
+                notice={copyrightNotice}
+                size="lg"
+              />
+            </div>
+          )}
         </div>
 
         {/* Fit / Extend text in the lower right corner of the margin outside of the image */}
@@ -562,32 +607,62 @@ export function PhotoViewer({
             }`}
           >
             <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
-              <img
-                src={photo.imageDesktop}
-                alt={photo.title}
-                fetchPriority="high"
-                decoding="async"
-                draggable={false}
-                onContextMenu={(e) => e.preventDefault()}
-                className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 cursor-pointer photo-frame select-none"
-                style={{
-                  touchAction: "none",
-                  WebkitTouchCallout: "none",
-                  userSelect: "none",
-                  WebkitUserSelect: "none",
-                }}
-              />
-              {/* Transparent Protection Shield */}
-              <div
-                className="absolute inset-0 z-10 cursor-pointer select-none"
-                onContextMenu={(e) => e.preventDefault()}
-              />
-              {/* Fullscreen Copyright Watermark Overlay (Toggleable via Admin Settings) */}
-              <WatermarkBadge
-                show={showWatermark}
-                notice={copyrightNotice}
-                size="lg"
-              />
+              {isVideo && parsedEmbed ? (
+                <div
+                  className="relative w-full max-w-6xl mx-auto bg-black rounded-sm overflow-hidden"
+                  style={{ aspectRatio: `${videoAspectRatio}`, maxHeight: "90vh" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <iframe
+                    src={parsedEmbed.embedUrl}
+                    title={photo.title}
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              ) : isVideo && photo.videoSrc ? (
+                <video
+                  src={photo.videoSrc}
+                  poster={photo.imageDesktop}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  onClick={(e) => e.stopPropagation()}
+                  className="max-h-full max-w-full w-auto h-auto mx-auto bg-black"
+                >
+                  Your browser does not support HTML5 video playback.
+                </video>
+              ) : (
+                <>
+                  <img
+                    src={photo.imageDesktop}
+                    alt={photo.title}
+                    fetchPriority="high"
+                    decoding="async"
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-200 cursor-pointer photo-frame select-none"
+                    style={{
+                      touchAction: "none",
+                      WebkitTouchCallout: "none",
+                      userSelect: "none",
+                      WebkitUserSelect: "none",
+                    }}
+                  />
+                  {/* Transparent Protection Shield */}
+                  <div
+                    className="absolute inset-0 z-10 cursor-pointer select-none"
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                  {/* Fullscreen Copyright Watermark Overlay (Toggleable via Admin Settings) */}
+                  <WatermarkBadge
+                    show={showWatermark}
+                    notice={copyrightNotice}
+                    size="lg"
+                  />
+                </>
+              )}
             </div>
           </div>
 
