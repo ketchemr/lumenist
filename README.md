@@ -453,6 +453,20 @@ lumenist/
 
 ---
 
+## Built with Lumenist
+
+A curated gallery of live photography portfolios powered by Lumenist:
+
+| Site | Photographer | Focus |
+| :--- | :--- | :--- |
+| [rrkphoto.com](https://rrkphoto.com) | Randal R. Ketchem | Fine-art landscape and nature photography |
+
+**Using Lumenist for your portfolio?** If you'd like your site considered for this showcase, please send your site URL and a brief description privately via the contact options on [rrkphoto.com/about](https://rrkphoto.com/about).
+
+> *Showcase guidelines: Listings are limited to family-friendly, original photography portfolios. All submissions are manually reviewed prior to listing and are included at the maintainer's discretion; links may be removed if a site goes offline or its content changes.*
+
+---
+
 ## License
 
 This project is licensed under the **MIT License** — you are free to self-host, customize, and extend it for your own photography portfolio.
