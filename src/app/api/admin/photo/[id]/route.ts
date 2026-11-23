@@ -391,52 +391,6 @@ export async function PUT(
       Boolean(updatedVideoEmbedUrl);
     const updatedMediaType: "photo" | "video" | undefined = isVideo ? "video" : undefined;
 
-    // Write updated .txt file
-    const txtFilename = `${targetPhotoID}.txt`;
-    const targetTxtPath = path.join(targetFolder, txtFilename);
-
-    const createdVal = photo.createdTimestamp || photo.rawFields?.created;
-    const txtLines = [
-      `photoID:${targetPhotoID}`,
-      `title:${title}`,
-      createdVal ? `created:${createdVal}` : "",
-      isVideo ? `mediaType:video` : "",
-      updatedVideoSrc ? `videoSrc:${updatedVideoSrc}` : "",
-      updatedVideoEmbedUrl ? `videoEmbedUrl:${updatedVideoEmbedUrl}` : "",
-      description ? `description:${description}` : "",
-      newLocation ? `location:${newLocation.latitude.toFixed(6)},${newLocation.longitude.toFixed(6)}` : "",
-      categories.length > 0 ? `albums:${categories.join(",")}` : "",
-      keywords.length > 0 ? `tags:${keywords.join(",")}` : "",
-      `size:${updatedSize.width}x${updatedSize.height}`,
-      tripod ? `tripod:${tripod}` : "tripod:None",
-      availability ? `availability:${availability}` : "availability:Available for Order",
-    ].filter(Boolean);
-
-    fs.writeFileSync(targetTxtPath, txtLines.join("\n") + "\n", "utf-8");
-
-    if (idChanged) {
-      const oldTxtPath = path.join(targetFolder, `${id}.txt`);
-      if (fs.existsSync(oldTxtPath) && oldTxtPath !== targetTxtPath) {
-        try {
-          fs.unlinkSync(oldTxtPath);
-        } catch {}
-      }
-    }
-
-    // Also sync public/photos .txt if separate
-    const publicTxtPath = path.join(process.cwd(), "public", "photos", String(year), txtFilename);
-    if (fs.existsSync(path.dirname(publicTxtPath)) && publicTxtPath !== targetTxtPath) {
-      try {
-        fs.copyFileSync(targetTxtPath, publicTxtPath);
-        if (idChanged) {
-          const oldPublicTxt = path.join(path.dirname(publicTxtPath), `${id}.txt`);
-          if (fs.existsSync(oldPublicTxt)) {
-            fs.unlinkSync(oldPublicTxt);
-          }
-        }
-      } catch {}
-    }
-
     // Update Photo in catalog
     const updatedMtime = (imageReplaced || idChanged)
       ? Math.floor(Date.now() / 1000)

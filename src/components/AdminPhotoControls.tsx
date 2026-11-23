@@ -117,7 +117,6 @@ export function AdminPhotoControls({ photoID, title }: AdminPhotoControlsProps) 
               </p>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] text-muted pl-1">
                 <li>Desktop web JPEG and original fullsize file from disk</li>
-                <li>Companion <code>.txt</code> metadata record</li>
                 <li>Catalog entry in <code>data/photos.json</code></li>
               </ul>
             </div>

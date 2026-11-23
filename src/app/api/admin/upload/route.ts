@@ -384,28 +384,6 @@ export async function POST(req: NextRequest) {
       createdTimestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     }
 
-    // Write companion .txt file
-    const txtFilename = `${photoID}.txt`;
-    const targetTxtPath = path.join(targetFolder, txtFilename);
-
-    const txtLines = [
-      `photoID:${photoID}`,
-      `title:${title}`,
-      `created:${createdTimestamp}`,
-      isVideo ? `mediaType:video` : "",
-      savedVideoSrc ? `videoSrc:${savedVideoSrc}` : "",
-      savedVideoEmbedUrl ? `videoEmbedUrl:${savedVideoEmbedUrl}` : "",
-      description ? `description:${description}` : "",
-      latitude !== null && longitude !== null ? `location:${latitude.toFixed(6)},${longitude.toFixed(6)}` : "",
-      categories.length > 0 ? `albums:${categories.join(",")}` : "",
-      keywords.length > 0 ? `tags:${keywords.join(",")}` : "",
-      `size:${sizeStr}`,
-      tripod ? `tripod:${tripod}` : "tripod:None",
-      availability ? `availability:${availability}` : "availability:Available for Order",
-    ].filter(Boolean);
-
-    fs.writeFileSync(targetTxtPath, txtLines.join("\n") + "\n", "utf-8");
-
     // Construct Photo object for JSON database
     const nowUnix = Math.floor(Date.now() / 1000);
     const newPhoto: Photo = {

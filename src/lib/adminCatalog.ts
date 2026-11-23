@@ -14,22 +14,6 @@ export function resolvePhotosDir(): string {
   }
 }
 
-export function findTxtPath(photo: Photo, photosRoot: string): string | null {
-  if (photo.imageDesktop && photo.imageDesktop.startsWith("/photos/")) {
-    const relPath = photo.imageDesktop.replace(/^\/photos\//, "").split("?")[0];
-    const fullDesktopPath = path.join(photosRoot, relPath);
-    const dirName = path.dirname(fullDesktopPath);
-    const p1 = path.join(dirName, `${photo.photoID}.txt`);
-    if (fs.existsSync(p1)) return p1;
-  }
-  if (photo.dateTaken?.year) {
-    const yearDir = path.join(photosRoot, String(photo.dateTaken.year));
-    const p2 = path.join(yearDir, `${photo.photoID}.txt`);
-    if (fs.existsSync(p2)) return p2;
-  }
-  return null;
-}
-
 export function findCandidateFilesToDelete(photo: Photo, photosRoot: string): string[] {
   const files: string[] = [];
   const mediaExts = [
@@ -49,7 +33,6 @@ export function findCandidateFilesToDelete(photo: Photo, photosRoot: string): st
     const fullDesktopPath = path.join(photosRoot, relPath);
     files.push(fullDesktopPath);
     const dirName = path.dirname(fullDesktopPath);
-    files.push(path.join(dirName, `${photo.photoID}.txt`));
     for (const ext of mediaExts) {
       files.push(path.join(dirName, `${photo.photoID}${ext}`));
     }
@@ -60,89 +43,12 @@ export function findCandidateFilesToDelete(photo: Photo, photosRoot: string): st
   }
   if (photo.dateTaken?.year) {
     const yearDir = path.join(photosRoot, String(photo.dateTaken.year));
-    files.push(path.join(yearDir, `${photo.photoID}.txt`));
     files.push(path.join(yearDir, `${photo.photoID}_desktop.jpg`));
     for (const ext of mediaExts) {
       files.push(path.join(yearDir, `${photo.photoID}${ext}`));
     }
   }
   return Array.from(new Set(files));
-}
-
-export function updateTxtFileMetadata(
-  txtPath: string,
-  updates: { categories?: string[]; keywords?: string[] }
-): boolean {
-  if (!fs.existsSync(txtPath)) return false;
-  try {
-    const content = fs.readFileSync(txtPath, "utf-8");
-    const lines = content.split(/\r?\n/);
-
-    let categoryLineIndex = -1;
-    let keywordLineIndex = -1;
-
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim().toLowerCase();
-      if (
-        trimmed.startsWith("category:") ||
-        trimmed.startsWith("categories:") ||
-        trimmed.startsWith("albums:") ||
-        trimmed.startsWith("album:")
-      ) {
-        categoryLineIndex = i;
-      }
-      if (
-        trimmed.startsWith("keyword:") ||
-        trimmed.startsWith("keywords:") ||
-        trimmed.startsWith("tags:") ||
-        trimmed.startsWith("tag:")
-      ) {
-        keywordLineIndex = i;
-      }
-    }
-
-    if (updates.categories !== undefined) {
-      const catStr = updates.categories.join(",");
-      const colonPrefix =
-        categoryLineIndex >= 0
-          ? lines[categoryLineIndex].split(":")[0] + ":"
-          : "category:";
-      const newLine = `${colonPrefix}${catStr}`;
-
-      if (categoryLineIndex >= 0) {
-        lines[categoryLineIndex] = newLine;
-      } else {
-        lines.push(newLine);
-      }
-    }
-
-    if (updates.keywords !== undefined) {
-      const kwStr = updates.keywords.join(",");
-      const colonPrefix =
-        keywordLineIndex >= 0
-          ? lines[keywordLineIndex].split(":")[0] + ":"
-          : "keyword:";
-      const newLine = `${colonPrefix}${kwStr}`;
-
-      if (keywordLineIndex >= 0) {
-        lines[keywordLineIndex] = newLine;
-      } else {
-        lines.push(newLine);
-      }
-    }
-
-    fs.writeFileSync(
-      txtPath,
-      lines
-        .filter((l, idx) => idx < lines.length - 1 || l.trim().length > 0)
-        .join("\n") + "\n",
-      "utf-8"
-    );
-    return true;
-  } catch (err) {
-    console.warn(`Failed to update txt file at ${txtPath}:`, err);
-    return false;
-  }
 }
 
 export function isPhotoOnlyInAll(photo: { categories?: string[] }): boolean {

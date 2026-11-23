@@ -25,11 +25,12 @@ Runs the linter across all TypeScript, TSX, and JavaScript source files to check
 
 ## 📸 Catalog & Photo Ingestion Commands
 
-### `npm run import:all`
-Scans your photo archive directory (configured in `.env.local` via `PHOTOS_SOURCE_DIR` or `LOCAL_PHOTO_DIR`), extracts EXIF metadata and companion `.txt` narrative descriptions, and rebuilds the unified catalog at `data/photos.json`.
-
-### `npm run import:test`
-Performs a dry-run test of the metadata parser script against sample images and `.txt` files without writing or modifying `data/photos.json`. Useful for verifying changes to parsing logic.
+### `npm run import:batch`
+Batch-imports a folder of images (with an optional `.csv` or `.json` metadata manifest) directly into `public/photos/` and `data/photos.json`, automatically extracting EXIF camera, date, and GPS metadata for any missing fields.
+```bash
+npm run import:batch -- /path/to/images --meta /path/to/manifest.csv --duplicates merge
+```
+*(For smaller batches, use the **Bulk Import** tab in `/admin/upload`, which also includes one-click **Export JSON / CSV** catalog backups.)*
 
 ### `npm run thumbnails:precache`
 Pre-generates and caches WebP thumbnails for every photograph in the catalog across all exhibition sizes (150px, 400px, 600px). Pre-caching ensures zero latency when visitors browse galleries and explore maps.

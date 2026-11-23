@@ -249,10 +249,14 @@ export function ExploreGallery({
     selectedSiteKey,
   ]);
 
-  // Compute tag frequencies across all photos, focusing on meaningful keywords
+  // Compute tag frequencies across all photos, deduplicating case-insensitively
   const allKeywords = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const groups: Record<
+      string,
+      { total: number; variants: Record<string, number> }
+    > = {};
     for (const p of initialPhotos) {
+      const seenInPhoto = new Set<string>();
       for (const k of p.keywords || []) {
         const trimmed = k.trim();
         // Skip purely technical orientation/color boilerplate tags
@@ -261,13 +265,26 @@ export function ExploreGallery({
           trimmed &&
           lower !== "color" &&
           lower !== "horizontal" &&
-          lower !== "vertical"
+          lower !== "vertical" &&
+          !seenInPhoto.has(lower)
         ) {
-          counts[trimmed] = (counts[trimmed] || 0) + 1;
+          seenInPhoto.add(lower);
+          if (!groups[lower]) {
+            groups[lower] = { total: 0, variants: {} };
+          }
+          groups[lower].total += 1;
+          groups[lower].variants[trimmed] =
+            (groups[lower].variants[trimmed] || 0) + 1;
         }
       }
     }
-    return Object.entries(counts).map(([tag, count]) => ({ tag, count }));
+    return Object.values(groups).map(({ total, variants }) => {
+      // Pick the most frequent casing (tie-break toward capitalized/Title Case)
+      const bestTag = Object.entries(variants).sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+      )[0][0];
+      return { tag: bestTag, count: total };
+    });
   }, [initialPhotos]);
 
   const displayedTags = useMemo(() => {

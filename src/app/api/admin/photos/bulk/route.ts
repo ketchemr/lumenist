@@ -7,8 +7,6 @@ import { Photo } from "@/types/photo";
 import {
   resolvePhotosDir,
   findCandidateFilesToDelete,
-  findTxtPath,
-  updateTxtFileMetadata,
 } from "@/lib/adminCatalog";
 
 export const dynamic = "force-dynamic";
@@ -120,13 +118,6 @@ export async function POST(req: NextRequest) {
             photo.categories.sort((a, b) =>
               a.localeCompare(b, undefined, { sensitivity: "base" })
             );
-
-            const txtPath = findTxtPath(photo, photosRoot);
-            if (txtPath) {
-              updateTxtFileMetadata(txtPath, {
-                categories: photo.categories,
-              });
-            }
             affectedCount++;
           }
         }
@@ -163,12 +154,6 @@ export async function POST(req: NextRequest) {
             (c) => c.toLowerCase() !== targetAlbum
           );
           if (photo.categories.length !== origLen) {
-            const txtPath = findTxtPath(photo, photosRoot);
-            if (txtPath) {
-              updateTxtFileMetadata(txtPath, {
-                categories: photo.categories,
-              });
-            }
             affectedCount++;
           }
         }
@@ -217,12 +202,6 @@ export async function POST(req: NextRequest) {
           }
 
           if (photoChanged) {
-            const txtPath = findTxtPath(photo, photosRoot);
-            if (txtPath) {
-              updateTxtFileMetadata(txtPath, {
-                keywords: photo.keywords,
-              });
-            }
             affectedCount++;
           }
         }
@@ -259,12 +238,6 @@ export async function POST(req: NextRequest) {
             (k) => k.toLowerCase() !== targetTag
           );
           if (photo.keywords.length !== origLen) {
-            const txtPath = findTxtPath(photo, photosRoot);
-            if (txtPath) {
-              updateTxtFileMetadata(txtPath, {
-                keywords: photo.keywords,
-              });
-            }
             affectedCount++;
           }
         }

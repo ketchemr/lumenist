@@ -5,9 +5,6 @@ import path from "path";
 import { isAuthenticatedAdmin } from "@/lib/auth";
 import { Photo } from "@/types/photo";
 import {
-  resolvePhotosDir,
-  findTxtPath,
-  updateTxtFileMetadata,
   isPhotoOnlyInAll,
   getCustomAlbums,
   saveCustomAlbums,
@@ -154,8 +151,6 @@ export async function POST(req: NextRequest) {
       catalog = [];
     }
 
-    const photosRoot = resolvePhotosDir();
-
     // 0. CREATE ALBUM
     if (action === "create") {
       const name = (body.name || "").trim();
@@ -258,12 +253,6 @@ export async function POST(req: NextRequest) {
             a.localeCompare(b, undefined, { sensitivity: "base" })
           );
           photo.categories = nextCategories;
-
-          // Update .txt file on disk
-          const txtPath = findTxtPath(photo, photosRoot);
-          if (txtPath) {
-            updateTxtFileMetadata(txtPath, { categories: photo.categories });
-          }
           updatedCount++;
         }
       }
@@ -322,12 +311,6 @@ export async function POST(req: NextRequest) {
           photo.categories = photo.categories.filter(
             (c) => c.toLowerCase() !== lowerName
           );
-
-          // Update .txt file on disk
-          const txtPath = findTxtPath(photo, photosRoot);
-          if (txtPath) {
-            updateTxtFileMetadata(txtPath, { categories: photo.categories });
-          }
           updatedCount++;
         }
       }

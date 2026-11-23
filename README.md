@@ -108,6 +108,7 @@ Lumenist includes a comprehensive, browser-based administrative suite accessed a
 - **Album Assignment**: Check existing albums or create new categories on the fly.
 - **Interactive GPS Pin Picker**: Click or drag a pin on a built-in Leaflet map to set or fine-tune coordinates, or click *Clear Location* to remove GPS data.
 - **Support Gear & Film Selectors**: Quick-pick dropdowns for tripod setups and film emulsions.
+- **Bulk Import & Catalog Export (`Bulk Import` tab)**: Upload multiple images at once with an optional `.csv` or `.json` metadata manifest (rows match by `filename` or `photoID`, with EXIF auto-filling any missing camera, date, or GPS fields), preview matches before committing, choose duplicate handling (`Skip`, `Merge tags & albums`, or `Overwrite`), download sample CSV/JSON templates, and export your full `data/photos.json` catalog as JSON or CSV anytime.
 
 ### 2. 🖼️ Manage & Batch Operations (`?tab=manage`)
 
@@ -239,28 +240,56 @@ ln -s /var/photos /var/www/lumenist/public/photos
 
 Organize your photo files by year or category (e.g. `public/photos/2026/my_photo.jpg`).
 
-### Step 5: Ingest Existing Photo Catalog & Metadata
+### Step 5: Bulk Import Your Initial Photo Catalog
 
-If you have existing images or videos with companion `.txt` metadata files, place each `.txt` file alongside its matching image (`.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`, `.gif`)—and optional self-hosted video (`.mp4`, `.webm`, `.mov`, `.m4v`)—in a subfolder under `public/photos/` using the same base filename (e.g. `public/photos/2026/autumn_trail.jpg` and `public/photos/2026/autumn_trail.txt`).
+Lumenist stores your entire catalog in `data/photos.json` and automatically extracts image dimensions, capture date/time, camera, lens, exposure settings, and GPS coordinates from EXIF/XMP headers. You can seed your initial library using either the **CLI batch importer** (best for large archives) or the **Web Admin Bulk Import tab** (best for smaller batches).
 
-Because dimensions, capture date/time, camera, lens, exposure settings, and GPS coordinates are automatically extracted from the image's EXIF/XMP headers, a **minimal companion `.txt` file** only needs your curated fields (`key:value`, one per line; lines starting with `#` are ignored):
+#### Option A: CLI Batch Importer (Recommended for Large Initial Libraries)
 
-```txt
-title:Autumn Forest Trail
-description:Morning mist drifting through maples along the ridge trail.
-albums:Fall Color, Landscapes
-tags:autumn, forest, mist, trail
-```
-
-> **Optional fields:** `albums` (or `category`) and `tags` (or `keyword`) are comma-separated. For scanned film or non-geotagged photos without EXIF, you can also include fields such as `location:44.3386,-68.2733`, `year:2026`, `month:10`, `day:15`, `film:Fuji Velvia 50`, `camera:Hasselblad 500C/M`, `tripod:Gitzo Systematic`, or `availability:Available for Order`. For videos, include `mediaType:video` with either `videoSrc:/photos/2026/my_clip.mp4` (auto-detected if a matching video file sits alongside the `.txt`) or `videoEmbedUrl:https://www.youtube.com/watch?v=...`.
-
-Run the importer to build your unified catalog in `data/photos.json`:
+Point `npm run import:batch` at a folder of images (`.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`, `.gif`)—with an optional `.csv` or `.json` metadata manifest:
 
 ```bash
-npm run import:all
+# Import a folder of images using EXIF metadata only
+npm run import:batch -- /path/to/your/photos
+
+# Import images with a CSV or JSON metadata manifest
+npm run import:batch -- /path/to/your/photos --meta /path/to/manifest.csv
+
+# Re-run to merge updated tags/albums into existing catalog entries
+npm run import:batch -- /path/to/your/photos --meta /path/to/manifest.json --duplicates merge
 ```
 
-This parses image dimensions, dates, camera exposure details, descriptions, categories, and tags, writing your unified catalog to `data/photos.json`.
+Rows in the manifest match images by `filename` or `photoID`. Any image without a matching row is still imported using its EXIF metadata.
+
+**Example CSV manifest (`manifest.csv`):**
+
+```csv
+filename,photoID,title,description,albums,tags,latitude,longitude,year,month,day,film,tripod
+autumn_trail.jpg,d20261015083000,"Autumn Forest Trail","Morning mist drifting through maples along the ridge trail.","Fall Color, Trees","autumn, forest, mist, trail",44.3386,-68.2733,2026,10,15,Digital,"Carbon Tripod"
+```
+
+**Example JSON manifest (`manifest.json`):**
+
+```json
+[
+  {
+    "filename": "autumn_trail.jpg",
+    "photoID": "d20261015083000",
+    "title": "Autumn Forest Trail",
+    "description": "Morning mist drifting through maples along the ridge trail.",
+    "albums": ["Fall Color", "Trees"],
+    "tags": ["autumn", "forest", "mist", "trail"],
+    "latitude": 44.3386,
+    "longitude": -68.2733
+  }
+]
+```
+
+> **Supported optional fields:** `filename`, `photoID`, `title`, `description`, `albums` (or `categories`), `tags` (or `keywords`), `location` (`"lat,lon"`) or `latitude`/`longitude`, `date` or `year`/`month`/`day`/`hour`/`minute`/`second`, `folder`, `film`, `camera`, `lens`, `focalLength`, `shutterspeed`, `aperture`, `sensitivity`, `tripod`, and `availability`. Duplicate handling supports `--duplicates skip` (default), `merge` (merges new tags/albums without losing existing metadata), or `overwrite`.
+
+#### Option B: Web Admin Bulk Import (`/admin/upload` → `Bulk Import`)
+
+Once the app is running, sign in to `/admin`, open the **Bulk Import** tab, select multiple images plus an optional `.csv` or `.json` manifest (sample templates are downloadable right in the UI), review the match preview table, and click **Import**. You can also export a full JSON or CSV backup of your catalog from the same tab anytime.
 
 *(Recommended)* Pre-cache WebP thumbnails for instant exhibition loading:
 
@@ -430,9 +459,9 @@ lumenist/
 │   ├── photos/                # Symlink or folder for full-res master photos
 │   └── favicon.ico            # Site favicon
 ├── scripts/
-│   ├── import-photos.ts       # CLI ingestion for images and .txt metadata
+│   ├── import-batch.ts        # CLI batch importer for images + optional CSV/JSON manifest
 │   ├── precache-thumbnails.js # Pre-caches WebP thumbnails across widths
-│   └── test-parser.ts         # Test suite for metadata companion parser
+│   └── tag-photos.py          # Optional AI vision + GPS tag enricher for data/photos.json
 ├── src/
 │   ├── app/                   # Next.js 15 App Router
 │   │   ├── layout.tsx         # Root layout with dynamic theme CSS variables

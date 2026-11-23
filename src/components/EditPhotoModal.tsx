@@ -593,7 +593,7 @@ export function EditPhotoModal({
               <div className="p-2.5 bg-amber-950/30 border border-amber-800/60 rounded text-amber-300 text-xs flex items-start space-x-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  Renaming Photo ID from <strong className="font-mono text-accent">{photoID}</strong> to <strong className="font-mono text-accent">{photoIDInput}</strong> will update the catalog, rename associated image and metadata files on disk (<code className="font-mono">{photoID}.jpg</code>, <code className="font-mono">{photoID}.txt</code>), and clear cached thumbnails.
+                  Renaming Photo ID from <strong className="font-mono text-accent">{photoID}</strong> to <strong className="font-mono text-accent">{photoIDInput}</strong> will update the catalog, rename the image file on disk (<code className="font-mono">{photoID}.jpg</code>), and clear cached thumbnails.
                 </span>
               </div>
             )}

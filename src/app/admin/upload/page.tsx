@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import exifr from "exifr";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import BulkImportPanel from "@/components/BulkImportPanel";
 import {
   Upload,
+  FileSpreadsheet,
   Camera,
   MapPin,
   Tag,
@@ -84,7 +86,7 @@ export default function AdminUploadPage() {
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<
-    "upload" | "manage" | "albums" | "settings"
+    "upload" | "import" | "manage" | "albums" | "settings"
   >("upload");
 
   // Manage / Catalog state
@@ -1472,6 +1474,17 @@ export default function AdminUploadPage() {
               <span>Upload</span>
             </button>
             <button
+              onClick={() => setActiveTab("import")}
+              className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
+                activeTab === "import"
+                  ? "bg-surface-hover text-foreground font-medium shadow-sm"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Bulk Import</span>
+            </button>
+            <button
               onClick={() => setActiveTab("manage")}
               className={`px-3 py-1.5 rounded-sm transition-colors flex items-center space-x-1.5 ${
                 activeTab === "manage"
@@ -1515,6 +1528,16 @@ export default function AdminUploadPage() {
           </button>
         </div>
       </div>
+
+      {/* TAB 1B: BULK IMPORT */}
+      {activeTab === "import" && (
+        <BulkImportPanel
+          onImportComplete={() => {
+            loadCatalog();
+            loadAlbums();
+          }}
+        />
+      )}
 
       {/* TAB 1: UPLOAD PHOTOGRAPH */}
       {activeTab === "upload" && (
@@ -3850,10 +3873,6 @@ export default function AdminUploadPage() {
                       original fullsize JPEG files will be unlinked from disk.
                     </li>
                     <li>
-                      Companion <code>.txt</code> metadata records will be
-                      deleted.
-                    </li>
-                    <li>
                       All entries will be permanently removed from{" "}
                       <code>data/photos.json</code>.
                     </li>
@@ -3946,9 +3965,6 @@ export default function AdminUploadPage() {
                   </p>
                   <ul className="list-disc list-inside space-y-0.5 text-[11px] text-muted pl-1">
                     <li>Desktop web JPEG and original fullsize file from disk</li>
-                    <li>
-                      Companion <code>.txt</code> metadata record
-                    </li>
                     <li>
                       Catalog entry in <code>data/photos.json</code>
                     </li>
@@ -4325,7 +4341,7 @@ export default function AdminUploadPage() {
                     />
                   </div>
                   <p className="text-[11px] text-muted">
-                    This updates the album label across all photographs assigned to it and updates their .txt metadata files.
+                    This updates the album label across all photographs assigned to it in the catalog.
                   </p>
                 </div>
 

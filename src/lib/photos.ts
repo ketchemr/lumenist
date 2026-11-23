@@ -3,7 +3,7 @@ import path from "path";
 import { Photo } from "@/types/photo";
 import { getSettings } from "@/lib/settings";
 import { sortPhotos } from "./photoSort";
-import { getJpegDimensions } from "./parseTxt";
+import { getJpegDimensions } from "./imageDimensions";
 
 export { sortPhotos };
 
