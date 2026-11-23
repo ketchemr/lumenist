@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {
   SiteSettings,
+  SocialLink,
   DEFAULT_SETTINGS,
   THEME_PRESETS,
   ThemePreset,
@@ -9,9 +10,11 @@ import {
   BackgroundPreset,
   isLightBackground,
   isLightModeActive,
+  migrateLegacyInstagramLink,
+  sanitizeSocialLinks,
 } from "@/types/settings";
 
-export type { SiteSettings, BackgroundPreset, ThemePreset };
+export type { SiteSettings, SocialLink, BackgroundPreset, ThemePreset };
 export {
   DEFAULT_SETTINGS,
   THEME_PRESETS,
@@ -49,6 +52,14 @@ export function getSettings(): SiteSettings {
     const raw = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(raw);
     const result: SiteSettings = { ...DEFAULT_SETTINGS, ...parsed };
+    if (Array.isArray(parsed.socialLinks)) {
+      result.socialLinks = sanitizeSocialLinks(parsed.socialLinks);
+    } else {
+      result.socialLinks = migrateLegacyInstagramLink(
+        parsed.instagramHandle,
+        parsed.instagramUrl
+      );
+    }
     cachedSettings = result;
     lastMtime = stats.mtimeMs;
     return result;
@@ -61,9 +72,16 @@ export function getSettings(): SiteSettings {
 export function saveSettings(updates: Partial<SiteSettings>): SiteSettings {
   const filePath = getSettingsFilePath();
   const current = getSettings();
+  const normalizedUpdates: Partial<SiteSettings> = { ...updates };
+  if ("socialLinks" in normalizedUpdates) {
+    normalizedUpdates.socialLinks = sanitizeSocialLinks(normalizedUpdates.socialLinks);
+    // Clear legacy Instagram fields once generic socialLinks are explicitly saved
+    normalizedUpdates.instagramHandle = "";
+    normalizedUpdates.instagramUrl = "";
+  }
   const updated: SiteSettings = {
     ...current,
-    ...updates,
+    ...normalizedUpdates,
   };
 
   const dataDir = path.dirname(filePath);

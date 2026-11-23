@@ -65,9 +65,11 @@ import {
   THEME_PRESETS,
   BACKGROUND_PRESETS,
   SiteSettings,
+  SocialLink,
   DEFAULT_SETTINGS,
   isLightBackground,
   isLightModeActive,
+  getResolvedSocialLinks,
 } from "@/types/settings";
 
 interface MetadataResponse {
@@ -312,6 +314,7 @@ export default function AdminUploadPage() {
 
   // Settings states
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [gearText, setGearText] = useState("");
   const [supportGearText, setSupportGearText] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -367,6 +370,7 @@ export default function AdminUploadPage() {
       .then((res) => res.json())
       .then((data: SiteSettings) => {
         setSettings(data);
+        setSocialLinks(getResolvedSocialLinks(data));
         setGearText((data.gearList || []).join("\n"));
         setSupportGearText((data.supportGearList || []).join("\n"));
       })
@@ -1215,14 +1219,39 @@ export default function AdminUploadPage() {
     setTouchedPhotoID(false);
   };
 
+  const handleAddSocialLink = () => {
+    setSocialLinks((prev) => [...prev, { name: "", url: "" }]);
+  };
+
+  const handleUpdateSocialLink = (
+    index: number,
+    field: keyof SocialLink,
+    value: string
+  ) => {
+    setSocialLinks((prev) =>
+      prev.map((row, idx) => (idx === index ? { ...row, [field]: value } : row))
+    );
+  };
+
+  const handleRemoveSocialLink = (index: number) => {
+    setSocialLinks((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingSettings(true);
     setSettingsSuccess(false);
 
     try {
+      const cleanedSocialLinks = socialLinks
+        .map((link) => ({
+          name: link.name.trim(),
+          url: link.url.trim(),
+        }))
+        .filter((link) => link.url.length > 0);
       const payload: SiteSettings = {
         ...settings,
+        socialLinks: cleanedSocialLinks,
         gearList: gearText.split("\n").map((s) => s.trim()).filter(Boolean),
         supportGearList: supportGearText.split("\n").map((s) => s.trim()).filter(Boolean),
       };
@@ -1234,6 +1263,12 @@ export default function AdminUploadPage() {
       const data = await res.json();
       if (data.success) {
         setSettingsSuccess(true);
+        if (data.settings) {
+          setSettings(data.settings);
+          setSocialLinks(getResolvedSocialLinks(data.settings));
+        } else {
+          setSocialLinks(cleanedSocialLinks);
+        }
         // Apply theme variables immediately to active document
         const isLight = isLightModeActive(settings);
         document.documentElement.className = isLight ? "light" : "dark";
@@ -4984,7 +5019,7 @@ export default function AdminUploadPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <label className="block text-xs font-medium text-foreground">
                   Contact / Inquiry Email
                 </label>
@@ -5002,41 +5037,100 @@ export default function AdminUploadPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-foreground">
-                  Instagram Handle
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. @artistphoto"
-                  value={settings.instagramHandle || ""}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      instagramHandle: e.target.value,
-                    }))
-                  }
-                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
-                />
-              </div>
+              <fieldset className="space-y-2.5 sm:col-span-2">
+                <legend className="text-xs font-medium text-foreground">
+                  Links &amp; Websites
+                </legend>
+                <p className="text-[11px] text-muted">
+                  Add social profiles, portfolios, print shops, or other websites to display on the About page.
+                </p>
 
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="block text-xs font-medium text-foreground">
-                  Instagram URL
-                </label>
-                <input
-                  type="url"
-                  placeholder="e.g. https://www.instagram.com/artistphoto/"
-                  value={settings.instagramUrl || ""}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      instagramUrl: e.target.value,
-                    }))
-                  }
-                  className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
-                />
-              </div>
+                {socialLinks.length > 0 && (
+                  <div className="space-y-2">
+                    <div
+                      className="hidden sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] gap-2 px-0.5 text-[11px] font-medium text-muted"
+                      aria-hidden="true"
+                    >
+                      <span>Name</span>
+                      <span>URL</span>
+                      <span className="w-8" />
+                    </div>
+
+                    {socialLinks.map((link, idx) => (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] gap-2 items-center"
+                      >
+                        <div>
+                          <label
+                            htmlFor={`social-link-name-${idx}`}
+                            className="block text-[11px] text-muted mb-1 sm:sr-only"
+                          >
+                            Site name (row {idx + 1})
+                          </label>
+                          <input
+                            id={`social-link-name-${idx}`}
+                            name={`socialLinkName-${idx}`}
+                            type="text"
+                            placeholder="e.g. Instagram, 500px, Flickr"
+                            value={link.name}
+                            onChange={(e) =>
+                              handleUpdateSocialLink(idx, "name", e.target.value)
+                            }
+                            className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor={`social-link-url-${idx}`}
+                            className="block text-[11px] text-muted mb-1 sm:sr-only"
+                          >
+                            Site URL (row {idx + 1})
+                          </label>
+                          <input
+                            id={`social-link-url-${idx}`}
+                            name={`socialLinkUrl-${idx}`}
+                            type="url"
+                            inputMode="url"
+                            autoCorrect="off"
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            required={Boolean(link.name.trim())}
+                            placeholder="https://example.com/username"
+                            value={link.url}
+                            onChange={(e) =>
+                              handleUpdateSocialLink(idx, "url", e.target.value)
+                            }
+                            className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSocialLink(idx)}
+                          aria-label={`Remove link row ${idx + 1}`}
+                          title="Remove link"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded border border-surface-border text-muted hover:text-red-400 hover:border-red-400/50 transition-colors cursor-pointer justify-self-end sm:justify-self-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={handleAddSocialLink}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 border border-accent/30 rounded transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Site</span>
+                  </button>
+                </div>
+              </fieldset>
 
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="block text-xs font-medium text-foreground">

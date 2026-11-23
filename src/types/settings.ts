@@ -1,3 +1,8 @@
+export interface SocialLink {
+  name: string;
+  url: string;
+}
+
 export interface SiteSettings {
   themeAccent: string; // e.g. "#f59e0b"
   themeAccentLight: string; // e.g. "#fbbf24"
@@ -16,7 +21,10 @@ export interface SiteSettings {
   aboutSubheading?: string;
   artistBio?: string;
   contactEmail?: string;
+  socialLinks?: SocialLink[];
+  /** @deprecated Legacy fallback; migrated automatically into `socialLinks`. */
   instagramHandle?: string;
+  /** @deprecated Legacy fallback; migrated automatically into `socialLinks`. */
   instagramUrl?: string;
   gearList?: string[];
   supportGearList?: string[];
@@ -193,6 +201,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   aboutSubheading: "Landscape and Nature Photography",
   artistBio: "Welcome to my photography portfolio. This exhibition showcases fine art photography exploring the quiet grandeur, intricate details, and atmospheric light of the natural world.\n\nThank you for visiting. Please explore the galleries, and check back regularly as new photographic work and collections are added.",
   contactEmail: "",
+  socialLinks: [],
   instagramHandle: "",
   instagramUrl: "",
   gearList: [],
@@ -220,4 +229,77 @@ export function isLightModeActive(settings: SiteSettings): boolean {
   if (settings.themeTextMode === "light") return true;
   if (settings.themeTextMode === "dark") return false;
   return isLightBackground(settings.themeBackground || "#000000");
+}
+
+/**
+ * Validates and normalizes an external link URL so only safe schemes
+ * (`http:`, `https:`, `mailto:`) are accepted. Returns an empty string if invalid.
+ */
+export function sanitizeExternalUrl(rawUrl?: string): string {
+  if (typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    if (
+      parsed.protocol === "https:" ||
+      parsed.protocol === "http:" ||
+      parsed.protocol === "mailto:"
+    ) {
+      return trimmed;
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Normalizes a list of SocialLink entries, dropping invalid/empty URLs and trimming whitespace.
+ */
+export function sanitizeSocialLinks(links: unknown): SocialLink[] {
+  if (!Array.isArray(links)) return [];
+  const result: SocialLink[] = [];
+  for (const item of links) {
+    if (!item || typeof item !== "object") continue;
+    const rawName = (item as { name?: unknown }).name;
+    const rawUrl = (item as { url?: unknown }).url;
+    const url = sanitizeExternalUrl(typeof rawUrl === "string" ? rawUrl : "");
+    if (!url) continue;
+    const name = typeof rawName === "string" ? rawName.trim() : "";
+    result.push({ name, url });
+  }
+  return result;
+}
+
+/**
+ * Builds a fallback SocialLink list from legacy instagramHandle / instagramUrl fields.
+ */
+export function migrateLegacyInstagramLink(
+  instagramHandle?: string,
+  instagramUrl?: string
+): SocialLink[] {
+  const handle = typeof instagramHandle === "string" ? instagramHandle.trim() : "";
+  const rawUrl =
+    (typeof instagramUrl === "string" && instagramUrl.trim()) ||
+    (handle ? `https://www.instagram.com/${handle.replace(/^@/, "")}/` : "");
+  const url = sanitizeExternalUrl(rawUrl);
+  if (!url) return [];
+  return [
+    {
+      name: handle ? `Instagram (${handle})` : "Instagram",
+      url,
+    },
+  ];
+}
+
+/**
+ * Returns the resolved, sanitized list of external links for display,
+ * falling back to legacy instagram fields if `socialLinks` has not been set.
+ */
+export function getResolvedSocialLinks(settings: SiteSettings): SocialLink[] {
+  if (Array.isArray(settings.socialLinks)) {
+    return sanitizeSocialLinks(settings.socialLinks);
+  }
+  return migrateLegacyInstagramLink(settings.instagramHandle, settings.instagramUrl);
 }

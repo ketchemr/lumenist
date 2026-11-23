@@ -1,9 +1,28 @@
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { RichText } from "@/components/RichText";
-import { Camera, Mail, Instagram, ShoppingBag, Sparkles } from "lucide-react";
+import { Camera, Globe, Mail, Instagram, ShoppingBag, Sparkles } from "lucide-react";
 import { getSettings } from "@/lib/settings";
+import { getResolvedSocialLinks } from "@/types/settings";
 import { siteConfig } from "@/config/site";
+
+function isInstagramUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "instagram.com" || host.endsWith(".instagram.com");
+  } catch {
+    return false;
+  }
+}
+
+function formatFallbackLabel(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -41,16 +60,11 @@ export default function AboutPage() {
     "Fine Art Photography";
   const bio = settings.artistBio || siteConfig.bio || "";
   const contactEmail = settings.contactEmail || siteConfig.contactEmail;
-  const instagramHandle = settings.instagramHandle;
-  const instagramUrl =
-    settings.instagramUrl ||
-    (instagramHandle
-      ? `https://www.instagram.com/${instagramHandle.replace(/^@/, "")}/`
-      : "");
+  const socialLinks = getResolvedSocialLinks(settings);
   const gearList = settings.gearList || [];
   const supportGearList = settings.supportGearList || [];
   const hasGear =
-    gearList.length > 0 || supportGearList.length > 0 || Boolean(instagramUrl);
+    gearList.length > 0 || supportGearList.length > 0 || socialLinks.length > 0;
 
   return (
     <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
@@ -99,7 +113,7 @@ export default function AboutPage() {
           )}
 
           {/* Tripods, Support & Social Card */}
-          {(supportGearList.length > 0 || instagramUrl) && (
+          {(supportGearList.length > 0 || socialLinks.length > 0) && (
             <div className="bg-surface border border-surface-border rounded-sm p-6 space-y-4">
               {supportGearList.length > 0 && (
                 <>
@@ -120,30 +134,40 @@ export default function AboutPage() {
                 </>
               )}
 
-              {instagramUrl && (
+              {socialLinks.length > 0 && (
                 <div
                   className={`${
                     supportGearList.length > 0
                       ? "pt-4 border-t border-surface-border/60"
                       : ""
-                  } space-y-2`}
+                  } space-y-2.5`}
                 >
                   <h3 className="text-xs uppercase tracking-wider font-semibold text-muted">
-                    Social & Community
+                    Social &amp; Links
                   </h3>
-                  <a
-                    href={instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 text-xs sm:text-sm text-accent hover:text-accent-light transition-colors"
-                  >
-                    <Instagram className="w-4 h-4" />
-                    <span>
-                      {instagramHandle
-                        ? `${instagramHandle} on Instagram ↗`
-                        : "Instagram ↗"}
-                    </span>
-                  </a>
+                  <ul className="space-y-2">
+                    {socialLinks.map((link, idx) => {
+                      const label = link.name || formatFallbackLabel(link.url);
+                      const isInstagram = isInstagramUrl(link.url);
+                      return (
+                        <li key={`${link.url}-${idx}`}>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-2 text-xs sm:text-sm text-accent hover:text-accent-light transition-colors"
+                          >
+                            {isInstagram ? (
+                              <Instagram className="w-4 h-4 shrink-0" />
+                            ) : (
+                              <Globe className="w-4 h-4 shrink-0" />
+                            )}
+                            <span>{label} ↗</span>
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               )}
             </div>
