@@ -5147,6 +5147,16 @@ export default function AdminUploadPage() {
                   }
                   className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent leading-relaxed"
                 />
+                <p className="text-[11px] text-muted">
+                  Supports basic markup: <code className="text-foreground/80">*italic*</code>,{" "}
+                  <code className="text-foreground/80">**bold**</code>,{" "}
+                  <code className="text-foreground/80">[link](https://...)</code>,{" "}
+                  <code className="text-foreground/80">&gt; quote</code>,{" "}
+                  <code className="text-foreground/80">## heading</code>,{" "}
+                  <code className="text-foreground/80">- list</code>, or simple tags like{" "}
+                  <code className="text-foreground/80">&lt;i&gt;</code> /{" "}
+                  <code className="text-foreground/80">&lt;b&gt;</code>. Blank lines separate paragraphs; single line breaks are preserved.
+                </p>
               </div>
 
               <div className="space-y-1.5">

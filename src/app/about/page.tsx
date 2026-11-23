@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { RichText } from "@/components/RichText";
 import { Camera, Mail, Instagram, ShoppingBag, Sparkles } from "lucide-react";
 import { getSettings } from "@/lib/settings";
 import { siteConfig } from "@/config/site";
@@ -39,7 +40,6 @@ export default function AboutPage() {
     siteConfig.tagline ||
     "Fine Art Photography";
   const bio = settings.artistBio || siteConfig.bio || "";
-  const paragraphs = bio ? bio.split(/\n\n+/).filter(Boolean) : [];
   const contactEmail = settings.contactEmail || siteConfig.contactEmail;
   const instagramHandle = settings.instagramHandle;
   const instagramUrl =
@@ -68,21 +68,11 @@ export default function AboutPage() {
       </div>
 
       {/* Main Narrative */}
-      {paragraphs.length > 0 && (
-        <div className="space-y-6 text-foreground/80 text-sm sm:text-base leading-relaxed">
-          {paragraphs.map((p, idx) => (
-            <p
-              key={idx}
-              className={
-                idx === paragraphs.length - 1 && paragraphs.length > 1
-                  ? "italic text-muted"
-                  : ""
-              }
-            >
-              {p}
-            </p>
-          ))}
-        </div>
+      {bio.trim().length > 0 && (
+        <RichText
+          content={bio}
+          className="space-y-6 text-foreground/80 text-sm sm:text-base leading-relaxed"
+        />
       )}
 
       {/* Equipment & Gear Section */}
