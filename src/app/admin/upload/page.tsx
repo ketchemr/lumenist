@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import exifr from "exifr";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -173,6 +173,8 @@ export default function AdminUploadPage() {
   });
   const [recentTags, setRecentTags] = useState<string[]>([]);
   const [showTagTray, setShowTagTray] = useState(false);
+  const [tagTraySearch, setTagTraySearch] = useState("");
+  const [tagTrayView, setTagTrayView] = useState<"all" | "popular">("all");
 
   // Upload & File states
   const [mediaType, setMediaType] = useState<"photo" | "video">("photo");
@@ -904,6 +906,28 @@ export default function AdminUploadPage() {
   };
 
   // Tag chip helper: appends or toggles tag in comma-separated input
+  const selectedTagSet = useMemo(
+    () =>
+      new Set(
+        tagsInput
+          .split(",")
+          .map((t) => t.trim().toLowerCase())
+          .filter(Boolean)
+      ),
+    [tagsInput]
+  );
+
+  const filteredTrayTags = useMemo(() => {
+    const q = tagTraySearch.trim().toLowerCase();
+    if (q) {
+      return metadata.allTags.filter((tag) => tag.toLowerCase().includes(q));
+    }
+    if (tagTrayView === "popular") {
+      return metadata.popularTags.map(({ tag }) => tag);
+    }
+    return metadata.allTags;
+  }, [metadata.allTags, metadata.popularTags, tagTraySearch, tagTrayView]);
+
   const handleTagChipClick = (tag: string) => {
     const currentTags = tagsInput
       .split(",")
@@ -2673,13 +2697,20 @@ export default function AdminUploadPage() {
                     className="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground"
                   />
                   <p className="text-[11px] text-muted">
-                    Paste comma-separated tags freely, or click popular chips
-                    below to toggle them.
+                    Paste comma-separated tags freely, or open{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTagTray(!showTagTray)}
+                      className="text-accent hover:underline cursor-pointer"
+                    >
+                      Quick-Add Tags
+                    </button>{" "}
+                    to pick from all {metadata.allTags.length} library keywords.
                   </p>
                 </div>
 
                 {/* Quick-Add Tag Tray */}
-                {(showTagTray || recentTags.length > 0) && (
+                {showTagTray && (
                   <div className="border-t border-surface-border pt-3 mt-2 space-y-3">
                     {/* Recently Used Tags */}
                     {recentTags.length > 0 && (
@@ -2690,10 +2721,9 @@ export default function AdminUploadPage() {
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {recentTags.map((tag) => {
-                            const isIncluded = tagsInput
-                              .split(",")
-                              .map((t) => t.trim().toLowerCase())
-                              .includes(tag.toLowerCase());
+                            const isIncluded = selectedTagSet.has(
+                              tag.toLowerCase()
+                            );
                             return (
                               <button
                                 type="button"
@@ -2713,34 +2743,85 @@ export default function AdminUploadPage() {
                       </div>
                     )}
 
-                    {/* Common & Popular Tags */}
-                    {metadata.popularTags.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[10px] text-muted uppercase tracking-wider font-semibold">
-                          Popular Library Keywords
-                        </span>
-                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                          {metadata.popularTags.slice(0, 40).map(({ tag }) => {
-                            const isIncluded = tagsInput
-                              .split(",")
-                              .map((t) => t.trim().toLowerCase())
-                              .includes(tag.toLowerCase());
-                            return (
+                    {/* All & Popular Library Keywords */}
+                    {metadata.allTags.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setTagTrayView("all")}
+                              className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                tagTrayView === "all" && !tagTraySearch.trim()
+                                  ? "bg-accent text-accent-contrast border-accent"
+                                  : "bg-surface border-surface-border text-muted hover:text-foreground"
+                              }`}
+                            >
+                              All A–Z ({metadata.allTags.length})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTagTrayView("popular")}
+                              className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                tagTrayView === "popular" &&
+                                !tagTraySearch.trim()
+                                  ? "bg-accent text-accent-contrast border-accent"
+                                  : "bg-surface border-surface-border text-muted hover:text-foreground"
+                              }`}
+                            >
+                              Popular ({metadata.popularTags.length})
+                            </button>
+                          </div>
+
+                          <div className="relative flex-1 min-w-[160px] max-w-xs">
+                            <Search className="w-3 h-3 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={tagTraySearch}
+                              onChange={(e) => setTagTraySearch(e.target.value)}
+                              placeholder={`Filter all ${metadata.allTags.length} tags...`}
+                              className="w-full bg-surface border border-surface-border rounded pl-7 pr-6 py-1 text-[11px] text-foreground placeholder:text-muted focus:outline-none focus:border-accent"
+                            />
+                            {tagTraySearch && (
                               <button
                                 type="button"
-                                key={tag}
-                                onClick={() => handleTagChipClick(tag)}
-                                className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                                  isIncluded
-                                    ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
-                                    : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
-                                }`}
+                                onClick={() => setTagTraySearch("")}
+                                aria-label="Clear tag filter"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
                               >
-                                {tag}
+                                <X className="w-3 h-3" />
                               </button>
-                            );
-                          })}
+                            )}
+                          </div>
                         </div>
+
+                        {filteredTrayTags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto pr-1">
+                            {filteredTrayTags.map((tag) => {
+                              const isIncluded = selectedTagSet.has(
+                                tag.toLowerCase()
+                              );
+                              return (
+                                <button
+                                  type="button"
+                                  key={tag}
+                                  onClick={() => handleTagChipClick(tag)}
+                                  className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                    isIncluded
+                                      ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
+                                      : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
+                                  }`}
+                                >
+                                  {tag}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted italic">
+                            No tags matching &ldquo;{tagTraySearch}&rdquo;.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

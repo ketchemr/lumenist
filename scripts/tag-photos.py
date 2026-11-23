@@ -10,7 +10,10 @@ non-redundant tags.
 Zero external Python dependencies (uses stdlib + macOS `sips` if available).
 
 Usage:
-  # Dry run on a single photo (default: does not modify data/photos.json)
+  # Tag a standalone image not yet added to the site (prints comma-separated tags)
+  python3 scripts/tag-photos.py --image /path/to/photo.jpg
+
+  # Dry run on a single cataloged photo (default: does not modify data/photos.json)
   python3 scripts/tag-photos.py --photo d20261026144835
 
   # Dry run on one folder / year
@@ -29,6 +32,7 @@ import json
 import os
 import shutil
 import ssl
+import struct
 import subprocess
 import sys
 import tempfile
@@ -220,6 +224,101 @@ def prepare_image_base64(image_path: Path, max_dim: int = 1024) -> tuple[str, st
         ".webp": "image/webp",
     }.get(ext, "image/jpeg")
     return mime, base64.b64encode(image_path.read_bytes()).decode("ascii")
+
+
+def extract_exif_metadata(image_path: Path) -> tuple[dict[str, str], dict[str, float] | None]:
+    """Extract DateTaken and GPS coordinates from a JPEG's EXIF APP1 block (stdlib only)."""
+    date_taken: dict[str, str] = {}
+    location: dict[str, float] | None = None
+
+    try:
+        data = image_path.read_bytes()
+        if data[:2] == b"\xff\xd8":
+            pos = 2
+            exif_bytes: bytes | None = None
+            while pos + 4 <= len(data):
+                if data[pos] != 0xFF:
+                    break
+                marker = data[pos + 1]
+                if marker in (0xD9, 0xDA):  # EOI / SOS
+                    break
+                seg_len = struct.unpack(">H", data[pos + 2 : pos + 4])[0]
+                if marker == 0xE1 and data[pos + 4 : pos + 10] == b"Exif\x00\x00":
+                    exif_bytes = data[pos + 10 : pos + 2 + seg_len]
+                    break
+                pos += 2 + seg_len
+
+            if exif_bytes and len(exif_bytes) >= 8:
+                endian = "<" if exif_bytes[:2] == b"II" else ">" if exif_bytes[:2] == b"MM" else ""
+                if endian:
+                    def read_ifd(offset: int) -> dict[int, tuple[int, int, bytes]]:
+                        entries: dict[int, tuple[int, int, bytes]] = {}
+                        if offset + 2 > len(exif_bytes):
+                            return entries
+                        count = struct.unpack_from(endian + "H", exif_bytes, offset)[0]
+                        for i in range(count):
+                            base = offset + 2 + i * 12
+                            if base + 12 > len(exif_bytes):
+                                break
+                            tag, typ, cnt, val_off = struct.unpack_from(endian + "HHII", exif_bytes, base)
+                            type_sizes = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8}
+                            sz = type_sizes.get(typ, 1) * cnt
+                            if sz <= 4:
+                                raw = exif_bytes[base + 8 : base + 8 + sz]
+                            elif val_off + sz <= len(exif_bytes):
+                                raw = exif_bytes[val_off : val_off + sz]
+                            else:
+                                raw = b""
+                            entries[tag] = (typ, cnt, raw)
+                        return entries
+
+                    def read_rationals(raw: bytes, cnt: int) -> list[float]:
+                        vals: list[float] = []
+                        for i in range(cnt):
+                            if (i + 1) * 8 > len(raw):
+                                break
+                            num, den = struct.unpack_from(endian + "II", raw, i * 8)
+                            vals.append(num / den if den else 0.0)
+                        return vals
+
+                    ifd0_offset = struct.unpack_from(endian + "I", exif_bytes, 4)[0]
+                    ifd0 = read_ifd(ifd0_offset)
+
+                    # DateTimeOriginal from ExifIFD (0x8769) or DateTime from IFD0 (0x0132)
+                    dt_str = ""
+                    if 0x8769 in ifd0 and len(ifd0[0x8769][2]) == 4:
+                        exif_ifd_off = struct.unpack_from(endian + "I", ifd0[0x8769][2], 0)[0]
+                        exif_ifd = read_ifd(exif_ifd_off)
+                        if 0x9003 in exif_ifd:
+                            dt_str = exif_ifd[0x9003][2].decode("ascii", errors="ignore").strip("\x00 ")
+                    if not dt_str and 0x0132 in ifd0:
+                        dt_str = ifd0[0x0132][2].decode("ascii", errors="ignore").strip("\x00 ")
+                    if dt_str and len(dt_str) >= 10:
+                        parts = dt_str[:10].split(":")
+                        if len(parts) == 3:
+                            date_taken = {"year": parts[0], "month": parts[1], "day": parts[2]}
+
+                    # GPS IFD (0x8825)
+                    if 0x8825 in ifd0 and len(ifd0[0x8825][2]) == 4:
+                        gps_ifd_off = struct.unpack_from(endian + "I", ifd0[0x8825][2], 0)[0]
+                        gps_ifd = read_ifd(gps_ifd_off)
+                        if 2 in gps_ifd and 4 in gps_ifd:
+                            lat_dms = read_rationals(gps_ifd[2][2], gps_ifd[2][1])
+                            lon_dms = read_rationals(gps_ifd[4][2], gps_ifd[4][1])
+                            if len(lat_dms) == 3 and len(lon_dms) == 3:
+                                lat = lat_dms[0] + lat_dms[1] / 60.0 + lat_dms[2] / 3600.0
+                                lon = lon_dms[0] + lon_dms[1] / 60.0 + lon_dms[2] / 3600.0
+                                lat_ref = gps_ifd[1][2].decode("ascii", errors="ignore").strip("\x00 ").upper() if 1 in gps_ifd else "N"
+                                lon_ref = gps_ifd[3][2].decode("ascii", errors="ignore").strip("\x00 ").upper() if 3 in gps_ifd else "E"
+                                if lat_ref == "S":
+                                    lat = -lat
+                                if lon_ref == "W":
+                                    lon = -lon
+                                location = {"latitude": round(lat, 6), "longitude": round(lon, 6)}
+    except Exception:
+        pass
+
+    return date_taken, location
 
 
 def clean_new_tags(candidates: list[Any], existing_tags: list[str]) -> list[str]:
@@ -421,6 +520,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Enrich Lumenist data/photos.json tags using Gemini Vision (or Ollama) + GPS."
     )
+    parser.add_argument("--image", help="Standalone local image file to tag (not yet in catalog)")
+    parser.add_argument("--title", default="", help="Optional title context (used with --image)")
+    parser.add_argument("--description", default="", help="Optional description context (used with --image)")
+    parser.add_argument("--tags", default="", help="Optional comma-separated existing tags to exclude (used with --image)")
+    parser.add_argument("--lat", type=float, default=None, help="Optional GPS latitude override (used with --image)")
+    parser.add_argument("--lon", type=float, default=None, help="Optional GPS longitude override (used with --image)")
     parser.add_argument("--photo", help="Single photoID to process")
     parser.add_argument("--folder", help="Filter by folder/year (e.g. 2026 or Film)")
     parser.add_argument("--all", action="store_true", help="Process all photos in catalog")
@@ -441,8 +546,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args()
 
-    if not args.photo and not args.folder and not args.all:
-        raise SystemExit("Specify one of --photo <ID>, --folder <name>, or --all.")
+    if not args.image and not args.photo and not args.folder and not args.all:
+        raise SystemExit("Specify one of --image <path>, --photo <ID>, --folder <name>, or --all.")
 
     provider = args.provider
     if provider == "gemini":
@@ -455,6 +560,54 @@ def main() -> None:
         model = args.model or os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
         workers = args.workers if args.workers is not None else 1
         api_key = ""
+
+    geo_cache_path = REPO_ROOT / "data" / "geocode-cache.json"
+    geocoder = Geocoder(geo_cache_path)
+
+    # Standalone image mode (for images not yet added to the site)
+    if args.image:
+        img_path = Path(args.image).expanduser().resolve()
+        if not img_path.exists() or not img_path.is_file():
+            sys.exit(f"Error: Image file not found: {img_path}")
+
+        date_taken, exif_loc = extract_exif_metadata(img_path)
+        loc = (
+            {"latitude": args.lat, "longitude": args.lon}
+            if args.lat is not None and args.lon is not None
+            else exif_loc
+        )
+        geo = (
+            geocoder.reverse(float(loc["latitude"]), float(loc["longitude"]))
+            if loc
+            else None
+        )
+        existing_tags = [t.strip() for t in args.tags.split(",") if t.strip()]
+        photo: dict[str, Any] = {
+            "photoID": img_path.stem,
+            "title": args.title,
+            "description": args.description,
+            "dateTaken": date_taken,
+            "location": loc,
+            "categories": [],
+            "keywords": existing_tags,
+        }
+
+        print(
+            f"Image: {img_path.name} | Provider: {provider} | Model: {model}"
+            + (f" | GPS: {loc['latitude']},{loc['longitude']}" if loc else " | GPS: none"),
+            file=sys.stderr,
+            flush=True,
+        )
+        if geo and geo.get("display_name"):
+            print(f"Place: {geo['display_name']}", file=sys.stderr, flush=True)
+
+        if provider == "gemini":
+            added_tags = call_gemini(api_key, model, img_path, photo, existing_tags, geo)
+        else:
+            added_tags = call_ollama(args.ollama_url, model, img_path, photo, existing_tags, geo)
+
+        print(", ".join(added_tags))
+        return
 
     catalog_path = Path(args.catalog).resolve()
     if not catalog_path.exists():
@@ -484,7 +637,6 @@ def main() -> None:
     cache_path = REPO_ROOT / "data" / (
         "tag-cache.json" if provider == "gemini" else "tag-cache-ollama.json"
     )
-    geo_cache_path = REPO_ROOT / "data" / "geocode-cache.json"
     md_report_path = REPO_ROOT / "data" / "tag-review.md"
     csv_report_path = REPO_ROOT / "data" / "tag-review.csv"
 
@@ -495,7 +647,6 @@ def main() -> None:
         except Exception:
             cache = {}
 
-    geocoder = Geocoder(geo_cache_path)
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(
         f"Mode: {mode} | Provider: {provider} | Model: {model} | Workers: {workers} | Photos: {len(targets)}",
@@ -521,9 +672,16 @@ def main() -> None:
 
         existing_tags = [str(t).strip() for t in (photo.get("keywords") or []) if str(t).strip()]
         loc = photo.get("location")
+        loc_key = (
+            f"{float(loc['latitude']):.4f},{float(loc['longitude']):.4f}"
+            if loc and "latitude" in loc and "longitude" in loc
+            else None
+        )
 
         with state_lock:
             cached = None if args.force else cache.get(pid)
+            if cached is not None and "location" in cached and cached["location"] != loc_key:
+                cached = None
 
         if cached is not None:
             added_tags = clean_new_tags(cached.get("added_tags", []), existing_tags)
@@ -531,7 +689,7 @@ def main() -> None:
         else:
             geo = (
                 geocoder.reverse(float(loc["latitude"]), float(loc["longitude"]))
-                if loc and "latitude" in loc and "longitude" in loc
+                if loc_key is not None
                 else None
             )
             try:
@@ -549,6 +707,7 @@ def main() -> None:
             with state_lock:
                 cache[pid] = {
                     "title": photo.get("title", ""),
+                    "location": loc_key,
                     "original_tags": existing_tags,
                     "added_tags": added_tags,
                     "model": model,

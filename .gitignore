@@ -48,6 +48,10 @@ yarn-error.log*
 *.swo
 *.log
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # Local Agent Instructions & Personal/One-Off Migration Scripts
 AGENTS.md
 scripts/batch-resize-photos.py
