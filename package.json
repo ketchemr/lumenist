@@ -8,6 +8,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "deploy": "bash scripts/deploy.sh",
     "lint": "next lint",
     "import:batch": "tsx scripts/import-batch.ts",
     "thumbnails:precache": "node scripts/precache-thumbnails.js",

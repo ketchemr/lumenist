@@ -305,16 +305,24 @@ Build the optimized production application:
 npm run build
 ```
 
-Start the application with PM2:
+Start the application with PM2 using the included `ecosystem.config.cjs` (runs Next.js directly in PM2 cluster mode with 1 instance so `pm2 reload` performs zero-downtime rolling reloads without concurrent JSON write conflicts):
 
 ```bash
 # Start Lumenist on port 3000
-pm2 start npm --name "lumenist" -- start
+pm2 start ecosystem.config.cjs
 
 # Configure PM2 to automatically start on server boot
 pm2 startup
 pm2 save
 ```
+
+For subsequent zero-downtime updates, run:
+
+```bash
+npm run deploy
+```
+
+This pulls the latest code, skips `npm ci` when `package-lock.json` is unchanged, builds into an alternating A/B build slot (`.next-a/` or `.next-b/`) without touching the live bundle, flips `.next-active`, and performs a seamless `pm2 reload lumenist`.
 
 ### Step 7: Configure Nginx & SSL
 

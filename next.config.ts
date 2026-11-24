@@ -1,6 +1,27 @@
 import type { NextConfig } from "next";
 import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
 import packageJson from "./package.json";
+
+function resolveDistDir(): string {
+  if (process.env.NEXT_DIST_DIR) {
+    return process.env.NEXT_DIST_DIR;
+  }
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const active = fs
+        .readFileSync(path.join(process.cwd(), ".next-active"), "utf-8")
+        .trim();
+      if (active === ".next-a" || active === ".next-b") {
+        return active;
+      }
+    } catch {
+      // Fall back to default .next when no A/B slot pointer exists
+    }
+  }
+  return ".next";
+}
 
 function getGitRevisionTimestamp(): string {
   try {
@@ -18,6 +39,7 @@ function getGitRevisionTimestamp(): string {
 }
 
 const nextConfig: NextConfig = {
+  distDir: resolveDistDir(),
   reactStrictMode: true,
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version || "0.1.0",

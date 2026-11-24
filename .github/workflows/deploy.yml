@@ -47,14 +47,8 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "=== Installing dependencies ==="
-            npm install --prefer-offline --no-audit
-
-            echo "=== Building Next.js application ==="
-            npm run build
-
-            echo "=== Restarting PM2 process ==="
-            pm2 restart "$PM2_APP_NAME"
+            echo "=== Running zero-downtime build & PM2 reload ==="
+            PM2_APP_NAME="$PM2_APP_NAME" bash scripts/deploy.sh --no-pull
 
             echo "=== Verifying local Next.js service health ==="
             HEALTHY=0

@@ -8,6 +8,10 @@ coverage/
 
 # Next.js / Build Outputs
 .next/
+.next-a/
+.next-b/
+.next-active
+.deploy-lockhash
 out/
 build/
 dist/

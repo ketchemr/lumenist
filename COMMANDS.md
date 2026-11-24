@@ -16,7 +16,17 @@ Starts the Next.js local development server with Fast Refresh (hot-reloading) at
 Compiles and generates the optimized production build of the Next.js application into `.next/`. Runs TypeScript type-checking and statically optimizes pages for maximum speed. Run this before deploying or starting the production server.
 
 ### `npm start`
-Launches the Next.js production HTTP server using the pre-compiled `.next/` build. In production environments, this is typically orchestrated via PM2 (`pm2 start npm --name "lumenist" -- start`).
+Launches the Next.js production HTTP server using the pre-compiled `.next/` build. In production environments, this is orchestrated via PM2 (`pm2 start ecosystem.config.cjs`).
+
+### `npm run deploy`
+Performs a fast, zero-downtime production update via `scripts/deploy.sh`:
+1. Pulls the latest commits (`git pull --ff-only`).
+2. Runs `npm ci` **only** if `package-lock.json` changed.
+3. Builds into the inactive A/B build slot (`.next-a/` or `.next-b/`, reusing the previous slot's `cache/` for fast incremental builds) so the live build is completely untouched during compilation.
+4. Atomically flips `.next-active` to the new slot (leaving the previous slot intact during reload overlap and for instant rollback).
+5. Executes `pm2 reload lumenist` in cluster mode so the new worker boots and binds before the old worker drains.
+
+Optional flags: `npm run deploy -- --no-pull`, `--force-install`, or `--skip-reload`.
 
 ### `npm run lint`
 Runs the linter across all TypeScript, TSX, and JavaScript source files to check for syntax issues, formatting consistency, and potential runtime bugs.
@@ -56,15 +66,8 @@ npm run dev
 
 ### Production Deployment / Update Workflow
 ```bash
-# 1. Pull latest code from GitHub
-git pull origin main
-
-# 2. Install any updated dependencies
-npm install
-
-# 3. Build optimized production bundle
-npm run build
-
-# 4. Restart production server via PM2
-pm2 restart lumenist
+# One-command zero-downtime deploy (pulls, builds in staging, swaps .next, reloads PM2)
+npm run deploy
 ```
+
+*(If running PM2 manually for the first time, launch with `pm2 start ecosystem.config.cjs && pm2 save` so `pm2 reload lumenist` uses cluster mode for seamless reloads.)*
