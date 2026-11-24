@@ -34,6 +34,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import atexit
 import base64
 import csv
 import json
@@ -630,6 +631,139 @@ def call_gemini(
     return []
 
 
+def _normalize_ollama_url(raw_url: str) -> str:
+    url = raw_url.strip().rstrip("/")
+    if not url:
+        return DEFAULT_OLLAMA_URL
+    if "://" not in url:
+        url = f"http://{url}"
+    return url
+
+
+def _is_local_ollama_url(ollama_url: str) -> bool:
+    parsed = urllib.parse.urlparse(_normalize_ollama_url(ollama_url))
+    host = (parsed.hostname or "").lower()
+    return host in {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
+
+
+def _find_ollama_binary() -> str | None:
+    found = shutil.which("ollama")
+    if found:
+        return found
+    for candidate in ("/opt/homebrew/bin/ollama", "/usr/local/bin/ollama"):
+        if Path(candidate).is_file():
+            return candidate
+    return None
+
+
+class OllamaServerManager:
+    """Starts a temporary local `ollama serve` on demand and stops it on exit.
+
+    If Ollama is already reachable at `ollama_url`, it is reused and left running.
+    """
+
+    def __init__(self, ollama_url: str) -> None:
+        self.ollama_url = _normalize_ollama_url(ollama_url)
+        self._lock = threading.Lock()
+        self._proc: subprocess.Popen[bytes] | None = None
+        self._started_by_us = False
+        self._ready = False
+
+    def _is_reachable(self, timeout: float = 1.5) -> bool:
+        url = f"{self.ollama_url}/api/tags"
+        req = urllib.request.Request(url, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return 200 <= resp.status < 300
+        except Exception:
+            return False
+
+    def ensure_running(self, startup_timeout: float = 20.0) -> None:
+        with self._lock:
+            if self._ready and (
+                not self._started_by_us
+                or (self._proc is not None and self._proc.poll() is None)
+            ):
+                return
+
+            if self._is_reachable():
+                self._ready = True
+                return
+
+            if not _is_local_ollama_url(self.ollama_url):
+                raise RuntimeError(
+                    f"Could not connect to remote Ollama at {self.ollama_url}."
+                )
+
+            ollama_bin = _find_ollama_binary()
+            if not ollama_bin:
+                raise RuntimeError(
+                    f"Could not connect to Ollama at {self.ollama_url}, and the `ollama` binary was not found in PATH."
+                )
+
+            parsed = urllib.parse.urlparse(self.ollama_url)
+            env = os.environ.copy()
+            if parsed.netloc:
+                env["OLLAMA_HOST"] = parsed.netloc
+
+            print(
+                f"Starting temporary Ollama server at {self.ollama_url}...",
+                file=sys.stderr,
+                flush=True,
+            )
+            self._proc = subprocess.Popen(
+                [ollama_bin, "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env,
+            )
+            self._started_by_us = True
+            atexit.register(self.stop)
+
+            deadline = time.monotonic() + startup_timeout
+            while time.monotonic() < deadline:
+                if self._proc.poll() is not None:
+                    exit_code = self._proc.returncode
+                    self._proc = None
+                    self._started_by_us = False
+                    raise RuntimeError(
+                        f"Temporary `ollama serve` exited unexpectedly with status {exit_code}."
+                    )
+                if self._is_reachable(timeout=1.0):
+                    self._ready = True
+                    return
+                time.sleep(0.25)
+
+            self.stop()
+            raise RuntimeError(
+                f"Timed out waiting for temporary Ollama server at {self.ollama_url} to become ready."
+            )
+
+    def stop(self) -> None:
+        with self._lock:
+            if not self._started_by_us or self._proc is None:
+                return
+            proc = self._proc
+            self._proc = None
+            self._started_by_us = False
+            self._ready = False
+
+            if proc.poll() is None:
+                print("Stopping temporary Ollama server...", file=sys.stderr, flush=True)
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5.0)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=5.0)
+
+    def __enter__(self) -> "OllamaServerManager":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        self.stop()
+
+
 def call_ollama(
     ollama_url: str,
     model: str,
@@ -666,7 +800,7 @@ def call_ollama(
         },
     }
 
-    url = f"{ollama_url.rstrip('/')}/api/chat"
+    url = f"{_normalize_ollama_url(ollama_url)}/api/chat"
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -855,9 +989,11 @@ def main() -> None:
                 api_key, model, img_path, photo, existing_tags, geo, system_tags, location_text
             )
         else:
-            added_tags = call_ollama(
-                args.ollama_url, model, img_path, photo, existing_tags, geo, system_tags, location_text
-            )
+            with OllamaServerManager(args.ollama_url) as ollama_server:
+                ollama_server.ensure_running()
+                added_tags = call_ollama(
+                    args.ollama_url, model, img_path, photo, existing_tags, geo, system_tags, location_text
+                )
 
         print(", ".join(added_tags))
         return
@@ -912,7 +1048,9 @@ def main() -> None:
     completed = 0
     total = len(targets)
 
-    def process_one(photo: dict[str, Any]) -> None:
+    def process_one(
+        photo: dict[str, Any], ollama_server: OllamaServerManager | None
+    ) -> None:
         nonlocal updated_count, error_count, completed
         pid = str(photo.get("photoID", ""))
         img_path = resolve_image_path(photo, photos_dir)
@@ -953,6 +1091,8 @@ def main() -> None:
                         api_key, model, img_path, photo, existing_tags, geo, system_tags
                     )
                 else:
+                    if ollama_server is not None:
+                        ollama_server.ensure_running()
                     added_tags = call_ollama(
                         args.ollama_url, model, img_path, photo, existing_tags, geo, system_tags
                     )
@@ -1005,10 +1145,15 @@ def main() -> None:
                 flush=True,
             )
 
-    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-        futs = [pool.submit(process_one, p) for p in targets]
-        for fut in as_completed(futs):
-            fut.result()
+    ollama_ctx = OllamaServerManager(args.ollama_url) if provider == "ollama" else None
+    try:
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+            futs = [pool.submit(process_one, p, ollama_ctx) for p in targets]
+            for fut in as_completed(futs):
+                fut.result()
+    finally:
+        if ollama_ctx is not None:
+            ollama_ctx.stop()
 
     if args.apply and updated_count > 0:
         catalog_path.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
