@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 """
-AI-assisted photo tagger for Lumenist's data/photos.json catalog.
+AI-assisted photo tagger for Lumenist (local Ollama vision by default, or Gemini).
 
-Inspects each photo alongside its GPS coordinates (reverse-geocoded via
-OpenStreetMap Nominatim), title, description, and existing tags, then asks
-Gemini Vision (or local Ollama) to suggest only missing, specific,
-non-redundant tags.
+Inspects a photo alongside its location (EXIF GPS, --location "lat, lon" or
+place name, reverse-geocoded via OpenStreetMap Nominatim), plus optional title,
+description, albums, existing image tags, and optional existing catalog/system tags,
+then suggests specific, non-redundant search tags.
 
 Zero external Python dependencies (uses stdlib + macOS `sips` if available).
 
 Usage:
-  # Tag a standalone image not yet added to the site (prints comma-separated tags)
-  python3 scripts/tag-photos.py --image /path/to/photo.jpg
+  # Tag a standalone image (uses EXIF GPS if present, or pass --location)
+  python3 scripts/tag-photos.py --image /path/to/photo.jpg --location "35.7993, -82.9548"
+
+  # Standalone image with optional metadata and catalog system tags
+  python3 scripts/tag-photos.py --image /path/to/photo.jpg \\
+    --location "19.9149, -155.8863" \\
+    --title "Sunset at 'Anaeho'omalu Beach" \\
+    --description "Evening light over the fishpond and palms" \\
+    --tags "Hawaii, HI" \\
+    --system-tags
 
   # Dry run on a single cataloged photo (default: does not modify data/photos.json)
   python3 scripts/tag-photos.py --photo d20261026144835
@@ -30,6 +38,7 @@ import base64
 import csv
 import json
 import os
+import re
 import shutil
 import ssl
 import struct
@@ -186,7 +195,7 @@ class Geocoder:
                 return None
 
 
-def prepare_image_base64(image_path: Path, max_dim: int = 1024) -> tuple[str, str]:
+def prepare_image_base64(image_path: Path, max_dim: int = 768) -> tuple[str, str]:
     if shutil.which("sips"):
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
             tmp_path = Path(tmp.name)
@@ -339,10 +348,166 @@ def clean_new_tags(candidates: list[Any], existing_tags: list[str]) -> list[str]
     return cleaned
 
 
+def parse_location_arg(
+    raw: str | None,
+) -> tuple[dict[str, float] | None, str | None]:
+    """Parse --location as 'lat, lon' (or Google Maps URL with @lat,lon) or a plain place name."""
+    if raw is None:
+        return None, None
+    trimmed = raw.strip()
+    if not trimmed or trimmed.lower() == "none":
+        return None, None
+
+    # Match decimal coordinates: "35.7993, -82.9548" or "35.7993 -82.9548" or "@35.7993,-82.9548"
+    coord_match = re.search(
+        r"(-?\d{1,2}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)", trimmed
+    )
+    if coord_match:
+        lat = float(coord_match.group(1))
+        lon = float(coord_match.group(2))
+        if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0:
+            return {"latitude": round(lat, 6), "longitude": round(lon, 6)}, None
+
+    return None, trimmed
+
+
+def load_system_tags_vocabulary(
+    system_tags_arg: str | None,
+    catalog_path: Path,
+    photo: dict[str, Any],
+    existing_tags: list[str],
+    geo: dict[str, Any] | None,
+    location_text: str | None = None,
+    limit: int = 120,
+) -> list[str]:
+    """Load optional system/catalog tag vocabulary, filtered to avoid unrelated geographic hallucinations."""
+    if not system_tags_arg:
+        return []
+
+    existing_lower = {t.strip().lower() for t in existing_tags if t.strip()}
+    counts: dict[str, int] = {}
+
+    if system_tags_arg == "__CATALOG__":
+        if not catalog_path.exists():
+            return []
+        try:
+            catalog_data = json.loads(catalog_path.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+        for entry in catalog_data:
+            for raw in entry.get("keywords") or []:
+                tag = str(raw).strip()
+                if tag and tag.lower() not in existing_lower:
+                    counts[tag] = counts.get(tag, 0) + 1
+    else:
+        cand_path = Path(system_tags_arg).expanduser()
+        if cand_path.exists() and cand_path.is_file():
+            raw_text = cand_path.read_text(encoding="utf-8", errors="replace")
+            try:
+                parsed = json.loads(raw_text)
+                if isinstance(parsed, list):
+                    for item in parsed:
+                        if isinstance(item, str) and item.strip():
+                            t = item.strip()
+                            if t.lower() not in existing_lower:
+                                counts[t] = counts.get(t, 0) + 1
+                        elif isinstance(item, dict):
+                            for raw in item.get("keywords") or []:
+                                t = str(raw).strip()
+                                if t and t.lower() not in existing_lower:
+                                    counts[t] = counts.get(t, 0) + 1
+            except Exception:
+                for tok in re.split(r"[,\n]+", raw_text):
+                    t = tok.strip()
+                    if t and t.lower() not in existing_lower:
+                        counts[t] = counts.get(t, 0) + 1
+        else:
+            for tok in system_tags_arg.split(","):
+                t = tok.strip()
+                if t and t.lower() not in existing_lower:
+                    counts[t] = counts.get(t, 0) + 1
+
+    if not counts:
+        return []
+
+    # Build context text from this photo's metadata + location so proper-noun tags
+    # from unrelated states/parks don't pollute this photo.
+    context_parts = [
+        str(photo.get("title") or ""),
+        str(photo.get("description") or ""),
+        " ".join(str(c) for c in (photo.get("categories") or [])),
+        location_text or "",
+    ]
+    if geo:
+        context_parts.append(str(geo.get("name") or ""))
+        context_parts.append(str(geo.get("display_name") or ""))
+        addr = geo.get("address")
+        if isinstance(addr, dict):
+            context_parts.extend(str(v) for v in addr.values())
+    context_text = " ".join(context_parts).lower()
+
+    matched_context: list[tuple[str, int]] = []
+    common_subjects: list[tuple[str, int]] = []
+    for tag, cnt in counts.items():
+        low = tag.lower()
+        if context_text and len(low) >= 2 and low in context_text:
+            matched_context.append((tag, cnt))
+        elif tag == low:
+            common_subjects.append((tag, cnt))
+
+    matched_context.sort(key=lambda kv: (-kv[1], kv[0].lower()))
+    common_subjects.sort(key=lambda kv: (-kv[1], kv[0].lower()))
+
+    combined: list[str] = []
+    seen: set[str] = set()
+    for tag, _ in matched_context[:40] + common_subjects:
+        low = tag.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        combined.append(tag)
+        if len(combined) >= limit:
+            break
+    return combined
+
+
+def parse_added_tags_from_content(content: str) -> list[Any]:
+    trimmed = content.strip()
+    for candidate in (trimmed,):
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict) and isinstance(parsed.get("added_tags"), list):
+                return parsed["added_tags"]
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+
+    match = re.search(r"\{[\s\S]*\}", trimmed)
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            if isinstance(parsed, dict) and isinstance(parsed.get("added_tags"), list):
+                return parsed["added_tags"]
+        except Exception:
+            pass
+
+    # Fallback if num_predict truncated a JSON array mid-output
+    arr_start = trimmed.find("[")
+    if arr_start != -1:
+        strings = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', trimmed[arr_start + 1 :])
+        if strings:
+            return strings
+
+    raise RuntimeError("Ollama returned an unexpected response format instead of JSON tags.")
+
+
 def build_prompt(
     photo: dict[str, Any],
     existing_tags: list[str],
     geo: dict[str, Any] | None,
+    system_tags: list[str] | None = None,
+    location_text: str | None = None,
 ) -> str:
     dt = photo.get("dateTaken") or {}
     date_str = (
@@ -350,28 +515,47 @@ def build_prompt(
         or "unknown"
     )
     loc = photo.get("location")
-    loc_str = f"{loc['latitude']},{loc['longitude']}" if loc else "none"
-    geo_summary = json.dumps(geo, ensure_ascii=False) if geo else "none"
+    loc_str = f"{loc['latitude']},{loc['longitude']}" if loc else (location_text or "none")
+    geo_summary = json.dumps(geo, ensure_ascii=False) if geo else (location_text or "none")
+    has_existing = len(existing_tags) > 0
+    albums_str = ", ".join(photo.get("categories") or []) or "(none)"
+    existing_str = ", ".join(existing_tags) if has_existing else "(none)"
+    vocab_line = (
+        f"\n- Established catalog/system tags (prefer reusing exact spelling/casing from this list when clearly relevant to this photo, and also add new specific tags not in this list when warranted): {', '.join(system_tags)}"
+        if system_tags
+        else ""
+    )
 
-    return f"""You are a fine-art & nature photography archivist adding missing search tags to an existing curated photo catalog.
+    if has_existing:
+        task_block = """Task:
+Look closely at the photograph and its location/metadata. Suggest ONLY genuinely missing, high-value NEW search tags (typically 3 to 12 tags, or fewer if the photo is already well tagged) that are clearly supported by what is visible in the photo or its verified location. Do not pad with filler, spelling variants, or near-duplicates of existing tags (e.g. do not add "Hawai'i" or "Big Island Hawaii" if "Hawaii" and "Big Island" are already present)."""
+    else:
+        task_block = """Task:
+This photograph currently has NO tags. Look closely at the photograph and its location/metadata and generate a thorough, well-rounded set of 15 to 25 distinct, high-value search tags covering:
+- Verified geographic places from the title, description, and location/reverse-geocoded GPS (landmarks, parks, bays, beaches, towns, islands, counties, full US state name, and 2-letter US state code).
+- All prominent visual subjects and natural/architectural features (e.g. palm trees, beach, coast, clouds, water, reflection, silhouette, bridge, waterfall, wildflowers).
+- Time of day, lighting, weather, and season (e.g. sunset, sunrise, dusk, twilight, evening, fog, autumn, winter).
+- Format or technique only if obvious (e.g. panorama, black and white, long exposure).
+Avoid redundant near-duplicates (e.g. do not output both "stone bridge" and "stone structure" and "stone construction")."""
+
+    return f"""You are a fine-art & nature photography archivist adding search tags to a curated photo catalog.
 
 Photo metadata:
-- Title: {photo.get('title', '')}
-- Description: {photo.get('description', '')}
+- Title: {photo.get('title', '') or '(none)'}
+- Description: {photo.get('description', '') or '(none)'}
 - Date: {date_str}
-- GPS coordinates: {loc_str}
+- Location / GPS: {loc_str}
 - Reverse-geocoded place: {geo_summary}
-- Existing albums: {', '.join(photo.get('categories') or [])}
-- Existing tags (DO NOT repeat or duplicate any of these): {', '.join(existing_tags) if existing_tags else '(none)'}
+- Albums: {albums_str}
+- Existing tags on this photo (DO NOT repeat, rephrase, or duplicate any of these): {existing_str}{vocab_line}
 
-Task:
-Look closely at the photograph and its location/metadata. Suggest all genuinely relevant, high-value NEW search tags that are clearly supported by what is visible in the photo or its verified location. Use as few or as many as are truly warranted for this specific scene—do not pad with filler and do not omit important relevant terms.
+{task_block}
 
 Strict rules:
-1. DO NOT repeat any existing tag (including trivial singular/plural duplicates of an existing tag).
-2. Use Title Case for proper nouns (landmarks, parks, rivers, mountains, towns, counties, states, 2-letter US state abbreviations if missing, e.g. "TN", "Tennessee", "Appalachian Mountains").
-3. Use lowercase for common visual subjects, features, weather, lighting, seasons, flora/fauna, and structures (e.g. "waterwheel", "wooden bridge", "split-rail fence", "autumn", "fog", "reflection").
-4. Include BOTH the full US state name and 2-letter state code ONLY if the photo is in the US and either is missing from existing tags.
+1. DO NOT repeat any existing tag on this photo (including singular/plural duplicates, punctuation/diacritic variants, or combined duplicates of existing tags).
+2. ALWAYS use Title Case for ALL proper nouns—including landmarks, parks, bays, beaches, oceans, rivers, mountains, islands, towns, counties, streets/places from GPS, states, and 2-letter US state codes (e.g. "Pacific Ocean", "Hawaii", "HI", "Big Island", "Waikoloa", "Ku'uali'i Place", "North Carolina", "NC").
+3. Use lowercase for common visual subjects, features, weather, lighting, seasons, flora/fauna, and structures (e.g. "palm trees", "beach", "sunset", "dusk", "reflection", "silhouette", "clouds", "waterwheel", "wooden bridge", "autumn", "fog").
+4. Include BOTH the full US state name and 2-letter state code as separate tags (e.g. "Hawaii", "HI") ONLY if the photo is in the US and either is missing from existing tags. Never include any state, county, or place that does not match this photo's verified location.
 5. NO generic filler words (avoid: nature, scenic, outdoor, photography, photo, landscape, beautiful, view, travel, USA, United States, daytime).
 6. Do NOT guess obscure species or landmark names unless confident from the image + coordinates/description.
 7. Return JSON matching the schema: {{"added_tags": ["tag1", "tag2", ...]}}."""
@@ -384,9 +568,11 @@ def call_gemini(
     photo: dict[str, Any],
     existing_tags: list[str],
     geo: dict[str, Any] | None,
+    system_tags: list[str] | None = None,
+    location_text: str | None = None,
 ) -> list[str]:
     mime, img_b64 = prepare_image_base64(image_path)
-    prompt = build_prompt(photo, existing_tags, geo)
+    prompt = build_prompt(photo, existing_tags, geo, system_tags, location_text)
 
     payload = {
         "contents": [
@@ -451,9 +637,12 @@ def call_ollama(
     photo: dict[str, Any],
     existing_tags: list[str],
     geo: dict[str, Any] | None,
+    system_tags: list[str] | None = None,
+    location_text: str | None = None,
 ) -> list[str]:
     _, img_b64 = prepare_image_base64(image_path)
-    prompt = build_prompt(photo, existing_tags, geo)
+    prompt = build_prompt(photo, existing_tags, geo, system_tags, location_text)
+    is_from_scratch = len(existing_tags) == 0
 
     payload = {
         "model": model,
@@ -461,10 +650,20 @@ def call_ollama(
         "messages": [{"role": "user", "content": prompt, "images": [img_b64]}],
         "format": {
             "type": "object",
-            "properties": {"added_tags": {"type": "array", "items": {"type": "string"}}},
+            "properties": {
+                "added_tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "maxItems": 28 if is_from_scratch else 15,
+                }
+            },
             "required": ["added_tags"],
         },
-        "options": {"temperature": 0.2},
+        "options": {
+            "temperature": 0.2,
+            "num_predict": 384 if is_from_scratch else 256,
+            "repeat_penalty": 1.15,
+        },
     }
 
     url = f"{ollama_url.rstrip('/')}/api/chat"
@@ -474,10 +673,25 @@ def call_ollama(
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=180) as resp:
-        resp_json = json.loads(resp.read().decode("utf-8"))
-    parsed = json.loads(resp_json["message"]["content"])
-    raw_tags = parsed.get("added_tags", [])
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            resp_json = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        err_body = exc.read().decode("utf-8", errors="replace")[:400]
+        if exc.code == 404 or "not found" in err_body.lower():
+            raise RuntimeError(
+                f'Ollama model "{model}" not found at {ollama_url}. Run: ollama pull {model}'
+            ) from exc
+        raise RuntimeError(f"Ollama HTTP {exc.code}: {err_body}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Could not connect to Ollama at {ollama_url}. Make sure Ollama is running (e.g. `brew services start ollama` or `ollama serve`)."
+        ) from exc
+
+    content = (resp_json.get("message") or {}).get("content", "")
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError("Ollama returned an empty response.")
+    raw_tags = parse_added_tags_from_content(content)
     return clean_new_tags(raw_tags if isinstance(raw_tags, list) else [], existing_tags)
 
 
@@ -518,12 +732,25 @@ def main() -> None:
     load_env_file(REPO_ROOT / ".env.local")
 
     parser = argparse.ArgumentParser(
-        description="Enrich Lumenist data/photos.json tags using Gemini Vision (or Ollama) + GPS."
+        description="Enrich Lumenist photo tags using local Ollama Vision (default) or Gemini Vision + GPS."
     )
     parser.add_argument("--image", help="Standalone local image file to tag (not yet in catalog)")
+    parser.add_argument(
+        "--location",
+        default=None,
+        help="Location for --image: 'lat, lon' coordinates, Google Maps URL, or place name (falls back to EXIF GPS; pass 'none' if unknown)",
+    )
     parser.add_argument("--title", default="", help="Optional title context (used with --image)")
     parser.add_argument("--description", default="", help="Optional description context (used with --image)")
-    parser.add_argument("--tags", default="", help="Optional comma-separated existing tags to exclude (used with --image)")
+    parser.add_argument("--albums", default="", help="Optional comma-separated albums/categories (used with --image)")
+    parser.add_argument("--tags", default="", help="Optional comma-separated existing image tags to exclude (used with --image)")
+    parser.add_argument(
+        "--system-tags",
+        nargs="?",
+        const="__CATALOG__",
+        default=None,
+        help="Optional existing system/catalog tags to prefer: omit for none, pass flag alone to load from --catalog (data/photos.json), or pass a comma-separated list or file path",
+    )
     parser.add_argument("--lat", type=float, default=None, help="Optional GPS latitude override (used with --image)")
     parser.add_argument("--lon", type=float, default=None, help="Optional GPS longitude override (used with --image)")
     parser.add_argument("--photo", help="Single photoID to process")
@@ -536,7 +763,7 @@ def main() -> None:
         help="Path to photos.json catalog",
     )
     parser.add_argument(
-        "--provider", choices=("gemini", "ollama"), default="gemini"
+        "--provider", choices=("ollama", "gemini"), default="ollama"
     )
     parser.add_argument("--model", default=None)
     parser.add_argument("--ollama-url", default=os.environ.get("OLLAMA_HOST", DEFAULT_OLLAMA_URL))
@@ -561,6 +788,7 @@ def main() -> None:
         workers = args.workers if args.workers is not None else 1
         api_key = ""
 
+    catalog_path = Path(args.catalog).resolve()
     geo_cache_path = REPO_ROOT / "data" / "geocode-cache.json"
     geocoder = Geocoder(geo_cache_path)
 
@@ -571,30 +799,51 @@ def main() -> None:
             sys.exit(f"Error: Image file not found: {img_path}")
 
         date_taken, exif_loc = extract_exif_metadata(img_path)
-        loc = (
-            {"latitude": args.lat, "longitude": args.lon}
-            if args.lat is not None and args.lon is not None
-            else exif_loc
-        )
+        parsed_loc, location_text = parse_location_arg(args.location)
+        if args.lat is not None and args.lon is not None:
+            loc = {"latitude": args.lat, "longitude": args.lon}
+        elif parsed_loc is not None:
+            loc = parsed_loc
+        else:
+            loc = exif_loc
+
+        if (
+            loc is None
+            and not location_text
+            and (args.location is None or args.location.strip().lower() != "none")
+        ):
+            sys.exit(
+                "Error: No GPS coordinates found in image EXIF. Provide --location \"lat, lon\" (or --location \"Place Name\", or --location none)."
+            )
+
         geo = (
             geocoder.reverse(float(loc["latitude"]), float(loc["longitude"]))
             if loc
             else None
         )
         existing_tags = [t.strip() for t in args.tags.split(",") if t.strip()]
+        albums = [a.strip() for a in args.albums.split(",") if a.strip()]
         photo: dict[str, Any] = {
             "photoID": img_path.stem,
             "title": args.title,
             "description": args.description,
             "dateTaken": date_taken,
             "location": loc,
-            "categories": [],
+            "categories": albums,
             "keywords": existing_tags,
         }
+        system_tags = load_system_tags_vocabulary(
+            args.system_tags, catalog_path, photo, existing_tags, geo, location_text
+        )
 
+        loc_display = (
+            f"{loc['latitude']},{loc['longitude']}"
+            if loc
+            else (location_text or "none")
+        )
         print(
-            f"Image: {img_path.name} | Provider: {provider} | Model: {model}"
-            + (f" | GPS: {loc['latitude']},{loc['longitude']}" if loc else " | GPS: none"),
+            f"Image: {img_path.name} | Provider: {provider} | Model: {model} | Location: {loc_display}"
+            + (f" | System tags: {len(system_tags)}" if system_tags else ""),
             file=sys.stderr,
             flush=True,
         )
@@ -602,14 +851,17 @@ def main() -> None:
             print(f"Place: {geo['display_name']}", file=sys.stderr, flush=True)
 
         if provider == "gemini":
-            added_tags = call_gemini(api_key, model, img_path, photo, existing_tags, geo)
+            added_tags = call_gemini(
+                api_key, model, img_path, photo, existing_tags, geo, system_tags, location_text
+            )
         else:
-            added_tags = call_ollama(args.ollama_url, model, img_path, photo, existing_tags, geo)
+            added_tags = call_ollama(
+                args.ollama_url, model, img_path, photo, existing_tags, geo, system_tags, location_text
+            )
 
         print(", ".join(added_tags))
         return
 
-    catalog_path = Path(args.catalog).resolve()
     if not catalog_path.exists():
         sys.exit(f"Error: Catalog not found: {catalog_path}")
 
@@ -692,11 +944,18 @@ def main() -> None:
                 if loc_key is not None
                 else None
             )
+            system_tags = load_system_tags_vocabulary(
+                args.system_tags, catalog_path, photo, existing_tags, geo
+            )
             try:
                 if provider == "gemini":
-                    added_tags = call_gemini(api_key, model, img_path, photo, existing_tags, geo)
+                    added_tags = call_gemini(
+                        api_key, model, img_path, photo, existing_tags, geo, system_tags
+                    )
                 else:
-                    added_tags = call_ollama(args.ollama_url, model, img_path, photo, existing_tags, geo)
+                    added_tags = call_ollama(
+                        args.ollama_url, model, img_path, photo, existing_tags, geo, system_tags
+                    )
             except Exception as exc:
                 with state_lock:
                     completed += 1

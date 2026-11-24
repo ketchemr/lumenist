@@ -13,13 +13,17 @@ import {
   AlertTriangle,
   ExternalLink,
   Camera,
-  Tag,
   Folder,
   Sliders,
   Film,
 } from "lucide-react";
 import { Photo } from "@/types/photo";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
+import {
+  TagInputWithTray,
+  loadRecentTagsFromStorage,
+  saveRecentTagsToStorage,
+} from "@/components/TagInputWithTray";
 import {
   parseCoordinates,
   formatDMS,
@@ -34,6 +38,8 @@ interface EditPhotoModalProps {
   photoID: string;
   initialPhoto?: Photo | null;
   availableAlbums?: string[];
+  availableTags?: string[];
+  popularTags?: { tag: string; count: number }[];
   isOpen: boolean;
   onClose: () => void;
   onSaved?: (updatedPhoto: Photo) => void;
@@ -43,6 +49,8 @@ export function EditPhotoModal({
   photoID,
   initialPhoto,
   availableAlbums,
+  availableTags,
+  popularTags,
   isOpen,
   onClose,
   onSaved,
@@ -61,6 +69,13 @@ export function EditPhotoModal({
   const [existingAlbums, setExistingAlbums] = useState<string[]>(
     availableAlbums || []
   );
+  const [allLibraryTags, setAllLibraryTags] = useState<string[]>(
+    availableTags || []
+  );
+  const [popularLibraryTags, setPopularLibraryTags] = useState<
+    { tag: string; count: number }[]
+  >(popularTags || []);
+  const [recentTags, setRecentTags] = useState<string[]>([]);
   const [tagsInput, setTagsInput] = useState("");
   const [tripod, setTripod] = useState("");
   const [availability, setAvailability] = useState("Available for Order");
@@ -148,14 +163,36 @@ export function EditPhotoModal({
     setReplacementFile(null);
     setReplacementPreview(null);
 
-    if (availableAlbums && availableAlbums.length > 0) {
+    setRecentTags(loadRecentTagsFromStorage());
+
+    const needsAlbums = !availableAlbums || availableAlbums.length === 0;
+    const needsTags = !availableTags || availableTags.length === 0;
+
+    if (!needsAlbums && availableAlbums) {
       setExistingAlbums(availableAlbums);
-    } else {
+    }
+    if (!needsTags && availableTags) {
+      setAllLibraryTags(availableTags);
+    }
+    if (popularTags && popularTags.length > 0) {
+      setPopularLibraryTags(popularTags);
+    }
+
+    if (needsAlbums || needsTags || !popularTags || popularTags.length === 0) {
       fetch("/api/admin/metadata")
         .then((res) => res.json())
         .then((data) => {
-          if (data.albums) {
+          if (needsAlbums && Array.isArray(data.albums)) {
             setExistingAlbums(data.albums);
+          }
+          if (needsTags && Array.isArray(data.allTags)) {
+            setAllLibraryTags(data.allTags);
+          }
+          if (
+            (!popularTags || popularTags.length === 0) &&
+            Array.isArray(data.popularTags)
+          ) {
+            setPopularLibraryTags(data.popularTags);
           }
         })
         .catch(() => {});
@@ -352,6 +389,7 @@ export function EditPhotoModal({
 
       if (data.photo) {
         setPhoto(data.photo);
+        setRecentTags((prev) => saveRecentTagsToStorage(tagsInput, prev));
         if (onSaved) {
           onSaved(data.photo);
         }
@@ -779,16 +817,14 @@ export function EditPhotoModal({
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-foreground">
-                Tags / Keywords (comma-separated)
-              </label>
-              <input
-                type="text"
+            <div className="pt-2 border-t border-surface-border">
+              <TagInputWithTray
                 value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
+                onChange={setTagsInput}
+                allTags={allLibraryTags}
+                popularTags={popularLibraryTags}
+                recentTags={recentTags}
                 placeholder="e.g. Appalachian Trail, Max Patch, sunrise, trees"
-                className="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs text-foreground focus:outline-none focus:border-accent"
               />
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import exifr from "exifr";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,7 +30,6 @@ import {
   Plus,
   Pencil,
   X,
-  History,
   Trash2,
   Search,
   Image as ImageIcon,
@@ -50,6 +49,11 @@ import {
 } from "lucide-react";
 import { AdminMapPicker } from "@/components/AdminMapPicker";
 import { EditPhotoModal } from "@/components/EditPhotoModal";
+import {
+  TagInputWithTray,
+  loadRecentTagsFromStorage,
+  saveRecentTagsToStorage,
+} from "@/components/TagInputWithTray";
 import {
   parseCoordinates,
   formatDMS,
@@ -172,9 +176,6 @@ export default function AdminUploadPage() {
     commonTripods: [],
   });
   const [recentTags, setRecentTags] = useState<string[]>([]);
-  const [showTagTray, setShowTagTray] = useState(false);
-  const [tagTraySearch, setTagTraySearch] = useState("");
-  const [tagTrayView, setTagTrayView] = useState<"all" | "popular">("all");
 
   // Upload & File states
   const [mediaType, setMediaType] = useState<"photo" | "video">("photo");
@@ -338,7 +339,7 @@ export default function AdminUploadPage() {
   const photoIdInputRef = useRef<HTMLInputElement>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const albumsSectionRef = useRef<HTMLDivElement>(null);
-  const tagsInputRef = useRef<HTMLInputElement>(null);
+  const tagsInputRef = useRef<HTMLTextAreaElement>(null);
   const locationSectionRef = useRef<HTMLDivElement>(null);
 
   const jumpToField = (ref: React.RefObject<HTMLElement | null>) => {
@@ -389,10 +390,7 @@ export default function AdminUploadPage() {
         setTripod("None");
       }
 
-      const storedTags = localStorage.getItem("lumenist_recent_tags");
-      if (storedTags) {
-        setRecentTags(JSON.parse(storedTags));
-      }
+      setRecentTags(loadRecentTagsFromStorage());
     } catch {}
   }, []);
 
@@ -905,52 +903,6 @@ export default function AdminUploadPage() {
     }
   };
 
-  // Tag chip helper: appends or toggles tag in comma-separated input
-  const selectedTagSet = useMemo(
-    () =>
-      new Set(
-        tagsInput
-          .split(",")
-          .map((t) => t.trim().toLowerCase())
-          .filter(Boolean)
-      ),
-    [tagsInput]
-  );
-
-  const filteredTrayTags = useMemo(() => {
-    const q = tagTraySearch.trim().toLowerCase();
-    if (q) {
-      return metadata.allTags.filter((tag) => tag.toLowerCase().includes(q));
-    }
-    if (tagTrayView === "popular") {
-      return metadata.popularTags.map(({ tag }) => tag);
-    }
-    return metadata.allTags;
-  }, [metadata.allTags, metadata.popularTags, tagTraySearch, tagTrayView]);
-
-  const handleTagChipClick = (tag: string) => {
-    const currentTags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const exists = currentTags.some(
-      (t) => t.toLowerCase() === tag.toLowerCase()
-    );
-
-    if (exists) {
-      // Remove
-      const next = currentTags.filter(
-        (t) => t.toLowerCase() !== tag.toLowerCase()
-      );
-      setTagsInput(next.join(", "));
-    } else {
-      // Append
-      const next = [...currentTags, tag];
-      setTagsInput(next.join(", "));
-    }
-  };
-
   const handleVideoFileSelect = (file: File) => {
     if (!file.type.startsWith("video/") && !isSupportedVideoFilename(file.name)) {
       alert("Please select a supported video file (.mp4, .webm, .mov, or .m4v)");
@@ -1106,22 +1058,7 @@ export default function AdminUploadPage() {
         } catch {}
       }
 
-      const submittedTags = tagsInput
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-      if (submittedTags.length > 0) {
-        try {
-          const updatedRecent = Array.from(
-            new Set([...submittedTags, ...recentTags])
-          ).slice(0, 20);
-          setRecentTags(updatedRecent);
-          localStorage.setItem(
-            "lumenist_recent_tags",
-            JSON.stringify(updatedRecent)
-          );
-        } catch {}
-      }
+      setRecentTags((prev) => saveRecentTagsToStorage(tagsInput, prev));
 
       setPublishedResult(data);
 
@@ -2663,169 +2600,19 @@ export default function AdminUploadPage() {
 
               {/* Tags with Memory & Fast Popup Tray */}
               <div className="space-y-3 upload-card p-6 rounded-sm">
-                <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                  <div className="flex items-center space-x-2 text-xs font-semibold text-foreground uppercase tracking-wider">
-                    <Tag className="w-3.5 h-3.5 text-accent" />
-                    <label htmlFor="upload-tags">Step 4 &mdash; Keywords &amp; Tags</label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowTagTray(!showTagTray)}
-                      className="text-xs text-accent hover:underline flex items-center space-x-1 cursor-pointer"
-                    >
-                      <span>
-                        {showTagTray ? "Hide Tag Tray" : "+ Quick-Add Tags"}
-                      </span>
-                    </button>
-                    <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border border-surface-border text-muted">
-                      Optional
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <input
-                    ref={tagsInputRef}
-                    id="upload-tags"
-                    name="tags"
-                    type="text"
-                    value={tagsInput}
-                    onChange={(e) => setTagsInput(e.target.value)}
-                    placeholder="Type or paste comma-separated tags (e.g. Washington, Fall color, sunset, river, trees)..."
-                    data-needs-attention={!tagsInput.trim()}
-                    className="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground"
-                  />
-                  <p className="text-[11px] text-muted">
-                    Paste comma-separated tags freely, or open{" "}
-                    <button
-                      type="button"
-                      onClick={() => setShowTagTray(!showTagTray)}
-                      className="text-accent hover:underline cursor-pointer"
-                    >
-                      Quick-Add Tags
-                    </button>{" "}
-                    to pick from all {metadata.allTags.length} library keywords.
-                  </p>
-                </div>
-
-                {/* Quick-Add Tag Tray */}
-                {showTagTray && (
-                  <div className="border-t border-surface-border pt-3 mt-2 space-y-3">
-                    {/* Recently Used Tags */}
-                    {recentTags.length > 0 && (
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] text-muted uppercase tracking-wider font-semibold flex items-center space-x-1">
-                          <History className="w-3 h-3 text-accent" />
-                          <span>Recently Used Across Photos</span>
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {recentTags.map((tag) => {
-                            const isIncluded = selectedTagSet.has(
-                              tag.toLowerCase()
-                            );
-                            return (
-                              <button
-                                type="button"
-                                key={tag}
-                                onClick={() => handleTagChipClick(tag)}
-                                className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                                  isIncluded
-                                    ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
-                                    : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
-                                }`}
-                              >
-                                {tag}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* All & Popular Library Keywords */}
-                    {metadata.allTags.length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setTagTrayView("all")}
-                              className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                                tagTrayView === "all" && !tagTraySearch.trim()
-                                  ? "bg-accent text-accent-contrast border-accent"
-                                  : "bg-surface border-surface-border text-muted hover:text-foreground"
-                              }`}
-                            >
-                              All A–Z ({metadata.allTags.length})
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setTagTrayView("popular")}
-                              className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                                tagTrayView === "popular" &&
-                                !tagTraySearch.trim()
-                                  ? "bg-accent text-accent-contrast border-accent"
-                                  : "bg-surface border-surface-border text-muted hover:text-foreground"
-                              }`}
-                            >
-                              Popular ({metadata.popularTags.length})
-                            </button>
-                          </div>
-
-                          <div className="relative flex-1 min-w-[160px] max-w-xs">
-                            <Search className="w-3 h-3 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            <input
-                              type="text"
-                              value={tagTraySearch}
-                              onChange={(e) => setTagTraySearch(e.target.value)}
-                              placeholder={`Filter all ${metadata.allTags.length} tags...`}
-                              className="w-full bg-surface border border-surface-border rounded pl-7 pr-6 py-1 text-[11px] text-foreground placeholder:text-muted focus:outline-none focus:border-accent"
-                            />
-                            {tagTraySearch && (
-                              <button
-                                type="button"
-                                onClick={() => setTagTraySearch("")}
-                                aria-label="Clear tag filter"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {filteredTrayTags.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto pr-1">
-                            {filteredTrayTags.map((tag) => {
-                              const isIncluded = selectedTagSet.has(
-                                tag.toLowerCase()
-                              );
-                              return (
-                                <button
-                                  type="button"
-                                  key={tag}
-                                  onClick={() => handleTagChipClick(tag)}
-                                  className={`text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                                    isIncluded
-                                      ? "bg-accent text-accent-contrast font-semibold border-accent shadow-sm"
-                                      : "bg-surface hover:bg-surface-hover border-surface-border text-foreground hover:border-accent"
-                                  }`}
-                                >
-                                  {tag}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-[11px] text-muted italic">
-                            No tags matching &ldquo;{tagTraySearch}&rdquo;.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <TagInputWithTray
+                  headerVariant="upload-step"
+                  label="Step 4 — Keywords & Tags"
+                  inputId="upload-tags"
+                  inputRef={tagsInputRef}
+                  value={tagsInput}
+                  onChange={setTagsInput}
+                  allTags={metadata.allTags}
+                  popularTags={metadata.popularTags}
+                  recentTags={recentTags}
+                  needsAttention={!tagsInput.trim()}
+                  inputClassName="upload-field-input w-full rounded px-3 py-2 text-xs text-foreground"
+                />
               </div>
 
               {/* Tripod & Availability */}
@@ -4082,6 +3869,8 @@ export default function AdminUploadPage() {
             <EditPhotoModal
               photoID={editingPhotoID}
               availableAlbums={availableAlbums}
+              availableTags={metadata.allTags}
+              popularTags={metadata.popularTags}
               isOpen={!!editingPhotoID}
               onClose={() => setEditingPhotoID(null)}
               onSaved={(savedPhoto) => {
@@ -4090,8 +3879,13 @@ export default function AdminUploadPage() {
                     prev.map((id) => (id === editingPhotoID ? savedPhoto.photoID : id))
                   );
                 }
+                setRecentTags(loadRecentTagsFromStorage());
                 loadCatalog(catalogPage, catalogSearch, catalogAlbumFilter, catalogPageSize);
                 loadAlbums();
+                fetch("/api/admin/metadata")
+                  .then((res) => res.json())
+                  .then((d: MetadataResponse) => setMetadata(d))
+                  .catch(() => {});
               }}
             />
           )}
