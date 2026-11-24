@@ -101,6 +101,8 @@ export function RandomHeroSlideshow({
           Array.isArray(parsed.list) &&
           parsed.list.length > 0 &&
           typeof parsed.index === "number" &&
+          parsed.index >= 0 &&
+          parsed.index < parsed.list.length &&
           parsed.list.every((i: number) => i >= 0 && i < photos.length)
         ) {
           setState(parsed);
@@ -131,13 +133,13 @@ export function RandomHeroSlideshow({
   const currentIndex =
     state.list.length > 0 && state.list[state.index] !== undefined
       ? state.list[state.index]
-      : 0;
+      : null;
 
-  const current = photos[currentIndex] || photos[0];
+  const current = currentIndex !== null ? photos[currentIndex] || null : null;
 
   // Background Preloader: pre-fetches upcoming and previous slides into browser cache
   useEffect(() => {
-    if (photos.length === 0) return;
+    if (photos.length === 0 || state.list.length === 0) return;
 
     // 1. If we can go back in history, preload the previous photo
     if (state.index > 0 && state.list[state.index - 1] !== undefined) {
@@ -189,13 +191,16 @@ export function RandomHeroSlideshow({
     (targetIndex: number, newList: number[], newIndex: number) => {
       const targetPhoto = photos[targetIndex];
       const activePhoto =
-        photos[
-          state.list.length > 0 && state.list[state.index] !== undefined
-            ? state.list[state.index]
-            : 0
-        ] || photos[0];
+        state.list.length > 0 && state.list[state.index] !== undefined
+          ? photos[state.list[state.index]] || null
+          : null;
 
-      if (!targetPhoto || targetPhoto.photoID === activePhoto.photoID) return;
+      if (
+        !targetPhoto ||
+        (activePhoto && targetPhoto.photoID === activePhoto.photoID)
+      ) {
+        return;
+      }
 
       // Cancel any ongoing image wait
       if (pendingLoadCleanupRef.current) {
@@ -209,15 +214,19 @@ export function RandomHeroSlideshow({
           cleanupTimerRef.current = null;
         }
 
-        setOutgoingPhoto(activePhoto);
+        if (activePhoto) {
+          setOutgoingPhoto(activePhoto);
+        }
         setState({ list: newList, index: newIndex });
         setTransitionId((prev) => prev + 1);
 
         // Schedule cleanup after the 700ms dissolve finishes
-        cleanupTimerRef.current = setTimeout(() => {
-          setOutgoingPhoto(null);
-          cleanupTimerRef.current = null;
-        }, 700);
+        if (activePhoto) {
+          cleanupTimerRef.current = setTimeout(() => {
+            setOutgoingPhoto(null);
+            cleanupTimerRef.current = null;
+          }, 700);
+        }
       };
 
       // Check if the image is already cached / decoded in browser memory
@@ -259,7 +268,8 @@ export function RandomHeroSlideshow({
     if (photos.length <= 1) return;
 
     if (state.list.length === 0) {
-      triggerTransition(0, [0], 0);
+      const initial = Math.floor(Math.random() * photos.length);
+      triggerTransition(initial, [initial], 0);
       return;
     }
 
@@ -296,7 +306,8 @@ export function RandomHeroSlideshow({
     if (photos.length <= 1) return;
 
     if (state.list.length === 0) {
-      triggerTransition(0, [0], 0);
+      const initial = Math.floor(Math.random() * photos.length);
+      triggerTransition(initial, [initial], 0);
       return;
     }
 
@@ -317,13 +328,14 @@ export function RandomHeroSlideshow({
 
   // Reset remaining time counter whenever slide changes
   useEffect(() => {
+    if (!current) return;
     remainingTimeRef.current = intervalSeconds * 1000;
     startedAtRef.current = Date.now();
   }, [current?.photoID, intervalSeconds]);
 
   // Slide transition timer: pauses gracefully and resumes with remaining time
   useEffect(() => {
-    if (photos.length <= 1) return;
+    if (photos.length <= 1 || !current) return;
 
     if (isPaused) {
       const elapsed = Date.now() - startedAtRef.current;
@@ -429,80 +441,82 @@ export function RandomHeroSlideshow({
       {/* Full-Screen Photograph Canvas: Rigid bounded stage that never changes dimensions */}
       <div className="w-full flex-1 min-h-0 min-w-0 flex items-center justify-center px-3 sm:px-6 pt-1 pb-3 sm:pb-4 relative overflow-hidden">
         <div className="relative w-full h-full max-w-7xl min-h-0 min-w-0 flex items-center justify-center">
-          <Link
-            href={`/photo/${current.photoID}`}
-            onClick={(e) => {
-              if (didSwipeRef.current) {
-                e.preventDefault();
-              }
-            }}
-            className="relative flex items-center justify-center max-w-full max-h-full cursor-pointer"
-            title={`View "${current.title}" details`}
-            aria-label={`View "${current.title}" details`}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            {/* Two-layer crossfade stage: stacks outgoing and incoming images at the exact same center */}
-            <div className="relative inline-grid grid-cols-1 grid-rows-1 place-items-center max-w-full max-h-full">
-              {/* Outgoing photo dissolving out */}
-              {outgoingPhoto && (
+          {current && (
+            <Link
+              href={`/photo/${current.photoID}`}
+              onClick={(e) => {
+                if (didSwipeRef.current) {
+                  e.preventDefault();
+                }
+              }}
+              className="relative flex items-center justify-center max-w-full max-h-full cursor-pointer"
+              title={`View "${current.title}" details`}
+              aria-label={`View "${current.title}" details`}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              {/* Two-layer crossfade stage: stacks outgoing and incoming images at the exact same center */}
+              <div className="relative inline-grid grid-cols-1 grid-rows-1 place-items-center max-w-full max-h-full">
+                {/* Outgoing photo dissolving out */}
+                {outgoingPhoto && (
+                  <div
+                    key={`outgoing-${outgoingPhoto.photoID}-${transitionId}`}
+                    className="col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center animate-hero-fade-out z-0 pointer-events-none"
+                  >
+                    <img
+                      src={outgoingPhoto.imageDesktop}
+                      alt={outgoingPhoto.title}
+                      width={outgoingPhoto.size?.width}
+                      height={outgoingPhoto.size?.height}
+                      style={
+                        outgoingPhoto.size?.aspectRatio
+                          ? { aspectRatio: `${outgoingPhoto.size.aspectRatio}` }
+                          : undefined
+                      }
+                      draggable={false}
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="max-w-full max-h-[calc(100vh-9rem)] sm:max-h-[calc(100vh-9.5rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
+                    />
+                    <WatermarkBadge
+                      show={showWatermark}
+                      notice={copyrightNotice}
+                      size="md"
+                      withShield={false}
+                    />
+                  </div>
+                )}
+
+                {/* Current/Incoming photo dissolving in */}
                 <div
-                  key={`outgoing-${outgoingPhoto.photoID}-${transitionId}`}
-                  className="col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center animate-hero-fade-out z-0 pointer-events-none"
+                  key={`current-${current.photoID}-${transitionId}`}
+                  className={`col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center ${
+                    outgoingPhoto ? "animate-hero-fade-in z-[1]" : "opacity-100 z-0"
+                  }`}
                 >
                   <img
-                    src={outgoingPhoto.imageDesktop}
-                    alt={outgoingPhoto.title}
-                    width={outgoingPhoto.size?.width}
-                    height={outgoingPhoto.size?.height}
+                    src={current.imageDesktop}
+                    alt={current.title}
+                    width={current.size?.width}
+                    height={current.size?.height}
                     style={
-                      outgoingPhoto.size?.aspectRatio
-                        ? { aspectRatio: `${outgoingPhoto.size.aspectRatio}` }
+                      current.size?.aspectRatio
+                        ? { aspectRatio: `${current.size.aspectRatio}` }
                         : undefined
                     }
                     draggable={false}
                     onContextMenu={(e) => e.preventDefault()}
                     className="max-w-full max-h-[calc(100vh-9rem)] sm:max-h-[calc(100vh-9.5rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
                   />
+                  {/* Protection shield & Watermark overlay */}
                   <WatermarkBadge
                     show={showWatermark}
                     notice={copyrightNotice}
                     size="md"
-                    withShield={false}
+                    withShield={true}
                   />
                 </div>
-              )}
-
-              {/* Current/Incoming photo dissolving in */}
-              <div
-                key={`current-${current.photoID}-${transitionId}`}
-                className={`col-start-1 row-start-1 relative justify-self-center self-center max-w-full max-h-full inline-flex items-center justify-center ${
-                  outgoingPhoto ? "animate-hero-fade-in z-[1]" : "opacity-100 z-0"
-                }`}
-              >
-                <img
-                  src={current.imageDesktop}
-                  alt={current.title}
-                  width={current.size?.width}
-                  height={current.size?.height}
-                  style={
-                    current.size?.aspectRatio
-                      ? { aspectRatio: `${current.size.aspectRatio}` }
-                      : undefined
-                  }
-                  draggable={false}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="max-w-full max-h-[calc(100vh-9rem)] sm:max-h-[calc(100vh-9.5rem)] w-auto h-auto object-contain mx-auto rounded-[2px] shadow-2xl photo-frame select-none pointer-events-none"
-                />
-                {/* Protection shield & Watermark overlay */}
-                <WatermarkBadge
-                  show={showWatermark}
-                  notice={copyrightNotice}
-                  size="md"
-                  withShield={true}
-                />
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
         </div>
       </div>
     </section>
