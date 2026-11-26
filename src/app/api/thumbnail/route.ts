@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
-import { syncPhotoSizeFromDimensions } from "@/lib/photos";
+import { getPhotoById, syncPhotoSizeFromDimensions } from "@/lib/photos";
 
 const THUMB_CACHE_DIR = path.join(process.cwd(), ".thumbnails");
 if (!fs.existsSync(THUMB_CACHE_DIR)) {
@@ -115,12 +115,21 @@ function resolveSafeImagePath(rawSrc: string): { fullPath: string; cleanSrc: str
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const src = searchParams.get("src");
-  const widthStr = searchParams.get("w") || "600";
+  let src = searchParams.get("src");
+  const id = searchParams.get("id");
+  const widthStr = searchParams.get("w") || searchParams.get("size") || "600";
   const width = snapToAllowedWidth(parseInt(widthStr, 10));
 
+  if (!src && id) {
+    const photo = getPhotoById(id);
+    if (!photo || !photo.imageDesktop) {
+      return new NextResponse("Image not found", { status: 404 });
+    }
+    src = photo.imageDesktop;
+  }
+
   if (!src) {
-    return new NextResponse("Missing src parameter", { status: 400 });
+    return new NextResponse("Missing src or id parameter", { status: 400 });
   }
 
   const resolved = resolveSafeImagePath(src);

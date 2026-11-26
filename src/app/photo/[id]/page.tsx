@@ -42,7 +42,7 @@ export async function generateMetadata({
     photo.description ||
     `${photo.title} — Fine art landscape and nature photography by ${settings.artistName || "Randal R. Ketchem"}.`;
 
-  const ogImageUrl = `/api/thumbnail?id=${photo.photoID}&size=600`;
+  const ogImageUrl = `/api/thumbnail?id=${encodeURIComponent(photo.photoID)}&w=600&fmt=jpg`;
 
   return {
     title,
@@ -104,7 +104,7 @@ export default async function PhotoPage({
       "@type": "Person",
       name: settings.artistName || "Randal R. Ketchem",
     },
-    image: `${baseUrl}/api/thumbnail?id=${photo.photoID}&size=600`,
+    image: `${baseUrl}/api/thumbnail?id=${encodeURIComponent(photo.photoID)}&w=600&fmt=jpg`,
     url: `${baseUrl}/photo/${photo.photoID}`,
     copyrightNotice,
     ...(photo.keywords && photo.keywords.length > 0

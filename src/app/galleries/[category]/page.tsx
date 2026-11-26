@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPhotosByCategory } from "@/lib/photos";
+import { getAllCategories, getPhotosByCategory } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
 import { PaginatedGallery } from "@/components/PaginatedGallery";
 import { Folder, Images } from "lucide-react";
@@ -38,21 +38,52 @@ function cleanCategoryString(raw: string): string {
   return decoded;
 }
 
+function resolveCanonicalCategory(decodedCategory: string): {
+  isAll: boolean;
+  canonicalName: string;
+  canonicalSlug: string;
+} {
+  const lower = decodedCategory.toLowerCase();
+  if (lower === "all" || lower === "all photographs") {
+    return {
+      isAll: true,
+      canonicalName: "All",
+      canonicalSlug: "All",
+    };
+  }
+  const matched = getAllCategories().find(
+    (cat) => cat.name.toLowerCase() === lower
+  );
+  if (matched) {
+    return {
+      isAll: false,
+      canonicalName: matched.name,
+      canonicalSlug: matched.slug,
+    };
+  }
+  return {
+    isAll: false,
+    canonicalName: decodedCategory,
+    canonicalSlug: encodeURIComponent(decodedCategory),
+  };
+}
+
 export async function generateMetadata({
   params,
 }: CategoryPageProps): Promise<Metadata> {
   const { category } = await params;
   const decodedCategory = cleanCategoryString(category);
-  const isAll = decodedCategory.toLowerCase() === "all";
-  const title = isAll ? "All Photographs" : decodedCategory;
+  const { isAll, canonicalName, canonicalSlug } =
+    resolveCanonicalCategory(decodedCategory);
+  const title = isAll ? "All Photographs" : canonicalName;
 
   return {
     title,
     description: isAll
       ? "Complete fine-art photography archive across all years and subjects."
-      : `Photographs curated in the ${decodedCategory} collection.`,
+      : `Photographs curated in the ${canonicalName} collection.`,
     alternates: {
-      canonical: `/galleries/${encodeURIComponent(decodedCategory)}`,
+      canonical: `/galleries/${canonicalSlug}`,
     },
   };
 }
