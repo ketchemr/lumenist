@@ -19,7 +19,7 @@ export function ExhibitionGallery({
   photos,
   gap = 32,
   showWatermark = false,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
   categoryName,
 }: ExhibitionGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);

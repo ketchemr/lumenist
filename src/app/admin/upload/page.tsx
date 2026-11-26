@@ -5099,7 +5099,7 @@ export default function AdminUploadPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. © Randal R. Ketchem"
+                      placeholder="e.g. © Your Name"
                       value={settings.copyrightOverlay || ""}
                       onChange={(e) =>
                         setSettings((prev) => ({

@@ -27,7 +27,7 @@ export function RandomHeroSlideshow({
   photos,
   intervalSeconds = 10,
   showWatermark = false,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
 }: RandomHeroSlideshowProps) {
   // Slideshow History: stores the exact chronological order of random slides shown
   const [state, setState] = useState<SlideshowState>({

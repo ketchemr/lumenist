@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const siteTitle = settings.siteTitle || "Fine Art Photography";
   return {
     title: "Explore Archive & Map",
-    description: `Explore the complete fine art landscape and nature photography archive by ${settings.artistName || "Randal R. Ketchem"}. Search, filter by analog film or digital capture, and discover by geographic location.`,
+    description: `Explore the complete fine art landscape and nature photography archive by ${settings.artistName || "Photographer"}. Search, filter by analog film or digital capture, and discover by geographic location.`,
     alternates: {
       canonical: "/explore",
     },
@@ -38,7 +38,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const settings = getSettings();
   const copyrightNotice =
     settings.copyrightOverlay ||
-    (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
+    (settings.artistName ? `© ${settings.artistName}` : "© Photographer");
 
   return (
     <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

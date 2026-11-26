@@ -12,7 +12,7 @@ export interface WatermarkBadgeProps {
 
 export function WatermarkBadge({
   show = true,
-  notice = "© Randal R. Ketchem",
+  notice = "© Photographer",
   size = "sm",
   className = "",
   withShield = true,

@@ -4,17 +4,14 @@ import { siteConfig } from "@/config/site";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { getSettings, getThemeCssVariables, isLightModeActive } from "@/lib/settings";
+import { getSiteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = getSettings();
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.SITE_URL ||
-    "https://rrkphoto.com"
-  ).replace(/\/+$/, "");
+  const siteUrl = await getSiteUrl();
 
   return {
     metadataBase: new URL(siteUrl),

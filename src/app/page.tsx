@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = getSettings();
-  const siteTitle = settings.siteTitle || "Randal R. Ketchem Photography";
+  const siteTitle = settings.siteTitle || "Fine Art Photography";
   const tagline = settings.siteTagline || "Fine Art Landscape and Nature Photography";
 
   return {
@@ -30,7 +30,7 @@ export default function HomePage() {
 
   const copyrightNotice =
     settings.copyrightOverlay ||
-    (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
+    (settings.artistName ? `© ${settings.artistName}` : "© Photographer");
   const showWatermark = settings.showWatermarkOverlay ?? false;
 
   return (

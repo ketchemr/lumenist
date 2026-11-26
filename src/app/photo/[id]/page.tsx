@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPhotoById, getAdjacentPhotos } from "@/lib/photos";
 import { getSettings } from "@/lib/settings";
+import { getSiteUrl } from "@/lib/siteUrl";
 import { TechnicalDetails } from "@/components/TechnicalDetails";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { PhotoBreadcrumbs } from "@/components/PhotoBreadcrumbs";
@@ -40,7 +41,7 @@ export async function generateMetadata({
   const title = photo.title;
   const description =
     photo.description ||
-    `${photo.title} — Fine art landscape and nature photography by ${settings.artistName || "Randal R. Ketchem"}.`;
+    `${photo.title} — Fine art landscape and nature photography by ${settings.artistName || "Photographer"}.`;
 
   const ogImageUrl = `/api/thumbnail?id=${encodeURIComponent(photo.photoID)}&w=600&fmt=jpg`;
 
@@ -51,6 +52,8 @@ export async function generateMetadata({
     openGraph: {
       title: `${title} | ${siteTitle}`,
       description,
+      url: `/photo/${photo.photoID}`,
+      siteName: siteTitle,
       type: "article",
       images: [
         {
@@ -87,13 +90,9 @@ export default async function PhotoPage({
   const settings = getSettings();
   const copyrightNotice =
     settings.copyrightOverlay ||
-    (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
+    (settings.artistName ? `© ${settings.artistName}` : "© Photographer");
 
-  const baseUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.SITE_URL ||
-    "https://rrkphoto.com"
-  ).replace(/\/+$/, "");
+  const baseUrl = await getSiteUrl();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -102,7 +101,7 @@ export default async function PhotoPage({
     description: photo.description || photo.title,
     creator: {
       "@type": "Person",
-      name: settings.artistName || "Randal R. Ketchem",
+      name: settings.artistName || "Photographer",
     },
     image: `${baseUrl}/api/thumbnail?id=${encodeURIComponent(photo.photoID)}&w=600&fmt=jpg`,
     url: `${baseUrl}/photo/${photo.photoID}`,

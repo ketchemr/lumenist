@@ -32,7 +32,7 @@ export default function GalleriesIndexPage() {
 
   const copyrightNotice =
     settings.copyrightOverlay ||
-    (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem");
+    (settings.artistName ? `© ${settings.artistName}` : "© Photographer");
   const showWatermark = settings.showWatermarkOverlay ?? false;
 
   return (

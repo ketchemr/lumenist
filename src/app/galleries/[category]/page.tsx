@@ -150,7 +150,7 @@ export default async function CategoryPage({
         showWatermark={settings.showWatermarkOverlay ?? false}
         copyrightNotice={
           settings.copyrightOverlay ||
-          (settings.artistName ? `© ${settings.artistName}` : "© Randal R. Ketchem")
+          (settings.artistName ? `© ${settings.artistName}` : "© Photographer")
         }
       />
     </div>

@@ -32,7 +32,7 @@ export function JustifiedGallery({
   targetRowHeight = 210,
   gap = 8,
   showWatermark = false,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
   categoryName,
 }: JustifiedGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);

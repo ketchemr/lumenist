@@ -56,7 +56,7 @@ export function ExploreGallery({
   initialPhotos,
   categories,
   showWatermark = false,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
   initialSharedState = null,
 }: ExploreGalleryProps) {
   const searchParams = useSearchParams();

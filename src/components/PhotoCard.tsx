@@ -15,7 +15,7 @@ export function PhotoCard({
   photo,
   heightClass = "h-[160px] sm:h-[200px] md:h-[220px]",
   showWatermark = false,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
 }: PhotoCardProps) {
   return (
     <Link

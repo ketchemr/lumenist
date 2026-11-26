@@ -30,7 +30,7 @@ export function PaginatedGallery({
   initialSort = "date-desc",
   initialPage = 1,
   showWatermark = false,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
 }: PaginatedGalleryProps) {
   // Density view mode (Exhibition vs Grid)
   const [viewMode, setViewMode] = useState<GalleryViewMode>(defaultView);

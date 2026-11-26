@@ -1,13 +1,10 @@
 import type { MetadataRoute } from "next";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export const dynamic = "force-dynamic";
 
-export default function robots(): MetadataRoute.Robots {
-  const baseUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.SITE_URL ||
-    "https://rrkphoto.com"
-  ).replace(/\/+$/, "");
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const baseUrl = await getSiteUrl();
 
   return {
     rules: [

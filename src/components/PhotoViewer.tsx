@@ -28,7 +28,7 @@ export function PhotoViewer({
   photo,
   prevPhoto,
   nextPhoto,
-  copyrightNotice = "© Randal R. Ketchem",
+  copyrightNotice = "© Photographer",
   showWatermark = false,
   fromGallery,
 }: PhotoViewerProps) {

@@ -207,7 +207,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   gearList: [],
   supportGearList: [],
   copyrightText: "",
-  copyrightOverlay: "© Randal R. Ketchem",
+  copyrightOverlay: "© Photographer",
   showWatermarkOverlay: false,
   googleAnalyticsId: "",
 };
